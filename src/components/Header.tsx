@@ -62,11 +62,21 @@ export function Header({ onMenu }: any) {
     setIsTesting(true);
     setTestStatus('idle');
     setErrorMessage("");
-    const result = await testApiKey(provider, currentKey.trim(), provider === 'gemini' ? geminiProxyUrl : undefined);
+    const result = await testApiKey(
+      provider, 
+      currentKey.trim(), 
+      provider === 'gemini' ? geminiProxyUrl : undefined,
+      provider === 'gemini' ? geminiModel : provider === 'openai' ? openaiModel : provider === 'groq' ? groqModel : undefined
+    );
     if (result.success) {
       setTestStatus('success');
       // Auto-save on success to prevent losing the key if user forgets to click Save
       localStorage.setItem("ai_provider", provider);
+      localStorage.setItem("gemini_model", geminiModel);
+      localStorage.setItem("groq_model", groqModel);
+      localStorage.setItem("openai_model", openaiModel);
+      localStorage.setItem("gemini_proxy_url", geminiProxyUrl.trim());
+      
       if (provider === 'gemini') localStorage.setItem("custom_gemini_api_key", currentKey.trim());
       else if (provider === 'openai') localStorage.setItem("custom_openai_api_key", currentKey.trim());
       else if (provider === 'grok') localStorage.setItem("custom_grok_api_key", currentKey.trim());

@@ -59,7 +59,7 @@ export const getOpenAIModel = () => {
   return localStorage.getItem("openai_model") || "gpt-4o-mini";
 };
 
-export async function testApiKey(provider: AIProvider, key: string, customProxyUrl?: string): Promise<{success: boolean, error?: string}> {
+export async function testApiKey(provider: AIProvider, key: string, customProxyUrl?: string, currentModel?: string): Promise<{success: boolean, error?: string}> {
   try {
     if (provider === 'gemini') {
       const proxyUrl = customProxyUrl !== undefined ? customProxyUrl : localStorage.getItem("gemini_proxy_url");
@@ -72,7 +72,7 @@ export async function testApiKey(provider: AIProvider, key: string, customProxyU
         config.httpOptions = { baseUrl: cleanUrl };
       }
       const ai = new GoogleGenAI(config);
-      const model = getGeminiModel();
+      const model = currentModel || getGeminiModel();
       const response = await ai.models.generateContent({
         model: model,
         contents: "Say 'OK'",
@@ -80,7 +80,7 @@ export async function testApiKey(provider: AIProvider, key: string, customProxyU
       return { success: !!response.text };
     } else if (provider === 'openai') {
       const openai = new OpenAI({ apiKey: key, dangerouslyAllowBrowser: true });
-      const model = getOpenAIModel();
+      const model = currentModel || getOpenAIModel();
       const response = await openai.chat.completions.create({
         model: model,
         messages: [{ role: "user", content: "Say 'OK'" }],
@@ -97,7 +97,7 @@ export async function testApiKey(provider: AIProvider, key: string, customProxyU
       return { success: !!response.choices[0].message.content };
     } else if (provider === 'groq') {
       const groq = new OpenAI({ apiKey: key, baseURL: "https://api.groq.com/openai/v1", dangerouslyAllowBrowser: true });
-      const model = getGroqModel();
+      const model = currentModel || getGroqModel();
       const response = await groq.chat.completions.create({
         model: model,
         messages: [{ role: "user", content: "Say 'OK'" }],
