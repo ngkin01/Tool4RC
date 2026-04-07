@@ -1,0 +1,89 @@
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+
+export function getTZOffsetMin(tz: string, date: Date) {
+  try {
+    const fmt = new Intl.DateTimeFormat("en-US", {timeZone:tz,hour12:false,year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit"});
+    const parts = fmt.formatToParts(date).reduce((a: any,p: any)=>{a[p.type]=p.value;return a},{});
+    const local = new Date(`${parts.year}-${parts.month}-${parts.day}T${parts.hour==="24"?"00":parts.hour}:${parts.minute}:${parts.second}Z`);
+    return Math.round((local.getTime() - date.getTime()) / 60000);
+  } catch { return 0; }
+}
+
+export function getGMTOffsetStr(tz: string, dateStr: string) {
+  try {
+    const d = new Date(dateStr + "T12:00:00Z");
+    const off = getTZOffsetMin(tz, d);
+    const abs = Math.abs(off), h = Math.floor(abs/60), m = abs%60;
+    return (off>=0?"+":"-")+h+(m>0?":"+String(m).padStart(2,"0"):"");
+  } catch { return "+0"; }
+}
+
+export function getDSTLabel(tz: string, dateStr: string) {
+  try {
+    const d = new Date(dateStr + "T12:00:00Z");
+    const off = getTZOffsetMin(tz, d);
+    const abs = Math.abs(off), h = Math.floor(abs/60), m = abs%60;
+    const offStr = `GMT${off>=0?"+":"-"}${h}${m>0?":"+String(m).padStart(2,"0"):""}`;
+    const jan = getTZOffsetMin(tz, new Date(d.getFullYear()+"-01-15T12:00:00Z"));
+    const jul = getTZOffsetMin(tz, new Date(d.getFullYear()+"-07-15T12:00:00Z"));
+    if(jan!==jul){const isDST=(off===Math.max(jan,jul));return{label:offStr,dst:isDST?"DST":"STD",hasDST:true};}
+    return{label:offStr,dst:null,hasDST:false};
+  } catch { return{label:"GMT+0",dst:null,hasDST:false}; }
+}
+
+export function convertTime(timeStr: string, fromTz: string, toTz: string, dateStr: string, is24: boolean) {
+  try {
+    if(!timeStr||timeStr.trim()==="") return is24?"00:00":"12:00 AM";
+    let h, m;
+    if(is24){const parts=timeStr.split(":");h=parseInt(parts[0])||0;m=parseInt(parts[1])||0;}
+    else{const sp=timeStr.split(" ");const ampm=sp[1]||"AM";const hm=(sp[0]||"12:00").split(":");h=parseInt(hm[0])||0;m=parseInt(hm[1])||0;if(ampm==="PM"&&h!==12)h+=12;if(ampm==="AM"&&h===12)h=0;}
+    if(isNaN(h)||isNaN(m)) return is24?"00:00":"12:00 AM";
+    const ref=new Date(dateStr+"T12:00:00Z");
+    const diff = getTZOffsetMin(toTz,ref)-getTZOffsetMin(fromTz,ref);
+    const total=((h*60+m+diff)%1440+1440)%1440;
+    const nh=Math.floor(total/60),nm=total%60;
+    if(is24) return String(nh).padStart(2,"0")+":"+String(nm).padStart(2,"0");
+    const ap=nh>=12?"PM":"AM";const dh=nh%12||12;
+    return String(dh).padStart(2,"0")+":"+String(nm).padStart(2,"0")+" "+ap;
+  } catch { return is24?"00:00":"12:00 AM"; }
+}
+
+export function getCurrentTime(tz: string, is24: boolean) {
+  try {
+    const now=new Date();
+    return new Intl.DateTimeFormat("en-US",{timeZone:tz,hour12:!is24,hour:"2-digit",minute:"2-digit"}).format(now);
+  } catch { return "00:00"; }
+}
+
+export function defaultTime(is24: boolean){return is24?{start:"09:00",end:"09:45"}:{start:"09:00 AM",end:"09:45 AM"};}
+
+export function formatOutput(dateStr: string, start: string, end: string, is24: boolean, country?: string, offset?: string) {
+  const d=new Date(dateStr+"T12:00:00Z");
+  const days=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+  const months=["January","February","March","April","May","June","July","August","September","October","November","December"];
+  const fmt=(t: string)=>{if(is24)return t;const sp=t.split(" "),ap=sp[1]||"AM",hm=sp[0].split(":");return `${parseInt(hm[0])}:${hm[1]} ${ap}`;};
+  let out = `${days[d.getUTCDay()]}, ${months[d.getUTCMonth()]} ${d.getUTCDate()}, ${d.getUTCFullYear()}: ${fmt(start)} – ${fmt(end)}`;
+  if (country && offset) {
+    out += ` (${country} - GMT${offset})`;
+  }
+  return out;
+}
+
+export const TZ_LIST = [
+  {tz:"Asia/Ho_Chi_Minh",city:"Ho Chi Minh City",country:"Vietnam"},{tz:"Asia/Bangkok",city:"Bangkok",country:"Thailand"},{tz:"Asia/Singapore",city:"Singapore",country:"Singapore"},{tz:"Asia/Kuala_Lumpur",city:"Kuala Lumpur",country:"Malaysia"},{tz:"Asia/Jakarta",city:"Jakarta",country:"Indonesia"},{tz:"Asia/Makassar",city:"Bali / Makassar",country:"Indonesia"},{tz:"Asia/Jayapura",city:"Jayapura",country:"Indonesia"},{tz:"Asia/Manila",city:"Manila",country:"Philippines"},{tz:"Asia/Rangoon",city:"Yangon",country:"Myanmar"},{tz:"Asia/Phnom_Penh",city:"Phnom Penh",country:"Cambodia"},{tz:"Asia/Vientiane",city:"Vientiane",country:"Laos"},{tz:"Asia/Brunei",city:"Bandar Seri Begawan",country:"Brunei"},{tz:"Asia/Shanghai",city:"Beijing / Shanghai",country:"China"},{tz:"Asia/Hong_Kong",city:"Hong Kong",country:"China"},{tz:"Asia/Taipei",city:"Taipei",country:"Taiwan"},{tz:"Asia/Tokyo",city:"Tokyo",country:"Japan"},{tz:"Asia/Seoul",city:"Seoul",country:"South Korea"},{tz:"Asia/Kolkata",city:"Mumbai / Delhi",country:"India"},{tz:"Asia/Karachi",city:"Karachi",country:"Pakistan"},{tz:"Asia/Dhaka",city:"Dhaka",country:"Bangladesh"},{tz:"Asia/Colombo",city:"Colombo",country:"Sri Lanka"},{tz:"Asia/Kathmandu",city:"Kathmandu",country:"Nepal"},{tz:"Asia/Kabul",city:"Kabul",country:"Afghanistan"},{tz:"Asia/Dubai",city:"Dubai",country:"UAE"},{tz:"Asia/Riyadh",city:"Riyadh",country:"Saudi Arabia"},{tz:"Asia/Qatar",city:"Doha",country:"Qatar"},{tz:"Asia/Kuwait",city:"Kuwait City",country:"Kuwait"},{tz:"Asia/Tehran",city:"Tehran",country:"Iran"},{tz:"Asia/Baghdad",city:"Baghdad",country:"Iraq"},{tz:"Asia/Beirut",city:"Beirut",country:"Lebanon"},{tz:"Asia/Jerusalem",city:"Tel Aviv",country:"Israel"},{tz:"Asia/Amman",city:"Amman",country:"Jordan"},{tz:"Asia/Yerevan",city:"Yerevan",country:"Armenia"},{tz:"Asia/Tbilisi",city:"Tbilisi",country:"Georgia"},{tz:"Asia/Baku",city:"Baku",country:"Azerbaijan"},{tz:"Asia/Almaty",city:"Almaty",country:"Kazakhstan"},{tz:"Asia/Tashkent",city:"Tashkent",country:"Uzbekistan"},{tz:"Europe/London",city:"London",country:"United Kingdom"},{tz:"Europe/Dublin",city:"Dublin",country:"Ireland"},{tz:"Europe/Lisbon",city:"Lisbon",country:"Portugal"},{tz:"Europe/Madrid",city:"Madrid",country:"Spain"},{tz:"Europe/Paris",city:"Paris",country:"France"},{tz:"Europe/Berlin",city:"Berlin",country:"Germany"},{tz:"Europe/Amsterdam",city:"Amsterdam",country:"Netherlands"},{tz:"Europe/Brussels",city:"Brussels",country:"Belgium"},{tz:"Europe/Zurich",city:"Zurich",country:"Switzerland"},{tz:"Europe/Vienna",city:"Vienna",country:"Austria"},{tz:"Europe/Rome",city:"Rome",country:"Italy"},{tz:"Europe/Stockholm",city:"Stockholm",country:"Sweden"},{tz:"Europe/Oslo",city:"Oslo",country:"Norway"},{tz:"Europe/Copenhagen",city:"Copenhagen",country:"Denmark"},{tz:"Europe/Helsinki",city:"Helsinki",country:"Finland"},{tz:"Europe/Warsaw",city:"Warsaw",country:"Poland"},{tz:"Europe/Prague",city:"Prague",country:"Czech Republic"},{tz:"Europe/Budapest",city:"Budapest",country:"Hungary"},{tz:"Europe/Bucharest",city:"Bucharest",country:"Romania"},{tz:"Europe/Sofia",city:"Sofia",country:"Bulgaria"},{tz:"Europe/Athens",city:"Athens",country:"Greece"},{tz:"Europe/Istanbul",city:"Istanbul",country:"Turkey"},{tz:"Europe/Kyiv",city:"Kyiv",country:"Ukraine"},{tz:"Europe/Moscow",city:"Moscow",country:"Russia"},{tz:"Asia/Novosibirsk",city:"Novosibirsk",country:"Russia"},{tz:"Asia/Vladivostok",city:"Vladivostok",country:"Russia"},{tz:"Europe/Minsk",city:"Minsk",country:"Belarus"},{tz:"Europe/Riga",city:"Riga",country:"Latvia"},{tz:"Europe/Tallinn",city:"Tallinn",country:"Estonia"},{tz:"Europe/Vilnius",city:"Vilnius",country:"Lithuania"},{tz:"Europe/Belgrade",city:"Belgrade",country:"Serbia"},{tz:"Europe/Zagreb",city:"Zagreb",country:"Croatia"},{tz:"Atlantic/Reykjavik",city:"Reykjavik",country:"Iceland"},{tz:"America/New_York",city:"New York",country:"USA"},{tz:"America/Chicago",city:"Chicago",country:"USA"},{tz:"America/Denver",city:"Denver",country:"USA"},{tz:"America/Los_Angeles",city:"Los Angeles",country:"USA"},{tz:"America/Phoenix",city:"Phoenix",country:"USA"},{tz:"America/Anchorage",city:"Anchorage",country:"USA"},{tz:"Pacific/Honolulu",city:"Honolulu",country:"USA"},{tz:"America/Toronto",city:"Toronto",country:"Canada"},{tz:"America/Vancouver",city:"Vancouver",country:"Canada"},{tz:"America/Mexico_City",city:"Mexico City",country:"Mexico"},{tz:"America/Havana",city:"Havana",country:"Cuba"},{tz:"America/Sao_Paulo",city:"São Paulo",country:"Brazil"},{tz:"America/Fortaleza",city:"Fortaleza",country:"Brazil"},{tz:"America/Manaus",city:"Manaus",country:"Brazil"},{tz:"America/Buenos_Aires",city:"Buenos Aires",country:"Argentina"},{tz:"America/Bogota",city:"Bogotá",country:"Colombia"},{tz:"America/Lima",city:"Lima",country:"Peru"},{tz:"America/Santiago",city:"Santiago",country:"Chile"},{tz:"America/Caracas",city:"Caracas",country:"Venezuela"},{tz:"Africa/Cairo",city:"Cairo",country:"Egypt"},{tz:"Africa/Casablanca",city:"Casablanca",country:"Morocco"},{tz:"Africa/Lagos",city:"Lagos",country:"Nigeria"},{tz:"Africa/Nairobi",city:"Nairobi",country:"Kenya"},{tz:"Africa/Johannesburg",city:"Johannesburg",country:"South Africa"},{tz:"Africa/Addis_Ababa",city:"Addis Ababa",country:"Ethiopia"},{tz:"Australia/Sydney",city:"Sydney",country:"Australia"},{tz:"Australia/Melbourne",city:"Melbourne",country:"Australia"},{tz:"Australia/Brisbane",city:"Brisbane",country:"Australia"},{tz:"Australia/Perth",city:"Perth",country:"Australia"},{tz:"Australia/Adelaide",city:"Adelaide",country:"Australia"},{tz:"Pacific/Auckland",city:"Auckland",country:"New Zealand"},{tz:"Pacific/Fiji",city:"Suva",country:"Fiji"},
+];
+
+export const LOOKUP_LIST = [
+  {tz:"Asia/Ho_Chi_Minh",city:"Ho Chi Minh City",country:"Vietnam"},{tz:"Asia/Ho_Chi_Minh",city:"Hanoi",country:"Vietnam"},{tz:"Asia/Ho_Chi_Minh",city:"Da Nang",country:"Vietnam"},{tz:"Asia/Bangkok",city:"Bangkok",country:"Thailand"},{tz:"Asia/Bangkok",city:"Chiang Mai",country:"Thailand"},{tz:"Asia/Bangkok",city:"Phuket",country:"Thailand"},{tz:"Asia/Singapore",city:"Singapore",country:"Singapore"},{tz:"Asia/Kuala_Lumpur",city:"Kuala Lumpur",country:"Malaysia"},{tz:"Asia/Kuala_Lumpur",city:"Penang",country:"Malaysia"},{tz:"Asia/Jakarta",city:"Jakarta",country:"Indonesia"},{tz:"Asia/Jakarta",city:"Surabaya",country:"Indonesia"},{tz:"Asia/Jakarta",city:"Bandung",country:"Indonesia"},{tz:"Asia/Makassar",city:"Bali",country:"Indonesia"},{tz:"Asia/Makassar",city:"Makassar",country:"Indonesia"},{tz:"Asia/Manila",city:"Manila",country:"Philippines"},{tz:"Asia/Manila",city:"Cebu",country:"Philippines"},{tz:"Asia/Rangoon",city:"Yangon",country:"Myanmar"},{tz:"Asia/Phnom_Penh",city:"Phnom Penh",country:"Cambodia"},{tz:"Asia/Vientiane",city:"Vientiane",country:"Laos"},{tz:"Asia/Shanghai",city:"Shanghai",country:"China"},{tz:"Asia/Shanghai",city:"Beijing",country:"China"},{tz:"Asia/Shanghai",city:"Guangzhou",country:"China"},{tz:"Asia/Shanghai",city:"Shenzhen",country:"China"},{tz:"Asia/Shanghai",city:"Chengdu",country:"China"},{tz:"Asia/Hong_Kong",city:"Hong Kong",country:"China"},{tz:"Asia/Taipei",city:"Taipei",country:"Taiwan"},{tz:"Asia/Tokyo",city:"Tokyo",country:"Japan"},{tz:"Asia/Tokyo",city:"Osaka",country:"Japan"},{tz:"Asia/Tokyo",city:"Kyoto",country:"Japan"},{tz:"Asia/Tokyo",city:"Fukuoka",country:"Japan"},{tz:"Asia/Seoul",city:"Seoul",country:"South Korea"},{tz:"Asia/Seoul",city:"Busan",country:"South Korea"},{tz:"Asia/Kolkata",city:"Mumbai",country:"India"},{tz:"Asia/Kolkata",city:"Delhi",country:"India"},{tz:"Asia/Kolkata",city:"Bangalore",country:"India"},{tz:"Asia/Kolkata",city:"Hyderabad",country:"India"},{tz:"Asia/Kolkata",city:"Chennai",country:"India"},{tz:"Asia/Kolkata",city:"Kolkata",country:"India"},{tz:"Asia/Karachi",city:"Karachi",country:"Pakistan"},{tz:"Asia/Karachi",city:"Lahore",country:"Pakistan"},{tz:"Asia/Karachi",city:"Islamabad",country:"Pakistan"},{tz:"Asia/Dhaka",city:"Dhaka",country:"Bangladesh"},{tz:"Asia/Colombo",city:"Colombo",country:"Sri Lanka"},{tz:"Asia/Kathmandu",city:"Kathmandu",country:"Nepal"},{tz:"Asia/Dubai",city:"Dubai",country:"UAE"},{tz:"Asia/Dubai",city:"Abu Dhabi",country:"UAE"},{tz:"Asia/Riyadh",city:"Riyadh",country:"Saudi Arabia"},{tz:"Asia/Riyadh",city:"Jeddah",country:"Saudi Arabia"},{tz:"Asia/Qatar",city:"Doha",country:"Qatar"},{tz:"Asia/Kuwait",city:"Kuwait City",country:"Kuwait"},{tz:"Asia/Tehran",city:"Tehran",country:"Iran"},{tz:"Asia/Baghdad",city:"Baghdad",country:"Iraq"},{tz:"Asia/Beirut",city:"Beirut",country:"Lebanon"},{tz:"Asia/Jerusalem",city:"Tel Aviv",country:"Israel"},{tz:"Asia/Jerusalem",city:"Jerusalem",country:"Israel"},{tz:"Europe/London",city:"London",country:"United Kingdom"},{tz:"Europe/London",city:"Manchester",country:"United Kingdom"},{tz:"Europe/London",city:"Birmingham",country:"United Kingdom"},{tz:"Europe/London",city:"Edinburgh",country:"United Kingdom"},{tz:"Europe/Dublin",city:"Dublin",country:"Ireland"},{tz:"Europe/Lisbon",city:"Lisbon",country:"Portugal"},{tz:"Europe/Madrid",city:"Madrid",country:"Spain"},{tz:"Europe/Madrid",city:"Barcelona",country:"Spain"},{tz:"Europe/Paris",city:"Paris",country:"France"},{tz:"Europe/Paris",city:"Lyon",country:"France"},{tz:"Europe/Berlin",city:"Berlin",country:"Germany"},{tz:"Europe/Berlin",city:"Munich",country:"Germany"},{tz:"Europe/Berlin",city:"Hamburg",country:"Germany"},{tz:"Europe/Berlin",city:"Frankfurt",country:"Germany"},{tz:"Europe/Amsterdam",city:"Amsterdam",country:"Netherlands"},{tz:"Europe/Brussels",city:"Brussels",country:"Belgium"},{tz:"Europe/Zurich",city:"Zurich",country:"Switzerland"},{tz:"Europe/Zurich",city:"Geneva",country:"Switzerland"},{tz:"Europe/Vienna",city:"Vienna",country:"Austria"},{tz:"Europe/Rome",city:"Rome",country:"Italy"},{tz:"Europe/Rome",city:"Milan",country:"Italy"},{tz:"Europe/Stockholm",city:"Stockholm",country:"Sweden"},{tz:"Europe/Oslo",city:"Oslo",country:"Norway"},{tz:"Europe/Copenhagen",city:"Copenhagen",country:"Denmark"},{tz:"Europe/Helsinki",city:"Helsinki",country:"Finland"},{tz:"Europe/Warsaw",city:"Warsaw",country:"Poland"},{tz:"Europe/Prague",city:"Prague",country:"Czech Republic"},{tz:"Europe/Budapest",city:"Budapest",country:"Hungary"},{tz:"Europe/Bucharest",city:"Bucharest",country:"Romania"},{tz:"Europe/Athens",city:"Athens",country:"Greece"},{tz:"Europe/Istanbul",city:"Istanbul",country:"Turkey"},{tz:"Europe/Istanbul",city:"Ankara",country:"Turkey"},{tz:"Europe/Kyiv",city:"Kyiv",country:"Ukraine"},{tz:"Europe/Moscow",city:"Moscow",country:"Russia"},{tz:"Europe/Moscow",city:"Saint Petersburg",country:"Russia"},{tz:"America/New_York",city:"New York",country:"USA"},{tz:"America/New_York",city:"Boston",country:"USA"},{tz:"America/New_York",city:"Washington DC",country:"USA"},{tz:"America/New_York",city:"Miami",country:"USA"},{tz:"America/New_York",city:"Atlanta",country:"USA"},{tz:"America/New_York",city:"Philadelphia",country:"USA"},{tz:"America/Chicago",city:"Chicago",country:"USA"},{tz:"America/Chicago",city:"Houston",country:"USA"},{tz:"America/Chicago",city:"Dallas",country:"USA"},{tz:"America/Chicago",city:"Austin",country:"USA"},{tz:"America/Los_Angeles",city:"Los Angeles",country:"USA"},{tz:"America/Los_Angeles",city:"San Francisco",country:"USA"},{tz:"America/Los_Angeles",city:"Seattle",country:"USA"},{tz:"America/Los_Angeles",city:"Las Vegas",country:"USA"},{tz:"America/Toronto",city:"Toronto",country:"Canada"},{tz:"America/Toronto",city:"Montreal",country:"Canada"},{tz:"America/Vancouver",city:"Vancouver",country:"Canada"},{tz:"America/Mexico_City",city:"Mexico City",country:"Mexico"},{tz:"America/Sao_Paulo",city:"São Paulo",country:"Brazil"},{tz:"America/Sao_Paulo",city:"Rio de Janeiro",country:"Brazil"},{tz:"America/Sao_Paulo",city:"Brasília",country:"Brazil"},{tz:"America/Sao_Paulo",city:"Belo Horizonte",country:"Brazil"},{tz:"America/Sao_Paulo",city:"Curitiba",country:"Brazil"},{tz:"America/Sao_Paulo",city:"Porto Alegre",country:"Brazil"},{tz:"America/Fortaleza",city:"Fortaleza",country:"Brazil"},{tz:"America/Fortaleza",city:"Recife",country:"Brazil"},{tz:"America/Manaus",city:"Manaus",country:"Brazil"},{tz:"America/Buenos_Aires",city:"Buenos Aires",country:"Argentina"},{tz:"America/Bogota",city:"Bogotá",country:"Colombia"},{tz:"America/Bogota",city:"Medellín",country:"Colombia"},{tz:"America/Lima",city:"Lima",country:"Peru"},{tz:"America/Santiago",city:"Santiago",country:"Chile"},{tz:"America/Caracas",city:"Caracas",country:"Venezuela"},{tz:"Africa/Cairo",city:"Cairo",country:"Egypt"},{tz:"Africa/Casablanca",city:"Casablanca",country:"Morocco"},{tz:"Africa/Lagos",city:"Lagos",country:"Nigeria"},{tz:"Africa/Lagos",city:"Abuja",country:"Nigeria"},{tz:"Africa/Nairobi",city:"Nairobi",country:"Kenya"},{tz:"Africa/Johannesburg",city:"Johannesburg",country:"South Africa"},{tz:"Africa/Johannesburg",city:"Cape Town",country:"South Africa"},{tz:"Africa/Addis_Ababa",city:"Addis Ababa",country:"Ethiopia"},{tz:"Australia/Sydney",city:"Sydney",country:"Australia"},{tz:"Australia/Melbourne",city:"Melbourne",country:"Australia"},{tz:"Australia/Brisbane",city:"Brisbane",country:"Australia"},{tz:"Australia/Perth",city:"Perth",country:"Australia"},{tz:"Pacific/Auckland",city:"Auckland",country:"New Zealand"},{tz:"Pacific/Auckland",city:"Wellington",country:"New Zealand"},
+];
+
+export const ROW_COLORS=[
+  {bg:"var(--bg-sky-50)",border:"var(--border-sky-200)",time:"var(--bg-sky-50)"},
+  {bg:"var(--bg-amber-50)",border:"var(--border-amber-200)",time:"var(--bg-amber-50)"},
+  {bg:"var(--bg-green-50)",border:"var(--border-green-200)",time:"var(--bg-green-50)"},
+  {bg:"var(--bg-red-50)",border:"var(--border-red-200)",time:"var(--bg-red-50)"},
+  {bg:"var(--bg-indigo-50)",border:"var(--border-indigo-200)",time:"var(--bg-indigo-50)"},
+  {bg:"var(--bg-emerald-50)",border:"var(--border-emerald-200)",time:"var(--bg-emerald-50)"},
+  {bg:"var(--bg-indigo-50)",border:"var(--border-indigo-200)",time:"var(--bg-indigo-50)"},
+  {bg:"var(--bg-sky-50)",border:"var(--border-sky-200)",time:"var(--bg-sky-50)"},
+];
