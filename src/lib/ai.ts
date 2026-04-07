@@ -261,8 +261,8 @@ export async function geminiWithDoc(system: string, userText: string, pdfBase64:
 export async function getGoogleMapsGrounding(locationQuery: string) {
   try {
     const ai = getGeminiClient();
-    // Force a stable model for grounding to avoid hangs with lite models
-    const model = "gemini-3-flash-preview"; 
+    // Use the user's selected model, or fallback to 2.5-flash
+    const model = getGeminiModel() || "gemini-2.5-flash"; 
     
     // Add a timeout to prevent infinite hanging
     const timeoutPromise = new Promise<any>((_, reject) => {
