@@ -48,7 +48,7 @@ export function getGroqClient() {
 }
 
 export const getGeminiModel = () => {
-  return localStorage.getItem("gemini_model") || "gemini-3.1-flash-lite-preview";
+  return localStorage.getItem("gemini_model") || "gemini-2.5-flash";
 };
 
 export const getGroqModel = () => {
@@ -250,7 +250,7 @@ export async function geminiWithDoc(system: string, userText: string, pdfBase64:
   const model = getGeminiModel();
   const response = await ai.models.generateContent({
     model: model,
-    contents: { parts },
+    contents: parts,
     config: {
       systemInstruction: system,
     }

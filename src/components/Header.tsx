@@ -9,7 +9,7 @@ export function Header({ onMenu }: any) {
   const [showSettings, setShowSettings] = useState(false);
   
   const [provider, setProvider] = useState<AIProvider>('gemini');
-  const [geminiModel, setGeminiModel] = useState("gemini-3.1-flash-lite-preview");
+  const [geminiModel, setGeminiModel] = useState("gemini-2.5-flash");
   const [geminiKey, setGeminiKey] = useState("");
   const [geminiProxyUrl, setGeminiProxyUrl] = useState("");
   const [openaiKey, setOpenaiKey] = useState("");
@@ -27,7 +27,7 @@ export function Header({ onMenu }: any) {
       const savedProvider = getProvider();
       setProvider(savedProvider);
       
-      const savedGeminiModel = localStorage.getItem("gemini_model") || "gemini-3.1-flash-lite-preview";
+      const savedGeminiModel = localStorage.getItem("gemini_model") || "gemini-2.5-flash";
       setGeminiModel(savedGeminiModel);
       
       const savedGeminiProxy = localStorage.getItem("gemini_proxy_url") || "";
@@ -251,7 +251,6 @@ export function Header({ onMenu }: any) {
                     <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
                   </optgroup>
                   <optgroup label="Flash-Lite">
-                    <option value="gemini-3.1-flash-lite-preview">Gemini 3.1 Flash-Lite</option>
                     <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash-Lite</option>
                     <option value="gemini-2.0-flash-lite">Gemini 2.0 Flash-Lite</option>
                   </optgroup>
