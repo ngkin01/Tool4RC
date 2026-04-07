@@ -6,8 +6,8 @@ export function Sidebar({open,onClose,sessions,onNew,onSelect,onDelete}: any){
     <aside style={{position:"fixed",top:0,left:0,bottom:0,width:262,background:"var(--bg-sidebar)",zIndex:300,transform:open?"translateX(0)":"translateX(-100%)",transition:"transform .25s ease",display:"flex",flexDirection:"column"}}>
       <div style={{padding:"18px 18px 14px",borderBottom:"1px solid var(--text-secondary)"}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
-          <div style={{color: 'white', fontWeight: 'bold', fontSize: 20, display: 'flex', alignItems: 'center'}}>
-            <img src="/logo.png" alt="Tool4RC Logo" className="sidebar-logo-img" style={{ height: 50 }} />
+          <div style={{color: 'white', fontWeight: 'bold', fontSize: 20, display: 'flex', alignItems: 'center', flexShrink: 0}}>
+            <img src="/logo.png" alt="Tool4RC Logo" className="sidebar-logo-img" style={{ height: 50, objectFit: 'contain', flexShrink: 0 }} />
           </div>
           <button onClick={onClose} style={{background:"none",border:"none",color:"var(--text-muted)",cursor:"pointer",fontSize:18,padding:4}}>×</button>
         </div>

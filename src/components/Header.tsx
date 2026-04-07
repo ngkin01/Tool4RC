@@ -135,20 +135,20 @@ export function Header({ onMenu }: any) {
   };
 
   return (
-    <header style={{ position: "sticky", top: 0, zIndex: 100, background: "var(--bg-header)", backdropFilter: "blur(12px)", borderBottom: "1px solid var(--border-color)", padding: "0 16px", height: 72, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+    <header style={{ position: "sticky", top: 0, zIndex: 100, background: "var(--bg-header)", backdropFilter: "blur(12px)", borderBottom: "1px solid var(--border-color)", padding: "0 12px", height: 64, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
         <button onClick={onMenu} style={{ background: "none", border: "none", cursor: "pointer", padding: 8, borderRadius: 8, color: "var(--text-muted)", display: "flex", marginRight: 4 }}
           onMouseEnter={(e: any) => e.currentTarget.style.background = "var(--bg-hover)"} onMouseLeave={(e: any) => e.currentTarget.style.background = "none"}>
           <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" /></svg>
         </button>
         {!isLanding && (
-          <Link to="/" style={{ textDecoration: 'none', background: "none", border: "none", cursor: "pointer", padding: "6px 10px", borderRadius: 8, color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 6, fontSize: 15, fontWeight: 500, marginRight: 8 }}
+          <Link to="/" style={{ textDecoration: 'none', background: "none", border: "none", cursor: "pointer", padding: "6px 6px", borderRadius: 8, color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 4, fontSize: 14, fontWeight: 500, marginRight: 4, flexShrink: 0 }}
             onMouseEnter={(e: any) => e.currentTarget.style.background = "var(--bg-hover)"} onMouseLeave={(e: any) => e.currentTarget.style.background = "none"}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6" /></svg>Dashboard
           </Link>
         )}
-        <div style={{ color: 'black', fontWeight: 'bold', fontSize: 24, display: 'flex', alignItems: 'center' }}>
-          <img src="/logo.png" alt="Tool4RC Logo" className="logo-img" style={{ height: 64 }} />
+        <div style={{ color: 'black', fontWeight: 'bold', fontSize: 24, display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+          <img src="/logo.png" alt="Tool4RC Logo" className="logo-img" style={{ height: 50, objectFit: 'contain', flexShrink: 0 }} />
         </div>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
