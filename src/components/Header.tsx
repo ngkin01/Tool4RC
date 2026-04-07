@@ -246,6 +246,7 @@ export function Header({ onMenu }: any) {
                     <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
                   </optgroup>
                   <optgroup label="Flash">
+                    <option value="gemini-3.1-flash-preview">Gemini 3.1 Flash</option>
                     <option value="gemini-3.1-flash-image-preview">Gemini 3.1 Flash Image</option>
                     <option value="gemini-3-flash-preview">Gemini 3 Flash</option>
                     <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
