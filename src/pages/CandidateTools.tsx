@@ -347,10 +347,11 @@ export function CandidateTools({toast}: any){
         "\\n- Avoid: Proceed with caution / System warning / overly formal wording." +
         "\\n- Use natural alternatives: Proceed with conditions / Consider for interview / Some gaps to note / Requires further clarification." +
         "\\n- recommendation field values: Proceed / Proceed with conditions / Consider for interview / Not prioritize" +
-        "\\n\\nSELF-CHECK before output: verify no assumptions or overclaiming. Verify fit rating = actual evidence.";
+        "\\n\\nSELF-CHECK before output: verify no assumptions or overclaiming. Verify fit rating = actual evidence." +
+        (analysisLang === "vi" ? "\\n\\nCRITICAL RULE: You MUST write the entire JSON response in Vietnamese (except for technical terms, company names, certifications like ISO/SA8000, job titles, and proper nouns which should remain in English)." : "");
       const userMsg = pdf
-        ? "CV is in the attached PDF.\\n\\nJob Description:\\n" + (jd||"Not provided") + (notes ? "\\n\\nRecruiter Notes:\\n"+notes : "")
-        : "CV:\\n" + cv + "\\n\\nJob Description:\\n" + (jd||"Not provided") + (notes ? "\\n\\nRecruiter Notes:\\n"+notes : "");
+        ? "CV is in the attached PDF.\\n\\nJob Description:\\n" + (jd||"Not provided")
+        : "CV:\\n" + cv + "\\n\\nJob Description:\\n" + (jd||"Not provided");
 
       const result = await geminiWithDoc(sys, userMsg, pdf, 8000);
 
@@ -377,34 +378,6 @@ export function CandidateTools({toast}: any){
       }
       if (!parsed) throw new Error("Parse failed. Clean: " + clean.slice(0, 100));
 
-      // STEP 2: If VI selected → translate whole result to Vietnamese
-      if (analysisLang === "vi") {
-        try {
-          const viSys = "You are a translator. Translate all Vietnamese-translatable text fields in this JSON from English to Vietnamese. Keep JSON structure identical. Rules: keep company names, certifications (ISO, SA8000, BSCI, APSCA etc.), job titles, proper nouns in English. Translate everything else. Return ONLY the translated JSON, no markdown, no explanation.";
-          const viMsg = "Translate text fields to Vietnamese. Return ONLY the JSON:\\n" + JSON.stringify(parsed);
-          const viRaw = await gemini(viSys, viMsg, 1500);
-          let viClean = viRaw.trim();
-          const fs = viClean.indexOf("\`\`\`");
-          if (fs !== -1) {
-            const nl = viClean.indexOf("\\n", fs);
-            viClean = nl !== -1 ? viClean.slice(nl + 1) : viClean.slice(fs + 3);
-          }
-          const fe = viClean.lastIndexOf("\`\`\`");
-          if (fe !== -1) viClean = viClean.slice(0, fe).trim();
-          const js = viClean.indexOf("{"), je = viClean.lastIndexOf("}");
-          if (js !== -1 && je !== -1) viClean = viClean.slice(js, je + 1);
-          let viParsed = null;
-          try { viParsed = JSON.parse(viClean); } catch {
-            try { viParsed = JSON.parse(viClean.replace(/,([\s\n]*[}\]])/g,"$1")); } catch(e) {
-              console.error("VI parse failed:", e);
-            }
-          }
-          if (viParsed) parsed = viParsed;
-        } catch(e) {
-          console.error("VI translation failed:", e);
-          // Fall back to English result silently
-        }
-      }
       setAnalysis(parsed);
     }catch(e: any){
       const msg = e.message || "Unknown error";

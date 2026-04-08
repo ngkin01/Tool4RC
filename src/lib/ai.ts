@@ -347,20 +347,45 @@ Executive Summary:
 }
 
 export async function extractEmail(cv: string, jd: string, pdfBase64: string | null = null) {
-  const sys = `Extract candidate information from the CV.
+  const sys = `Extract candidate information from the CV and the job title from the Job Description.
 RULES: Extract ONLY what is explicitly stated. If a field is not found, use "Not specified". NEVER guess or assume.
 Respond ONLY with this JSON, no other text:
-{"candidateName":"","location":"","dob":"","yearsExperience":"","language":"","education":"","availability":"","salary":""}`;
-  const userText = pdfBase64 ? `The CV is in the attached document above.\n\nJSON only.` : `CV:\n${cv}\n\nJSON only.`;
-  const [info, title] = await Promise.all([
-    geminiWithDoc(sys, userText, pdfBase64),
-    gemini(`Extract the job title from the job description. Respond with ONLY the job title.`, `JD:\n${jd||"Not specified"}`)
-  ]);
+{"candidateName":"","location":"","dob":"","yearsExperience":"","language":"","education":"","availability":"","salary":"","jobTitle":""}`;
+  
+  const userText = pdfBase64 
+    ? `The CV is in the attached document above.\n\nJob Description:\n${jd || "Not specified"}\n\nJSON only.` 
+    : `CV:\n${cv}\n\nJob Description:\n${jd || "Not specified"}\n\nJSON only.`;
+    
+  const info = await geminiWithDoc(sys, userText, pdfBase64);
+  
   try {
-    const m=info.match(/\{[\s\S]*\}/); const p=m?JSON.parse(m[0]):{};
-    const ns=(k: string)=>p[k]||"Not specified";
-    return {candidateName:ns("candidateName"),location:ns("location"),dob:ns("dob"),yearsExperience:ns("yearsExperience"),language:ns("language"),education:ns("education"),availability:ns("availability"),salary:ns("salary"),jobTitle:title.trim()||"Not specified"};
-  } catch { return {candidateName:"Not specified",location:"Not specified",dob:"Not specified",yearsExperience:"Not specified",language:"Not specified",education:"Not specified",availability:"Not specified",salary:"Not specified",jobTitle:title.trim()||"Not specified"}; }
+    const m = info.match(/\{[\s\S]*\}/); 
+    const p = m ? JSON.parse(m[0]) : {};
+    const ns = (k: string) => p[k] || "Not specified";
+    return {
+      candidateName: ns("candidateName"),
+      location: ns("location"),
+      dob: ns("dob"),
+      yearsExperience: ns("yearsExperience"),
+      language: ns("language"),
+      education: ns("education"),
+      availability: ns("availability"),
+      salary: ns("salary"),
+      jobTitle: ns("jobTitle")
+    };
+  } catch { 
+    return {
+      candidateName: "Not specified",
+      location: "Not specified",
+      dob: "Not specified",
+      yearsExperience: "Not specified",
+      language: "Not specified",
+      education: "Not specified",
+      availability: "Not specified",
+      salary: "Not specified",
+      jobTitle: "Not specified"
+    }; 
+  }
 }
 
 export const buildEmail=(info: any,summary: string)=>{
