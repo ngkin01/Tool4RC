@@ -6,7 +6,7 @@ import { UsageTracker } from './usage';
 // Configure PDF.js worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
-export type AIProvider = 'gemini' | 'openai' | 'grok' | 'groq';
+export type AIProvider = 'gemini' | 'openai' | 'grok' | 'groq' | 'cerebras';
 
 export function getProvider(): AIProvider {
   return (localStorage.getItem("ai_provider") as AIProvider) || 'gemini';
@@ -48,12 +48,22 @@ export function getGroqClient() {
   return new OpenAI({ apiKey: customKey, baseURL: "https://api.groq.com/openai/v1", dangerouslyAllowBrowser: true });
 }
 
+export function getCerebrasClient() {
+  const customKey = localStorage.getItem("custom_cerebras_api_key");
+  if (!customKey) throw new Error("Cerebras API key is missing");
+  return new OpenAI({ apiKey: customKey, baseURL: "https://api.cerebras.ai/v1", dangerouslyAllowBrowser: true });
+}
+
 export const getGeminiModel = () => {
   return localStorage.getItem("gemini_model") || "gemini-2.5-flash";
 };
 
 export const getGroqModel = () => {
   return localStorage.getItem("groq_model") || "llama-3.3-70b-versatile";
+};
+
+export const getCerebrasModel = () => {
+  return localStorage.getItem("cerebras_model") || "qwen-3-235b-a22b-instruct-2507";
 };
 
 export const getOpenAIModel = () => {
@@ -100,6 +110,15 @@ export async function testApiKey(provider: AIProvider, key: string, customProxyU
       const groq = new OpenAI({ apiKey: key, baseURL: "https://api.groq.com/openai/v1", dangerouslyAllowBrowser: true });
       const model = currentModel || getGroqModel();
       const response = await groq.chat.completions.create({
+        model: model,
+        messages: [{ role: "user", content: "Say 'OK'" }],
+        max_tokens: 5,
+      });
+      return { success: !!response.choices[0].message.content };
+    } else if (provider === 'cerebras') {
+      const cerebras = new OpenAI({ apiKey: key, baseURL: "https://api.cerebras.ai/v1", dangerouslyAllowBrowser: true });
+      const model = currentModel || getCerebrasModel();
+      const response = await cerebras.chat.completions.create({
         model: model,
         messages: [{ role: "user", content: "Say 'OK'" }],
         max_tokens: 5,
@@ -154,6 +173,19 @@ export async function gemini(system: string, user: string, maxTokens=1200) {
     });
     if (response.usage) UsageTracker.logUsage(provider, model, response.usage.prompt_tokens, response.usage.completion_tokens);
     return response.choices[0].message.content || "";
+  } else if (provider === 'cerebras') {
+    const cerebras = getCerebrasClient();
+    const model = getCerebrasModel();
+    const response = await cerebras.chat.completions.create({
+      model: model,
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: user }
+      ],
+      max_tokens: maxTokens,
+    });
+    if (response.usage) UsageTracker.logUsage(provider, model, response.usage.prompt_tokens, response.usage.completion_tokens);
+    return response.choices[0].message.content || "";
   }
 
   const ai = getGeminiClient();
@@ -195,7 +227,7 @@ async function extractTextFromPdfBase64(base64: string): Promise<string> {
 export async function geminiWithDoc(system: string, userText: string, pdfBase64: string | null = null, maxTokens=1200) {
   const provider = getProvider();
 
-  if (provider === 'openai' || provider === 'grok' || provider === 'groq') {
+  if (provider === 'openai' || provider === 'grok' || provider === 'groq' || provider === 'cerebras') {
     let finalUserText = userText;
     if (pdfBase64) {
       const extractedText = await extractTextFromPdfBase64(pdfBase64);
@@ -227,10 +259,23 @@ export async function geminiWithDoc(system: string, userText: string, pdfBase64:
       });
       if (response.usage) UsageTracker.logUsage(provider, "grok-2-latest", response.usage.prompt_tokens, response.usage.completion_tokens);
       return response.choices[0].message.content || "";
-    } else {
+    } else if (provider === 'groq') {
       const groq = getGroqClient();
       const model = getGroqModel();
       const response = await groq.chat.completions.create({
+        model: model,
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content: finalUserText }
+        ],
+        max_tokens: maxTokens,
+      });
+      if (response.usage) UsageTracker.logUsage(provider, model, response.usage.prompt_tokens, response.usage.completion_tokens);
+      return response.choices[0].message.content || "";
+    } else {
+      const cerebras = getCerebrasClient();
+      const model = getCerebrasModel();
+      const response = await cerebras.chat.completions.create({
         model: model,
         messages: [
           { role: "system", content: system },

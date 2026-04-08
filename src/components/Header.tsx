@@ -17,7 +17,9 @@ export function Header({ onMenu }: any) {
   const [openaiKey, setOpenaiKey] = useState("");
   const [grokKey, setGrokKey] = useState("");
   const [groqKey, setGroqKey] = useState("");
+  const [cerebrasKey, setCerebrasKey] = useState("");
   const [groqModel, setGroqModel] = useState("llama-3.3-70b-versatile");
+  const [cerebrasModel, setCerebrasModel] = useState("qwen-3-235b-a22b-instruct-2507");
   const [openaiModel, setOpenaiModel] = useState("gpt-4o-mini");
   
   const [isTesting, setIsTesting] = useState(false);
@@ -38,6 +40,9 @@ export function Header({ onMenu }: any) {
       const savedGroqModel = localStorage.getItem("groq_model") || "llama-3.3-70b-versatile";
       setGroqModel(savedGroqModel);
       
+      const savedCerebrasModel = localStorage.getItem("cerebras_model") || "qwen-3-235b-a22b-instruct-2507";
+      setCerebrasModel(savedCerebrasModel);
+      
       const savedOpenaiModel = localStorage.getItem("openai_model") || "gpt-4o-mini";
       setOpenaiModel(savedOpenaiModel);
       
@@ -45,19 +50,21 @@ export function Header({ onMenu }: any) {
       const savedOpenai = localStorage.getItem("custom_openai_api_key") || "";
       const savedGrok = localStorage.getItem("custom_grok_api_key") || "";
       const savedGroq = localStorage.getItem("custom_groq_api_key") || "";
+      const savedCerebras = localStorage.getItem("custom_cerebras_api_key") || "";
       
       setGeminiKey(savedGemini);
       setOpenaiKey(savedOpenai);
       setGrokKey(savedGrok);
       setGroqKey(savedGroq);
+      setCerebrasKey(savedCerebras);
       
-      const currentKey = savedProvider === 'gemini' ? savedGemini : savedProvider === 'openai' ? savedOpenai : savedProvider === 'grok' ? savedGrok : savedGroq;
+      const currentKey = savedProvider === 'gemini' ? savedGemini : savedProvider === 'openai' ? savedOpenai : savedProvider === 'grok' ? savedGrok : savedProvider === 'groq' ? savedGroq : savedCerebras;
       setTestStatus(currentKey ? 'success' : 'idle');
       setErrorMessage("");
     }
   }, [showSettings]);
 
-  const currentKey = provider === 'gemini' ? geminiKey : provider === 'openai' ? openaiKey : provider === 'grok' ? grokKey : groqKey;
+  const currentKey = provider === 'gemini' ? geminiKey : provider === 'openai' ? openaiKey : provider === 'grok' ? grokKey : provider === 'groq' ? groqKey : cerebrasKey;
 
   const handleTestKey = async () => {
     if (!currentKey.trim()) return;
@@ -68,7 +75,7 @@ export function Header({ onMenu }: any) {
       provider, 
       currentKey.trim(), 
       provider === 'gemini' ? geminiProxyUrl : undefined,
-      provider === 'gemini' ? geminiModel : provider === 'openai' ? openaiModel : provider === 'groq' ? groqModel : undefined
+      provider === 'gemini' ? geminiModel : provider === 'openai' ? openaiModel : provider === 'groq' ? groqModel : provider === 'cerebras' ? cerebrasModel : undefined
     );
     if (result.success) {
       setTestStatus('success');
@@ -76,13 +83,15 @@ export function Header({ onMenu }: any) {
       localStorage.setItem("ai_provider", provider);
       localStorage.setItem("gemini_model", geminiModel);
       localStorage.setItem("groq_model", groqModel);
+      localStorage.setItem("cerebras_model", cerebrasModel);
       localStorage.setItem("openai_model", openaiModel);
       localStorage.setItem("gemini_proxy_url", geminiProxyUrl.trim());
       
       if (provider === 'gemini') localStorage.setItem("custom_gemini_api_key", currentKey.trim());
       else if (provider === 'openai') localStorage.setItem("custom_openai_api_key", currentKey.trim());
       else if (provider === 'grok') localStorage.setItem("custom_grok_api_key", currentKey.trim());
-      else localStorage.setItem("custom_groq_api_key", currentKey.trim());
+      else if (provider === 'groq') localStorage.setItem("custom_groq_api_key", currentKey.trim());
+      else localStorage.setItem("custom_cerebras_api_key", currentKey.trim());
     } else {
       setTestStatus('error');
       let displayError = result.error || "Invalid API Key. Please check and try again.";
@@ -115,6 +124,7 @@ export function Header({ onMenu }: any) {
     localStorage.setItem("ai_provider", provider);
     localStorage.setItem("gemini_model", geminiModel);
     localStorage.setItem("groq_model", groqModel);
+    localStorage.setItem("cerebras_model", cerebrasModel);
     localStorage.setItem("openai_model", openaiModel);
     
     if (geminiKey.trim()) {
@@ -140,6 +150,12 @@ export function Header({ onMenu }: any) {
       localStorage.setItem("custom_groq_api_key", groqKey.trim());
     } else {
       localStorage.removeItem("custom_groq_api_key");
+    }
+    
+    if (cerebrasKey.trim()) {
+      localStorage.setItem("custom_cerebras_api_key", cerebrasKey.trim());
+    } else {
+      localStorage.removeItem("custom_cerebras_api_key");
     }
     
     setShowSettings(false);
@@ -208,10 +224,11 @@ export function Header({ onMenu }: any) {
               <option value="openai">OpenAI (ChatGPT)</option>
               <option value="grok">xAI (Grok)</option>
               <option value="groq">Groq (Ultra-Fast Llama 3)</option>
+              <option value="cerebras">Cerebras (Ultra-Fast AI)</option>
             </select>
 
             <label style={{ fontSize: 14, fontWeight: 600, color: "var(--text-secondary)", display: "block", marginBottom: 8 }}>
-              {provider === 'gemini' ? 'Personal Gemini API Key' : provider === 'openai' ? 'Personal OpenAI API Key' : provider === 'grok' ? 'Personal Grok API Key' : 'Personal Groq API Key'}
+              {provider === 'gemini' ? 'Personal Gemini API Key' : provider === 'openai' ? 'Personal OpenAI API Key' : provider === 'grok' ? 'Personal Grok API Key' : provider === 'groq' ? 'Personal Groq API Key' : 'Personal Cerebras API Key'}
             </label>
             <div style={{ display: "flex", gap: 8, marginBottom: provider === 'gemini' ? 16 : 8 }}>
               <input 
@@ -221,10 +238,11 @@ export function Header({ onMenu }: any) {
                   if (provider === 'gemini') setGeminiKey(e.target.value);
                   else if (provider === 'openai') setOpenaiKey(e.target.value);
                   else if (provider === 'grok') setGrokKey(e.target.value);
-                  else setGroqKey(e.target.value);
+                  else if (provider === 'groq') setGroqKey(e.target.value);
+                  else setCerebrasKey(e.target.value);
                   setTestStatus('idle');
                 }} 
-                placeholder={`Paste your ${provider === 'gemini' ? 'Gemini' : provider === 'openai' ? 'OpenAI' : provider === 'grok' ? 'Grok' : 'Groq'} API Key here...`}
+                placeholder={`Paste your ${provider === 'gemini' ? 'Gemini' : provider === 'openai' ? 'OpenAI' : provider === 'grok' ? 'Grok' : provider === 'groq' ? 'Groq' : 'Cerebras'} API Key here...`}
                 style={{ flex: 1, border: "1.5px solid var(--border-color)", borderRadius: 8, padding: "10px 14px", fontSize: 14, outline: "none", transition: "border-color 0.2s" }}
                 onFocus={(e: any) => e.target.style.borderColor = "var(--border-focus)"} 
                 onBlur={(e: any) => e.target.style.borderColor = "var(--border-color)"}
@@ -340,6 +358,23 @@ export function Header({ onMenu }: any) {
               </>
             )}
 
+            {provider === 'cerebras' && (
+              <>
+                <label style={{ fontSize: 14, fontWeight: 600, color: "var(--text-secondary)", display: "block", marginBottom: 8 }}>Cerebras Model</label>
+                <select 
+                  value={cerebrasModel} 
+                  onChange={(e) => {
+                    setCerebrasModel(e.target.value);
+                    setTestStatus('idle');
+                  }}
+                  style={{ width: "100%", border: "1.5px solid var(--border-color)", borderRadius: 8, padding: "10px 14px", fontSize: 14, outline: "none", marginBottom: 8, background: "var(--bg-card)" }}
+                >
+                  <option value="qwen-3-235b-a22b-instruct-2507">Qwen 3 235B (qwen-3-235b-a22b-instruct-2507)</option>
+                  <option value="llama3.1-8b">Llama 3.1 8B</option>
+                </select>
+              </>
+            )}
+
             {testStatus === 'success' && (
               <div style={{ fontSize: 13, color: "var(--success)", fontWeight: 500, marginBottom: 12, display: "flex", alignItems: "center", gap: 4 }}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
@@ -366,9 +401,13 @@ export function Header({ onMenu }: any) {
                 <div style={{ marginBottom: 8 }}>
                   <strong>Don't have a Grok Key?</strong> Get it from the <a href="https://console.x.ai/" target="_blank" rel="noreferrer" style={{ color: "var(--border-focus)", textDecoration: "none", fontWeight: 500 }}>xAI Console</a>.
                 </div>
-              ) : (
+              ) : provider === 'groq' ? (
                 <div style={{ marginBottom: 8 }}>
                   <strong>Don't have a Groq Key?</strong> Get it from the <a href="https://console.groq.com/keys" target="_blank" rel="noreferrer" style={{ color: "var(--border-focus)", textDecoration: "none", fontWeight: 500 }}>Groq Console</a>.
+                </div>
+              ) : (
+                <div style={{ marginBottom: 8 }}>
+                  <strong>Don't have a Cerebras Key?</strong> Get it from the <a href="https://cloud.cerebras.ai/" target="_blank" rel="noreferrer" style={{ color: "var(--border-focus)", textDecoration: "none", fontWeight: 500 }}>Cerebras Cloud</a>.
                 </div>
               )}
               <div style={{ display: "flex", alignItems: "flex-start", gap: 6 }}>
