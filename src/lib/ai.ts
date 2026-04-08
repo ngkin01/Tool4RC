@@ -1,6 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 import OpenAI from "openai";
 import * as pdfjsLib from 'pdfjs-dist';
+import { UsageTracker } from './usage';
 
 // Configure PDF.js worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
@@ -126,6 +127,7 @@ export async function gemini(system: string, user: string, maxTokens=1200) {
       ],
       max_tokens: maxTokens,
     });
+    if (response.usage) UsageTracker.logUsage(provider, model, response.usage.prompt_tokens, response.usage.completion_tokens);
     return response.choices[0].message.content || "";
   } else if (provider === 'grok') {
     const grok = getGrokClient();
@@ -137,6 +139,7 @@ export async function gemini(system: string, user: string, maxTokens=1200) {
       ],
       max_tokens: maxTokens,
     });
+    if (response.usage) UsageTracker.logUsage(provider, "grok-2-latest", response.usage.prompt_tokens, response.usage.completion_tokens);
     return response.choices[0].message.content || "";
   } else if (provider === 'groq') {
     const groq = getGroqClient();
@@ -149,6 +152,7 @@ export async function gemini(system: string, user: string, maxTokens=1200) {
       ],
       max_tokens: maxTokens,
     });
+    if (response.usage) UsageTracker.logUsage(provider, model, response.usage.prompt_tokens, response.usage.completion_tokens);
     return response.choices[0].message.content || "";
   }
 
@@ -161,6 +165,7 @@ export async function gemini(system: string, user: string, maxTokens=1200) {
       systemInstruction: system,
     }
   });
+  if (response.usageMetadata) UsageTracker.logUsage('gemini', model, response.usageMetadata.promptTokenCount || 0, response.usageMetadata.candidatesTokenCount || 0);
   return response.text || "";
 }
 
@@ -208,6 +213,7 @@ export async function geminiWithDoc(system: string, userText: string, pdfBase64:
         ],
         max_tokens: maxTokens,
       });
+      if (response.usage) UsageTracker.logUsage(provider, model, response.usage.prompt_tokens, response.usage.completion_tokens);
       return response.choices[0].message.content || "";
     } else if (provider === 'grok') {
       const grok = getGrokClient();
@@ -219,6 +225,7 @@ export async function geminiWithDoc(system: string, userText: string, pdfBase64:
         ],
         max_tokens: maxTokens,
       });
+      if (response.usage) UsageTracker.logUsage(provider, "grok-2-latest", response.usage.prompt_tokens, response.usage.completion_tokens);
       return response.choices[0].message.content || "";
     } else {
       const groq = getGroqClient();
@@ -231,6 +238,7 @@ export async function geminiWithDoc(system: string, userText: string, pdfBase64:
         ],
         max_tokens: maxTokens,
       });
+      if (response.usage) UsageTracker.logUsage(provider, model, response.usage.prompt_tokens, response.usage.completion_tokens);
       return response.choices[0].message.content || "";
     }
   }
@@ -255,6 +263,7 @@ export async function geminiWithDoc(system: string, userText: string, pdfBase64:
       systemInstruction: system,
     }
   });
+  if (response.usageMetadata) UsageTracker.logUsage('gemini', model, response.usageMetadata.promptTokenCount || 0, response.usageMetadata.candidatesTokenCount || 0);
   return response.text || "";
 }
 
@@ -279,6 +288,8 @@ export async function getGoogleMapsGrounding(locationQuery: string) {
 
     const response = await Promise.race([fetchPromise, timeoutPromise]);
     
+    if (response.usageMetadata) UsageTracker.logUsage('gemini', model, response.usageMetadata.promptTokenCount || 0, response.usageMetadata.candidatesTokenCount || 0);
+
     const chunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
     let mapUri = "";
     if (chunks) {

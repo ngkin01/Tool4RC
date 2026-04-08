@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Modal } from './ui';
 import { testApiKey, AIProvider, getProvider } from '../lib/ai';
+import { UsageDashboard } from './UsageDashboard';
 
 export function Header({ onMenu }: any) {
   const location = useLocation();
   const isLanding = location.pathname === '/';
   const [showSettings, setShowSettings] = useState(false);
+  const [showUsage, setShowUsage] = useState(false);
   
   const [provider, setProvider] = useState<AIProvider>('gemini');
   const [geminiModel, setGeminiModel] = useState("gemini-2.5-flash");
@@ -145,23 +147,30 @@ export function Header({ onMenu }: any) {
   };
 
   return (
-    <header style={{ position: "sticky", top: 0, zIndex: 100, background: "var(--bg-header)", backdropFilter: "blur(12px)", borderBottom: "1px solid var(--border-color)", padding: "0 12px", height: 64, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-        <button onClick={onMenu} style={{ background: "none", border: "none", cursor: "pointer", padding: 8, borderRadius: 8, color: "var(--text-muted)", display: "flex", marginRight: 4 }}
+    <header style={{ position: "sticky", top: 0, zIndex: 100, background: "var(--bg-header)", backdropFilter: "blur(12px)", borderBottom: "1px solid var(--border-color)", padding: "0 12px", height: 64, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, flex: 1, minWidth: 0 }}>
+        <button onClick={onMenu} style={{ background: "none", border: "none", cursor: "pointer", padding: 8, borderRadius: 8, color: "var(--text-muted)", display: "flex", marginRight: 4, flexShrink: 0 }}
           onMouseEnter={(e: any) => e.currentTarget.style.background = "var(--bg-hover)"} onMouseLeave={(e: any) => e.currentTarget.style.background = "none"}>
           <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" /></svg>
         </button>
         {!isLanding && (
           <Link to="/" style={{ textDecoration: 'none', background: "none", border: "none", cursor: "pointer", padding: "6px 6px", borderRadius: 8, color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 4, fontSize: 14, fontWeight: 500, marginRight: 4, flexShrink: 0 }}
             onMouseEnter={(e: any) => e.currentTarget.style.background = "var(--bg-hover)"} onMouseLeave={(e: any) => e.currentTarget.style.background = "none"}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6" /></svg>Dashboard
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6" /></svg><span className="hidden sm:inline">Dashboard</span>
           </Link>
         )}
-        <div style={{ color: 'black', fontWeight: 'bold', fontSize: 24, display: 'flex', alignItems: 'center', flexShrink: 0 }}>
-          <img src="/logo.png" alt="Tool4RC Logo" className="logo-img" style={{ height: 50, objectFit: 'contain', flexShrink: 0 }} />
+        <div style={{ color: 'black', fontWeight: 'bold', fontSize: 24, display: 'flex', alignItems: 'center', flexShrink: 1, minWidth: 0 }}>
+          <img src="/logo.png" alt="Tool4RC Logo" className="logo-img" style={{ height: 50, maxWidth: "100%", objectFit: 'contain' }} />
         </div>
       </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+        {!isLanding && (
+          <button onClick={() => setShowUsage(true)} style={{ background: "none", border: "1px solid var(--border-color)", cursor: "pointer", padding: "8px 12px", borderRadius: 8, color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600 }}
+            onMouseEnter={(e: any) => e.currentTarget.style.background = "var(--bg-main)"} onMouseLeave={(e: any) => e.currentTarget.style.background = "none"}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+            Usage
+          </button>
+        )}
         {isLanding && (
           <button onClick={() => setShowSettings(true)} style={{ background: "none", border: "1px solid var(--border-color)", cursor: "pointer", padding: "8px 12px", borderRadius: 8, color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600 }}
             onMouseEnter={(e: any) => e.currentTarget.style.background = "var(--bg-main)"} onMouseLeave={(e: any) => e.currentTarget.style.background = "none"}>
@@ -380,6 +389,8 @@ export function Header({ onMenu }: any) {
           </div>
         </Modal>
       )}
+
+      {showUsage && <UsageDashboard onClose={() => setShowUsage(false)} />}
     </header>
   );
 }
