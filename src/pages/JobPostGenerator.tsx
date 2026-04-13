@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import Markdown from 'react-markdown';
 import { gemini } from '../lib/ai';
 import { Spin, Modal } from '../components/ui';
+import { LinkedInFormatter } from '../components/LinkedInFormatter';
 
 const DEFAULT_PLATFORMS = [
   {
@@ -349,7 +350,7 @@ Output ONLY the post content. No explanations, no "Here is..." preamble. Just th
           ):(
             <div style={{background:"var(--bg-card)",borderRadius:16,border:"1.5px solid var(--border-color)",padding:"22px 24px",boxShadow:"0 2px 12px rgba(0,0,0,.06)"}}>
               {/* Post header */}
-              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16,flexWrap:"wrap",gap:12}}>
                 <div style={{display:"flex",alignItems:"center",gap:8}}>
                   <div style={{width:8,height:8,borderRadius:"50%",background:"var(--success)"}}/>
                   <span style={{fontSize:13.5,fontWeight:700,color:"var(--text-primary)"}}>{currentPost?.platform}</span>
@@ -411,6 +412,15 @@ Output ONLY the post content. No explanations, no "Here is..." preamble. Just th
           <div style={{fontSize:13}}>Select a platform above to generate</div>
         </div>
       )}
+
+      {/* Standalone Text Formatter */}
+      <div style={{marginTop: 48, paddingTop: 32, borderTop: "1px solid var(--border-color)"}}>
+        <div style={{marginBottom: 24}}>
+          <h2 style={{fontSize: 20, fontWeight: 700, color: "var(--text-primary)", margin: "0 0 8px 0"}}>Social Media Text Formatter</h2>
+          <p style={{fontSize: 14, color: "var(--text-secondary)", margin: 0}}>Format your text with bold, italics, and more to stand out on LinkedIn, Facebook, and other platforms. You can use this independently or edit generated posts.</p>
+        </div>
+        <LinkedInFormatter initialText={currentPost?.text || ""} />
+      </div>
 
       {/* Edit Prompt Modal */}
       {editingPlat&&(
