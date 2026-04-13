@@ -3,7 +3,8 @@ import { formatText, FormatterStyle, unformatText } from '../lib/unicodeFormatte
 import {
   Undo, Redo, Eraser,
   Copy,
-  ThumbsUp, MessageSquare, Repeat, Send
+  ThumbsUp, MessageSquare, Repeat, Send,
+  List, ListOrdered, CheckSquare, ArrowUp, ArrowDown
 } from 'lucide-react';
 
 interface Props {
@@ -162,17 +163,20 @@ export function LinkedInFormatter({ initialText = '', onCopy }: Props) {
                 <option value="uppercase">UPPERCASE</option>
                 <option value="lowercase">lowercase</option>
               </optgroup>
-              <optgroup label="Lists">
-                <option value="number">1. Numbered List</option>
-                <option value="bullet">• Bullet Points</option>
-                <option value="checklist">☐ Checklist</option>
-                <option value="ascending">A. Ascending List</option>
-                <option value="descending">3. Descending List</option>
-              </optgroup>
             </select>
             
             <Divider />
-            {/* Group 2: History & Clear */}
+            {/* Group 2: Lists */}
+            <div style={{ display: 'flex', gap: 4 }}>
+              <ToolbarBtn icon={<List size={16}/>} onClick={() => handleFormatSelection('bullet')} title="Bullet Points" />
+              <ToolbarBtn icon={<ListOrdered size={16}/>} onClick={() => handleFormatSelection('number')} title="Numbered List" />
+              <ToolbarBtn icon={<CheckSquare size={16}/>} onClick={() => handleFormatSelection('checklist')} title="Checklist" />
+              <ToolbarBtn icon={<ArrowUp size={16}/>} onClick={() => handleFormatSelection('ascending')} title="Ascending List" />
+              <ToolbarBtn icon={<ArrowDown size={16}/>} onClick={() => handleFormatSelection('descending')} title="Descending List" />
+            </div>
+
+            <Divider />
+            {/* Group 3: History & Clear */}
             <div style={{ display: 'flex', gap: 4 }}>
               <ToolbarBtn icon={<Undo size={16}/>} onClick={handleUndo} disabled={historyIndex === 0} title="Undo" />
               <ToolbarBtn icon={<Redo size={16}/>} onClick={handleRedo} disabled={historyIndex === history.length - 1} title="Redo" />
