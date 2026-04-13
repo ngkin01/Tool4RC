@@ -59,14 +59,16 @@ export function LinkedInFormatter({ initialText = '', onCopy }: Props) {
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
 
-    if (start === end) return;
+    const isFullText = start === end;
+    const targetText = isFullText ? text : text.substring(start, end);
 
-    const selectedText = text.substring(start, end);
-    let newSelected = selectedText;
+    if (!targetText) return;
+
+    let newFormattedText = targetText;
 
     if (['bullet', 'number', 'checklist', 'ascending', 'descending'].includes(style)) {
-      const lines = selectedText.split('\n');
-      newSelected = lines.map((line, i) => {
+      const lines = targetText.split('\n');
+      newFormattedText = lines.map((line, i) => {
         if (!line.trim()) return line;
         if (style === 'bullet') return `• ${line}`;
         if (style === 'number') return `${i + 1}. ${line}`;
@@ -76,15 +78,22 @@ export function LinkedInFormatter({ initialText = '', onCopy }: Props) {
         return line;
       }).join('\n');
     } else {
-      newSelected = formatText(selectedText, style as FormatterStyle);
+      newFormattedText = formatText(targetText, style as FormatterStyle);
     }
 
-    const newText = text.substring(0, start) + newSelected + text.substring(end);
+    const newText = isFullText 
+      ? newFormattedText 
+      : text.substring(0, start) + newFormattedText + text.substring(end);
+      
     handleTextChange(newText);
 
     setTimeout(() => {
       textarea.focus();
-      textarea.setSelectionRange(start, start + newSelected.length);
+      if (isFullText) {
+        textarea.setSelectionRange(newFormattedText.length, newFormattedText.length);
+      } else {
+        textarea.setSelectionRange(start, start + newFormattedText.length);
+      }
     }, 0);
   };
 
