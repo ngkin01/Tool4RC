@@ -55,11 +55,8 @@ export function JDHub({ toast }: any) {
 
   return (
     <div style={{ padding: '32px', maxWidth: 1000, margin: '0 auto', width: '100%', animation: 'fadeIn 0.3s ease' }}>
-      <div style={{ marginBottom: 32, textAlign: 'center' }}>
-        <h1 style={{ fontSize: 28, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 8 }}>
-          JD <span style={{ background: 'linear-gradient(135deg, var(--warning), var(--warning))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Hub</span>
-        </h1>
-        <p style={{ color: 'var(--text-secondary)' }}>Find and share Job Descriptions quickly</p>
+      <div style={{ marginBottom: 24, textAlign: 'center' }}>
+        <p style={{ color: 'var(--text-primary)', fontSize: 18, fontWeight: 600 }}>Find and share Job Descriptions quickly</p>
       </div>
 
       <div style={{ display: 'flex', gap: 16, marginBottom: 24, flexWrap: 'wrap' }}>
@@ -98,22 +95,22 @@ export function JDHub({ toast }: any) {
             </div>
           ) : (
             filteredJobs.map((job, idx) => (
-              <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '12px 20px', borderRadius: 8, border: '1px solid #e5e7eb', boxShadow: '0 1px 2px rgba(0,0,0,0.05)', flexWrap: 'wrap', gap: 12 }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  <div style={{ fontSize: 15, fontWeight: 600, color: '#1f2937' }}>{job.JobTitle}</div>
-                  <div style={{ fontSize: 13, color: '#6b7280' }}>{job.ClientName}</div>
+              <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'white', padding: '8px 12px', borderRadius: 6, border: '1px solid #e5e7eb', marginBottom: 6 }}>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: '#1f2937' }}>{job.JobTitle}</div>
+                  <div style={{ fontSize: 12, color: '#6b7280' }}>{job.ClientName}</div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <a href={job.JDLink} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
-                    <button style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', background: '#eff6ff', color: '#2563eb', border: 'none', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s' }}>
-                      <ExternalLink size={14} /> View
+                    <button style={{ padding: '5px 8px', background: '#2563eb', color: 'white', border: 'none', borderRadius: 5, fontSize: 11, cursor: 'pointer', transition: 'all 0.2s ease' }}>
+                      View
                     </button>
                   </a>
                   <button 
                     onClick={() => handleCopy(job.JDLink)}
-                    style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', background: copiedLink === job.JDLink ? '#dcfce7' : '#10b981', color: copiedLink === job.JDLink ? '#166534' : '#fff', border: 'none', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s' }}
+                    style={{ padding: '5px 8px', background: copiedLink === job.JDLink ? '#9ca3af' : '#10b981', color: 'white', border: 'none', borderRadius: 5, fontSize: 11, cursor: 'pointer', transition: 'all 0.2s ease', transform: copiedLink === job.JDLink ? 'scale(0.95)' : 'none' }}
                   >
-                    {copiedLink === job.JDLink ? <><Check size={14} /> Copied</> : <><Copy size={14} /> Copy</>}
+                    {copiedLink === job.JDLink ? 'Copied ✓' : 'Copy'}
                   </button>
                 </div>
               </div>
