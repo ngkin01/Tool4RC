@@ -19,7 +19,7 @@ export function Landing() {
 
   return (
     <main style={{ animation: "fadeIn .3s ease" }}>
-      <div style={{ background: "linear-gradient(160deg,var(--bg-indigo-50) 0%,var(--bg-main) 55%)", padding: "40px 16px 36px", textAlign: "center", borderBottom: "1px solid var(--border-color)" }}>
+      <div style={{ padding: "40px 16px 36px", textAlign: "center", borderBottom: "1px solid var(--border-color)" }}>
         <h1 style={{ fontSize: "clamp(28px,6vw,44px)", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-.03em", lineHeight: 1.15, maxWidth: 540, margin: "0 auto 16px" }}>
           Work faster,<br />{"  "}<span style={{ background: "linear-gradient(135deg,var(--primary),var(--primary))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Close more placements.</span>
         </h1>
