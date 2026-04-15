@@ -6,7 +6,7 @@
 
 :root {
   --bg-main: #F8FAFC;
-  --bg-gradient: linear-gradient(to bottom, #fdf4ff 0%, #f5f0ff 35%, #edeaff 70%, #e2e6fa 100%);
+  --bg-gradient: linear-gradient(to bottom, #fffaff 0%, #f9f5ff 35%, #f3f0ff 70%, #edf0fc 100%);
   --bg-card: #fff;
   --bg-hover: #F1F5F9;
   --bg-input: #fff;
@@ -43,7 +43,7 @@
 
 .dark {
   --bg-main: #0F172A;
-  --bg-gradient: linear-gradient(to bottom, #4c1d95 0%, #3b0764 35%, #2e1065 70%, #1e1b4b 100%);
+  --bg-gradient: linear-gradient(to bottom, #5b21b6 0%, #4c1d95 35%, #3b0764 70%, #2e1065 100%);
   --bg-card: #1E293B;
   --bg-hover: #334155;
   --bg-input: #1E293B;
