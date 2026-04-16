@@ -39,11 +39,20 @@
   --border-emerald-200: #A7F3D0;
   --bg-header: rgba(255, 255, 255, 0.92);
   --bg-sidebar: #0F172A;
+  --bg-glass: rgba(255, 255, 255, 0.7);
+  --bg-glass-hover: rgba(255, 255, 255, 0.9);
+  --border-glass: rgba(255, 255, 255, 1);
+  --shadow-glass: 0 10px 32px -4px rgba(0, 0, 0, 0.08), 0 4px 12px -2px rgba(0, 0, 0, 0.04), inset 0 1px 1px rgba(255, 255, 255, 1);
+  --glass-inset: rgba(255, 255, 255, 1);
 }
 
 .dark {
-  --bg-main: #0F172A;
-  --bg-gradient: linear-gradient(to bottom, #0f172a 0%, #1e1b4b 50%, #2e1065 100%);
+  --bg-main: #05050a;
+  --bg-gradient: 
+    radial-gradient(circle at 15% 20%, rgba(107, 33, 168, 0.15) 0%, transparent 45%), 
+    radial-gradient(circle at 85% 70%, rgba(134, 25, 143, 0.12) 0%, transparent 45%), 
+    radial-gradient(circle at 40% 80%, rgba(76, 29, 149, 0.15) 0%, transparent 50%), 
+    #05050a;
   --bg-card: #1E293B;
   --bg-hover: #334155;
   --bg-input: #1E293B;
@@ -74,8 +83,13 @@
   --border-red-200: #DC2626;
   --border-sky-200: #0284C7;
   --border-emerald-200: #059669;
-  --bg-header: rgba(30, 41, 59, 0.92);
-  --bg-sidebar: #020617;
+  --bg-header: rgba(10, 10, 10, 0.8);
+  --bg-sidebar: #050505;
+  --bg-glass: rgba(24, 24, 27, 0.55);
+  --bg-glass-hover: rgba(39, 39, 42, 0.7);
+  --border-glass: rgba(255, 255, 255, 0.06);
+  --shadow-glass: 0 16px 40px -4px rgba(0, 0, 0, 0.8), 0 8px 16px -4px rgba(0, 0, 0, 0.6), inset 0 1px 1px rgba(255, 255, 255, 0.05);
+  --glass-inset: rgba(255, 255, 255, 0.08);
 }
 
 body {

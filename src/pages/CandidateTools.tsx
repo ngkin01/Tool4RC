@@ -100,7 +100,7 @@ export function AnalysisContent({analysis}: any) {
 
       {/* Overall Candidate */}
       {(analysis.overallCandidate || analysis.roleInterpretation)&&(
-        <div style={{background:"var(--bg-main)",borderRadius:10,border:"1.5px solid var(--border-color)",padding:"12px 14px",marginBottom:12}}>
+        <div style={{background:"var(--bg-glass)",backdropFilter:"blur(16px)",borderRadius:10,border:"1.5px solid var(--border-glass)",padding:"12px 14px",marginBottom:12}}>
           <div style={{fontSize:11,fontWeight:700,color:"var(--text-muted)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:8}}>Overall Candidate</div>
           {/* Meta tags row */}
           <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:analysis.overallCandidate?.profile || analysis.roleInterpretation?.whatTheyDo?8:0}}>
@@ -191,7 +191,7 @@ export function AnalysisContent({analysis}: any) {
       {/* Conclusion */}
       {analysis.conclusion&&(
         <Sec title="Conclusion" color="var(--primary-hover)">
-          <div style={{fontSize:13.5,color:"var(--text-secondary)",lineHeight:1.7,background:"var(--bg-main)",borderRadius:10,padding:"12px 14px",border:"1px solid var(--border-color)",fontStyle:"italic"}}>
+          <div style={{fontSize:13.5,color:"var(--text-secondary)",lineHeight:1.7,background:"var(--bg-glass)",backdropFilter:"blur(16px)",borderRadius:10,padding:"12px 14px",border:"1.5px solid var(--border-glass)",fontStyle:"italic"}}>
             {typeof analysis.conclusion === "object" ? analysis.conclusion.reason : analysis.conclusion}
           </div>
         </Sec>
@@ -430,9 +430,9 @@ export function CandidateTools({toast}: any){
           <p style={{fontSize:14,color:"var(--text-muted)"}}>Summary, email draft, and CV pre-call analysis</p>
         </div>
         <a href="https://sotel.vn/cong-cu-lay-so-dien-thoai-tu-facebook-mien-phi/" target="_blank" rel="noopener noreferrer" 
-           style={{display:"flex",alignItems:"center",gap:6,padding:"8px 14px",background:"var(--bg-card)",border:"1.5px solid var(--border-color)",borderRadius:8,fontSize:13,fontWeight:600,color:"var(--text-secondary)",textDecoration:"none",boxShadow:"0 1px 3px rgba(0,0,0,.05)",transition:"all .15s",marginTop:4}} 
-           onMouseEnter={(e: any)=>{e.currentTarget.style.borderColor="var(--primary)";e.currentTarget.style.color="var(--primary)";}} 
-           onMouseLeave={(e: any)=>{e.currentTarget.style.borderColor="var(--border-color)";e.currentTarget.style.color="var(--text-secondary)";}}>
+           style={{display:"flex",alignItems:"center",gap:6,padding:"8px 14px",background:"var(--bg-glass)",backdropFilter:"blur(16px)",border:"1.5px solid var(--border-glass)",borderRadius:8,fontSize:13,fontWeight:600,color:"var(--text-secondary)",textDecoration:"none",boxShadow:"var(--shadow-glass)",transition:"all .15s",marginTop:4}} 
+           onMouseEnter={(e: any)=>{e.currentTarget.style.borderColor="var(--primary)";e.currentTarget.style.color="var(--primary)";e.currentTarget.style.background="var(--bg-glass-hover)";}} 
+           onMouseLeave={(e: any)=>{e.currentTarget.style.borderColor="var(--border-glass)";e.currentTarget.style.color="var(--text-secondary)";e.currentTarget.style.background="var(--bg-glass)";}}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
           Find Phone
         </a>
@@ -441,7 +441,7 @@ export function CandidateTools({toast}: any){
       {/* Input Section */}
       <div style={{display:"flex",flexDirection:"column",gap:14,marginBottom:20}}>
         {/* CV */}
-        <div style={{background:"var(--bg-card)",borderRadius:14,border:"1.5px solid var(--border-color)",padding:"18px 20px",boxShadow:"0 1px 4px rgba(0,0,0,.04)"}}>
+        <div style={{background:"var(--bg-glass)",backdropFilter:"blur(16px)",borderRadius:14,border:"1.5px solid var(--border-glass)",padding:"18px 20px",boxShadow:"var(--shadow-glass)"}}>
           <div style={{fontSize:13.5,fontWeight:700,color:"var(--text-primary)",marginBottom:10}}>Upload CV or paste text</div>
           <div style={{display:"flex",gap:10,alignItems:"center",marginBottom:10,flexWrap:"wrap"}}>
             <label style={{cursor:"pointer"}}>
@@ -457,7 +457,7 @@ export function CandidateTools({toast}: any){
             </div>}
           </div>
           {!cvFile&&<TA value={cv} onChange={setCv} placeholder="Paste CV content here..." rows={6}/>}
-          {cvFile?.type==="pdf"&&<div style={{background:"var(--bg-main)",border:"1.5px solid var(--border-color)",borderRadius:9,padding:"12px",fontSize:13,color:"var(--text-muted)",textAlign:"center",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+          {cvFile?.type==="pdf"&&<div style={{background:"var(--bg-glass)",backdropFilter:"blur(16px)",border:"1.5px solid var(--border-glass)",borderRadius:9,padding:"12px",fontSize:13,color:"var(--text-muted)",textAlign:"center",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
             PDF ready
           </div>}
@@ -475,15 +475,15 @@ export function CandidateTools({toast}: any){
         </Btn>
         <div style={{display:"flex",alignItems:"center",borderRadius:12,border:"1.5px solid var(--primary)",overflow:"hidden",flexShrink:0,flex:"1 1 auto"}}>
           <button onClick={handleAnalyze} disabled={aL||!hasCV}
-            style={{display:"flex",alignItems:"center",justifyContent:"center",flex:1,gap:7,padding:"0 14px",height:44,background:"var(--bg-card)",border:"none",cursor:aL||!hasCV||!jd.trim()?"not-allowed":"pointer",fontWeight:600,fontSize:14,color:"var(--primary-hover)",opacity:aL||!hasCV||!jd.trim()?.5:1}}
-            onMouseEnter={(e: any)=>{if(!aL&&hasCV&&jd.trim())e.currentTarget.style.background="var(--bg-indigo-50)";}}
-            onMouseLeave={(e: any)=>e.currentTarget.style.background="var(--bg-card)"}>
+            style={{display:"flex",alignItems:"center",justifyContent:"center",flex:1,gap:7,padding:"0 14px",height:44,background:"var(--bg-glass)",backdropFilter:"blur(16px)",border:"none",cursor:aL||!hasCV||!jd.trim()?"not-allowed":"pointer",fontWeight:600,fontSize:14,color:"var(--primary-hover)",opacity:aL||!hasCV||!jd.trim()?.5:1}}
+            onMouseEnter={(e: any)=>{if(!aL&&hasCV&&jd.trim())e.currentTarget.style.background="var(--bg-glass-hover)";}}
+            onMouseLeave={(e: any)=>e.currentTarget.style.background="var(--bg-glass)"}>
             {aL ? <><span style={{width:14,height:14,border:"2px solid var(--primary)",borderTopColor:"transparent",borderRadius:"50%",animation:"spin .7s linear infinite",display:"inline-block",marginRight:6}}/> Analyzing...</> : <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{marginRight:4}}><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg> Analyze CV</>}
           </button>
-          <div style={{display:"flex",borderLeft:"1.5px solid var(--border-indigo-200)",height:44}}>
+          <div style={{display:"flex",borderLeft:"1.5px solid var(--border-glass)",height:44}}>
             {["EN","VI"].map(lang=>(
               <button key={lang} onClick={()=>setAnalysisLang(lang.toLowerCase())}
-                style={{width:40,height:"100%",border:"none",borderLeft:lang==="VI"?"1px solid var(--border-color)":"none",cursor:"pointer",fontSize:11,fontWeight:700,transition:"all .15s",background:analysisLang===lang.toLowerCase()?"var(--bg-indigo-50)":"var(--bg-card)",color:analysisLang===lang.toLowerCase()?"var(--primary-hover)":"var(--text-placeholder)"}}>
+                style={{width:40,height:"100%",border:"none",borderLeft:lang==="VI"?"1.5px solid var(--border-glass)":"none",cursor:"pointer",fontSize:11,fontWeight:700,transition:"all .15s",background:analysisLang===lang.toLowerCase()?"var(--bg-glass-hover)":"var(--bg-glass)",backdropFilter:"blur(16px)",color:analysisLang===lang.toLowerCase()?"var(--primary-hover)":"var(--text-placeholder)"}}>
                 {lang}
               </button>
             ))}
@@ -534,7 +534,7 @@ export function CandidateTools({toast}: any){
                   <CopyBtn text={sum}/>
                 </div>
               </div>
-              <div style={{background:"var(--bg-main)",borderRadius:10,border:"1px solid var(--border-color)",padding:"14px 16px",fontSize:13.5,color:"var(--text-secondary)",lineHeight:1.7,maxHeight:300,overflowY:"auto"}}>
+              <div style={{background:"var(--bg-glass)",backdropFilter:"blur(16px)",borderRadius:10,border:"1.5px solid var(--border-glass)",padding:"14px 16px",fontSize:13.5,color:"var(--text-secondary)",lineHeight:1.7,maxHeight:300,overflowY:"auto"}}>
                 <Markdown
                   components={{
                     ul: ({node, ...props}) => <ul style={{listStyleType: 'disc', paddingLeft: 20, margin: '8px 0'}} {...props} />,
@@ -566,7 +566,7 @@ export function CandidateTools({toast}: any){
 
       {/* Empty state */}
       {!hasResult && !aL && (
-        <div style={{textAlign:"center",padding:"32px 20px",color:"var(--text-placeholder)",background:"var(--bg-card)",borderRadius:14,border:"1.5px dashed var(--border-color)"}}>
+        <div style={{textAlign:"center",padding:"32px 20px",color:"var(--text-placeholder)",background:"var(--bg-glass)",backdropFilter:"blur(16px)",borderRadius:14,border:"1.5px dashed var(--border-glass)"}}>
           <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" style={{margin:"0 auto 10px",display:"block",opacity:.4}}><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
           <div style={{fontSize:14,fontWeight:500,marginBottom:4}}>Upload a CV to get started</div>
           <div style={{fontSize:12}}>Generate summary, analyze fit, or draft email</div>

@@ -271,7 +271,7 @@ function IMEditor({ template, vars, lang, onChange }: any) {
 
   return (
     <div className="ql-editor" style={{fontFamily:"'DM Sans','Noto Sans',sans-serif",fontSize:14.5,lineHeight:1.9,
-      color:"#1e293b",whiteSpace:"normal",wordBreak:"break-word",userSelect:"text", padding: 0, overflowY: 'visible'}}>
+      color:"var(--text-primary)",whiteSpace:"normal",wordBreak:"break-word",userSelect:"text", padding: 0, overflowY: 'visible'}}>
       {parse(htmlWithPlaceholders, options)}
     </div>
   );
@@ -431,16 +431,16 @@ export function InterviewMail({ toast }: any) {
   };
 
   const seg = (active: boolean) => ({
-    padding:"7px 14px", borderRadius:8, border:"1.5px solid "+(active?"#8b5cf6":"#e2e8f0"),
+    padding:"7px 14px", borderRadius:8, border:"1.5px solid "+(active?"var(--primary)":"var(--border-glass)"),
     cursor:"pointer", fontWeight:600, fontSize:13, fontFamily:"'DM Sans',sans-serif",
-    background:active?"linear-gradient(135deg,#8b5cf6,#6d28d9)":"#fff",
-    color:active?"#fff":"#374151", transition:"all .12s",
+    background:active?"linear-gradient(135deg,var(--primary),var(--primary-hover))":"var(--bg-glass)",
+    color:active?"#fff":"var(--text-primary)", transition:"all .12s", backdropFilter: "blur(16px)"
   });
 
   const pill = (active: boolean) => ({
     padding:"5px 14px", borderRadius:7, border:"none", cursor:"pointer", fontSize:12.5,
     fontWeight:700, fontFamily:"'DM Sans',sans-serif",
-    background:active?"#fff":"transparent", color:active?"#8b5cf6":"#64748b",
+    background:active?"var(--bg-card)":"transparent", color:active?"var(--primary)":"var(--text-muted)",
     boxShadow:active?"0 1px 4px rgba(0,0,0,.1)":"none", transition:"all .12s",
   });
 
@@ -451,10 +451,10 @@ export function InterviewMail({ toast }: any) {
       <div style={{marginBottom:20}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:10,marginBottom:14}}>
           <div>
-            <h1 style={{fontSize:"clamp(20px,5vw,26px)",fontWeight:800,color:"#0f172a",letterSpacing:"-.02em",marginBottom:4}}>
-              Interview <span style={{background:"linear-gradient(135deg,#8b5cf6,#6d28d9)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>Mail</span>
+            <h1 style={{fontSize:"clamp(20px,5vw,26px)",fontWeight:800,color:"var(--text-primary)",letterSpacing:"-.02em",marginBottom:4}}>
+              Interview <span style={{background:"linear-gradient(135deg,var(--primary),var(--primary-hover))",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>Mail</span>
             </h1>
-            <p style={{fontSize:13,color:"#94a3b8"}}>Click any highlighted field to edit inline</p>
+            <p style={{fontSize:13,color:"var(--text-muted)"}}>Click any highlighted field to edit inline</p>
           </div>
           <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
             {type === "offline" && (
@@ -466,13 +466,13 @@ export function InterviewMail({ toast }: any) {
             )}
             {/* Edit template btn */}
             <button onClick={()=>{setTplDraft(template);setEditingTpl(true);}}
-              style={{padding:"6px 12px",border:"1.5px solid #e2e8f0",borderRadius:8,background:"#fff",cursor:"pointer",fontSize:12,fontWeight:600,color:"#6366f1",fontFamily:"'DM Sans',sans-serif",display:"flex",alignItems:"center",gap:5}}>
+              style={{padding:"6px 12px",border:"1.5px solid var(--border-glass)",borderRadius:8,background:"var(--bg-glass)",cursor:"pointer",fontSize:12,fontWeight:600,color:"var(--primary)",fontFamily:"'DM Sans',sans-serif",display:"flex",alignItems:"center",gap:5,backdropFilter:"blur(16px)"}}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4z"/></svg>
               Template
             </button>
             {customTpls[tplKey] && (
               <button onClick={resetTpl}
-                style={{padding:"6px 12px",border:"1.5px solid #fde68a",borderRadius:8,background:"#fffbeb",cursor:"pointer",fontSize:12,fontWeight:600,color:"#d97706",fontFamily:"'DM Sans',sans-serif"}}>
+                style={{padding:"6px 12px",border:"1.5px solid var(--warning)",borderRadius:8,background:"var(--bg-glass)",cursor:"pointer",fontSize:12,fontWeight:600,color:"var(--warning)",fontFamily:"'DM Sans',sans-serif",backdropFilter:"blur(16px)"}}>
                 Reset
               </button>
             )}
@@ -486,17 +486,17 @@ export function InterviewMail({ toast }: any) {
             <button key={s.id} onClick={()=>save({stage:s.id})} style={seg(stage===s.id)}>{s.label}</button>
           ))}
 
-          <div style={{width:1,height:24,background:"#e2e8f0"}}/>
+          <div style={{width:1,height:24,background:"var(--border-glass)"}}/>
 
           {/* Online/Offline */}
-          <div style={{display:"flex",background:"#f1f5f9",borderRadius:9,padding:3,gap:2}}>
+          <div style={{display:"flex",background:"var(--bg-glass)",backdropFilter:"blur(16px)",borderRadius:9,padding:3,gap:2,border:"1.5px solid var(--border-glass)"}}>
             {[["offline","Offline"],["online","Online"]].map(([v,l])=>(
               <button key={v} onClick={()=>save({type:v})} style={pill(type===v)}>{l}</button>
             ))}
           </div>
 
           {/* Lang */}
-          <div style={{display:"flex",background:"#f1f5f9",borderRadius:9,padding:3,gap:2}}>
+          <div style={{display:"flex",background:"var(--bg-glass)",backdropFilter:"blur(16px)",borderRadius:9,padding:3,gap:2,border:"1.5px solid var(--border-glass)"}}>
             {["en","vi"].map(l=>(
               <button key={l} onClick={()=>save({lang:l})} style={pill(lang===l)}>{l.toUpperCase()}</button>
             ))}
@@ -505,13 +505,13 @@ export function InterviewMail({ toast }: any) {
       </div>
 
       {/* ── Subject ── */}
-      <div style={{background:"#f5f3ff",border:"1.5px solid #ddd6fe",borderRadius:12,padding:"12px 16px",marginBottom:16,display:"flex",alignItems:"flex-start",gap:10}}>
+      <div style={{background:"var(--bg-glass)",backdropFilter:"blur(16px)",border:"1.5px solid var(--border-glass)",borderRadius:12,padding:"12px 16px",marginBottom:16,display:"flex",alignItems:"flex-start",gap:10,boxShadow:"var(--shadow-glass)"}}>
         <div style={{flex:1}}>
-          <div style={{fontSize:10.5,fontWeight:700,color:"#a78bfa",textTransform:"uppercase",letterSpacing:".08em",marginBottom:5}}>Subject (auto)</div>
-          <div style={{fontSize:13,color:"#4c1d95",fontWeight:500,lineHeight:1.5,wordBreak:"break-all"}}>{subject}</div>
+          <div style={{fontSize:10.5,fontWeight:700,color:"var(--primary)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:5}}>Subject (auto)</div>
+          <div style={{fontSize:13,color:"var(--text-primary)",fontWeight:500,lineHeight:1.5,wordBreak:"break-all"}}>{subject}</div>
         </div>
         <button onClick={()=>copy(subject,"sub")}
-          style={{flexShrink:0,padding:"5px 12px",border:"1.5px solid #ddd6fe",borderRadius:8,cursor:"pointer",fontSize:11.5,fontWeight:600,color:copied==="sub"?"#059669":"#7c3aed",background:copied==="sub"?"#ecfdf5":"#fff",fontFamily:"'DM Sans',sans-serif",transition:"all .15s",display:"flex",alignItems:"center",gap:5}}>
+          style={{flexShrink:0,padding:"5px 12px",border:"1.5px solid var(--border-glass)",borderRadius:8,cursor:"pointer",fontSize:11.5,fontWeight:600,color:copied==="sub"?"var(--success)":"var(--primary)",background:"var(--bg-card)",fontFamily:"'DM Sans',sans-serif",transition:"all .15s",display:"flex",alignItems:"center",gap:5}}>
           {copied==="sub"
             ?<><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>Copied</>
             :<><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copy</>
@@ -520,7 +520,7 @@ export function InterviewMail({ toast }: any) {
       </div>
 
       {/* ── Email Editor ── */}
-      <div style={{background:"#fff",borderRadius:14,border:"1.5px solid #e2e8f0",padding:"28px 32px",boxShadow:"0 2px 12px rgba(0,0,0,.05)",minHeight:420,marginBottom:16}}>
+      <div style={{background:"var(--bg-glass)",backdropFilter:"blur(16px)",borderRadius:14,border:"1.5px solid var(--border-glass)",padding:"28px 32px",boxShadow:"var(--shadow-glass)",minHeight:420,marginBottom:16}}>
         <IMEditor template={template} vars={vars} lang={lang} onChange={setVar}/>
       </div>
 

@@ -218,12 +218,12 @@ Output ONLY the post content. No explanations, no "Here is..." preamble. Just th
       </div>
 
       {/* Input Section */}
-      <div style={{background:"var(--bg-card)",borderRadius:16,border:"1.5px solid var(--border-color)",padding:"22px 24px",marginBottom:16,boxShadow:"0 1px 4px rgba(0,0,0,.04)"}}>
+      <div style={{background:"var(--bg-glass)",backdropFilter:"blur(16px)",borderRadius:16,border:"1.5px solid var(--border-glass)",padding:"22px 24px",marginBottom:16,boxShadow:"var(--shadow-glass)"}}>
         <div style={{fontSize:14,fontWeight:700,color:"var(--text-primary)",marginBottom:12}}>Paste Job description or Job URL</div>
         <textarea value={jd} onChange={e=>setJd(e.target.value)} rows={7}
           placeholder="Paste job description..."
-          style={{...inpStyle, resize:"none"}}
-          onFocus={(e: any)=>e.target.style.borderColor="var(--success)"} onBlur={(e: any)=>e.target.style.borderColor="var(--border-color)"}/>
+          style={{...inpStyle, resize:"none", background:"var(--bg-glass)", border:"1.5px solid var(--border-glass)", color:"var(--text-primary)"}}
+          onFocus={(e: any)=>e.target.style.borderColor="var(--success)"} onBlur={(e: any)=>e.target.style.borderColor="var(--border-glass)"}/>
         {isURL && (
           <div style={{marginTop:10,display:"flex",justifyContent:"flex-end"}}>
             <button onClick={handleExtractURL} disabled={urlLoading}
@@ -235,7 +235,7 @@ Output ONLY the post content. No explanations, no "Here is..." preamble. Just th
       </div>
 
       {/* Platform Buttons */}
-      <div style={{background:"var(--bg-card)",borderRadius:16,border:"1.5px solid var(--border-color)",padding:"22px 24px",marginBottom:16,boxShadow:"0 1px 4px rgba(0,0,0,.04)"}}>
+      <div style={{background:"var(--bg-glass)",backdropFilter:"blur(16px)",borderRadius:16,border:"1.5px solid var(--border-glass)",padding:"22px 24px",marginBottom:16,boxShadow:"var(--shadow-glass)"}}>
         <div style={{fontSize:14,fontWeight:700,color:"var(--text-primary)",marginBottom:14}}>Generate for:</div>
         <div style={{display:"flex",flexWrap:"wrap",gap:10}}>
           {platforms.map((p: any)=>(
@@ -266,21 +266,21 @@ Output ONLY the post content. No explanations, no "Here is..." preamble. Just th
                   } :
                   // Disabled
                   loading ? {
-                    background:"var(--bg-main)",color:"var(--border-color)",
-                    border:"1.5px solid var(--bg-hover)",
+                    background:"var(--bg-glass)",color:"var(--text-muted)",
+                    border:"1.5px solid var(--border-glass)",
                     opacity:.55,
                   } :
                   // Normal hover-ready
                   {
-                    background:"var(--bg-card)",color:p.color,
-                    border:`1.5px solid ${p.color}30`,
-                    boxShadow:`0 2px 8px ${p.color}20`,
+                    background:"var(--bg-glass)",color:p.color,
+                    border:`1.5px solid var(--border-glass)`,
+                    boxShadow:`var(--shadow-glass)`,
                   }),
                 }}
                 onMouseEnter={(e: any)=>{
                   if(loading||!jd.trim()) return;
                   if(activePlatId===p.id) return;
-                  e.currentTarget.style.background=p.bg||"var(--bg-indigo-50)";
+                  e.currentTarget.style.background="var(--bg-glass-hover)";
                   e.currentTarget.style.borderColor=p.color;
                   e.currentTarget.style.boxShadow=`0 8px 24px ${p.color}35`;
                   e.currentTarget.style.color=p.color;
@@ -288,9 +288,9 @@ Output ONLY the post content. No explanations, no "Here is..." preamble. Just th
                 onMouseLeave={(e: any)=>{
                   if(loading||!jd.trim()) return;
                   if(activePlatId===p.id) return;
-                  e.currentTarget.style.background="var(--bg-card)";
-                  e.currentTarget.style.borderColor=`${p.color}30`;
-                  e.currentTarget.style.boxShadow=`0 2px 8px ${p.color}20`;
+                  e.currentTarget.style.background="var(--bg-glass)";
+                  e.currentTarget.style.borderColor=`var(--border-glass)`;
+                  e.currentTarget.style.boxShadow=`var(--shadow-glass)`;
                   e.currentTarget.style.color=p.color;
                 }}
               >

@@ -61,44 +61,44 @@ export function JDHub({ toast }: any) {
 
       <div style={{ display: 'flex', gap: 16, marginBottom: 24, flexWrap: 'wrap' }}>
         <div style={{ flex: '1 1 300px', position: 'relative' }}>
-          <Search size={18} color="#9ca3af" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }} />
+          <Search size={18} color="var(--text-placeholder)" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }} />
           <input
             type="text"
             placeholder="Job title..."
             value={searchTitle}
             onChange={(e) => setSearchTitle(e.target.value)}
-            style={{ width: '100%', padding: '12px 12px 12px 40px', borderRadius: 8, border: '1px solid #e5e7eb', outline: 'none', fontSize: 15, boxSizing: 'border-box' }}
+            style={{ width: '100%', padding: '12px 12px 12px 40px', borderRadius: 12, border: '1.5px solid var(--border-glass)', background: 'var(--bg-glass)', color: 'var(--text-primary)', outline: 'none', fontSize: 15, boxSizing: 'border-box', backdropFilter: 'blur(16px)', boxShadow: 'var(--shadow-glass)' }}
           />
         </div>
         <div style={{ flex: '1 1 300px', position: 'relative' }}>
-          <Search size={18} color="#9ca3af" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }} />
+          <Search size={18} color="var(--text-placeholder)" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }} />
           <input
             type="text"
             placeholder="Client..."
             value={searchClient}
             onChange={(e) => setSearchClient(e.target.value)}
-            style={{ width: '100%', padding: '12px 12px 12px 40px', borderRadius: 8, border: '1px solid #e5e7eb', outline: 'none', fontSize: 15, boxSizing: 'border-box' }}
+            style={{ width: '100%', padding: '12px 12px 12px 40px', borderRadius: 12, border: '1.5px solid var(--border-glass)', background: 'var(--bg-glass)', color: 'var(--text-primary)', outline: 'none', fontSize: 15, boxSizing: 'border-box', backdropFilter: 'blur(16px)', boxShadow: 'var(--shadow-glass)' }}
           />
         </div>
       </div>
 
       {loading ? (
-        <div style={{ textAlign: 'center', padding: 40, color: '#6b7280' }}>
-          <div style={{ display: 'inline-block', width: 24, height: 24, border: '3px solid #e5e7eb', borderTopColor: 'var(--warning)', borderRadius: '50%', animation: 'spin 1s linear infinite', marginBottom: 12 }}></div>
+        <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>
+          <div style={{ display: 'inline-block', width: 24, height: 24, border: '3px solid var(--border-color)', borderTopColor: 'var(--warning)', borderRadius: '50%', animation: 'spin 1s linear infinite', marginBottom: 12 }}></div>
           <div>Loading jobs...</div>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {filteredJobs.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: 40, color: '#6b7280', background: '#fff', borderRadius: 8, border: '1px solid #e5e7eb' }}>
+            <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)', background: 'var(--bg-glass)', backdropFilter: 'blur(16px)', borderRadius: 12, border: '1.5px solid var(--border-glass)', boxShadow: 'var(--shadow-glass)' }}>
               No jobs found matching your search.
             </div>
           ) : (
             filteredJobs.map((job, idx) => (
-              <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'white', padding: '8px 12px', borderRadius: 6, border: '1px solid #e5e7eb', marginBottom: 6 }}>
+              <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-glass)', backdropFilter: 'blur(16px)', padding: '14px 18px', borderRadius: 12, border: '1.5px solid var(--border-glass)', boxShadow: 'var(--shadow-glass)' }}>
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: '#1f2937' }}>{job.JobTitle}</div>
-                  <div style={{ fontSize: 12, color: '#6b7280' }}>{job.ClientName}</div>
+                  <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)' }}>{job.JobTitle}</div>
+                  <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>{job.ClientName}</div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <a href={job.JDLink} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
