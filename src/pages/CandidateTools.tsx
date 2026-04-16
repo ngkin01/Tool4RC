@@ -439,32 +439,51 @@ export function CandidateTools({toast}: any){
       </div>
 
       {/* Input Section */}
-      <div style={{display:"flex",flexDirection:"column",gap:14,marginBottom:20}}>
+      <div style={{display:"flex",flexDirection:"column",gap:20,marginBottom:24}}>
         {/* CV */}
-        <div style={{background:"var(--bg-glass)",backdropFilter:"blur(16px)",borderRadius:14,border:"1.5px solid var(--border-glass)",padding:"18px 20px",boxShadow:"var(--shadow-glass)"}}>
-          <div style={{fontSize:13.5,fontWeight:700,color:"var(--text-primary)",marginBottom:10}}>Upload CV or paste text</div>
-          <div style={{display:"flex",gap:10,alignItems:"center",marginBottom:10,flexWrap:"wrap"}}>
+        <div>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+            <label style={{fontSize:14,fontWeight:700,color:"var(--text-primary)"}}>Candidate CV</label>
             <label style={{cursor:"pointer"}}>
               <input type="file" accept=".pdf,.docx,.txt" onChange={handleFile} style={{display:"none"}}/>
-              <div style={{display:"flex",alignItems:"center",gap:7,padding:"8px 14px",background:"var(--bg-hover)",border:"1.5px solid var(--border-color)",borderRadius:9,fontSize:13,fontWeight:600,color:"var(--text-secondary)",cursor:"pointer"}}>
+              <div style={{display:"flex",alignItems:"center",gap:6,padding:"6px 14px",background:"var(--bg-glass)",backdropFilter:"blur(16px)",border:"1.5px solid var(--border-glass)",borderRadius:8,fontSize:12.5,fontWeight:600,color:"var(--text-primary)",cursor:"pointer",transition:"all .15s",boxShadow:"var(--shadow-glass)"}}
+                   onMouseEnter={(e: any)=>{e.currentTarget.style.borderColor="var(--primary)";e.currentTarget.style.color="var(--primary)";e.currentTarget.style.background="var(--bg-glass-hover)";}}
+                   onMouseLeave={(e: any)=>{e.currentTarget.style.borderColor="var(--border-glass)";e.currentTarget.style.color="var(--text-primary)";e.currentTarget.style.background="var(--bg-glass)";}}>
                 {fileLoading?<><Spin size={13}/> Reading...</>:<><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Upload File</>}
               </div>
             </label>
-            {cvFile&&<div style={{display:"flex",alignItems:"center",gap:7,padding:"8px 12px",background:"var(--bg-emerald-50)",border:"1.5px solid var(--border-emerald-200)",borderRadius:9}}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--success)" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-              <span style={{fontSize:12.5,color:"var(--success)",fontWeight:500,maxWidth:180,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{cvFile.name}</span>
-              <button onClick={()=>{setCvFile(null);setCv("");}} style={{background:"none",border:"none",cursor:"pointer",color:"var(--text-muted)",fontSize:15,padding:"0 2px",lineHeight:1}}>×</button>
-            </div>}
           </div>
-          {!cvFile&&<TA value={cv} onChange={setCv} placeholder="Paste CV content here..." rows={6}/>}
-          {cvFile?.type==="pdf"&&<div style={{background:"var(--bg-glass)",backdropFilter:"blur(16px)",border:"1.5px solid var(--border-glass)",borderRadius:9,padding:"12px",fontSize:13,color:"var(--text-muted)",textAlign:"center",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-            PDF ready
-          </div>}
+          {cvFile ? (
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"16px 20px",background:"var(--bg-glass)",backdropFilter:"blur(16px)",border:"1.5px solid var(--success)",borderRadius:12,boxShadow:"var(--shadow-glass)"}}>
+              <div style={{display:"flex",alignItems:"center",gap:14}}>
+                <div style={{width:42,height:42,borderRadius:10,background:"var(--bg-emerald-50)",display:"flex",alignItems:"center",justifyContent:"center",border:"1px solid var(--border-emerald-200)"}}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--success)" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                </div>
+                <div>
+                  <div style={{fontSize:14.5,fontWeight:700,color:"var(--text-primary)",marginBottom:2}}>{cvFile.name}</div>
+                  <div style={{fontSize:12.5,color:"var(--success)",fontWeight:500}}>File loaded successfully</div>
+                </div>
+              </div>
+              <button onClick={()=>{setCvFile(null);setCv("");}} style={{background:"var(--bg-glass)",backdropFilter:"blur(16px)",border:"1.5px solid var(--border-glass)",width:32,height:32,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",color:"var(--text-muted)",transition:"all .15s"}} onMouseEnter={(e: any)=>{e.currentTarget.style.background="var(--bg-red-50)";e.currentTarget.style.color="var(--danger)";e.currentTarget.style.borderColor="var(--danger)";}} onMouseLeave={(e: any)=>{e.currentTarget.style.background="var(--bg-glass)";e.currentTarget.style.color="var(--text-muted)";e.currentTarget.style.borderColor="var(--border-glass)";}}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+          ) : (
+            <TA value={cv} onChange={setCv} placeholder="Paste CV content here..." rows={6}/>
+          )}
         </div>
 
-        <TA value={jd} onChange={setJd} placeholder="Paste job description..." rows={5}/>
-        <TA value={notes} onChange={setNotes} placeholder="Notes: salary, notice period, etc. (optional)" rows={2}/>
+        {/* JD */}
+        <div>
+          <div style={{fontSize:14,fontWeight:700,color:"var(--text-primary)",marginBottom:8}}>Job Description</div>
+          <TA value={jd} onChange={setJd} placeholder="Paste job description..." rows={5}/>
+        </div>
+
+        {/* Notes */}
+        <div>
+          <div style={{fontSize:14,fontWeight:700,color:"var(--text-primary)",marginBottom:8}}>Additional Notes <span style={{fontWeight:400,color:"var(--text-muted)",fontSize:12}}>(Optional)</span></div>
+          <TA value={notes} onChange={setNotes} placeholder="Salary expectations, notice period, etc." rows={2}/>
+        </div>
       </div>
 
       {/* Action Buttons */}

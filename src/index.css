@@ -6,7 +6,7 @@
 
 :root {
   --bg-main: #F8FAFC;
-  --bg-gradient: linear-gradient(to bottom, #ffffff 0%, #faf5ff 40%, #f3e8ff 100%);
+  --bg-gradient: linear-gradient(to bottom, #ffffff 0%, #ffffff 20%, #D4C5EB 100%);
   --bg-card: #fff;
   --bg-hover: #F1F5F9;
   --bg-input: #fff;
@@ -47,12 +47,12 @@
 }
 
 .dark {
-  --bg-main: #05050a;
+  --bg-main: #030408;
   --bg-gradient: 
-    radial-gradient(circle at 15% 20%, rgba(107, 33, 168, 0.15) 0%, transparent 45%), 
-    radial-gradient(circle at 85% 70%, rgba(134, 25, 143, 0.12) 0%, transparent 45%), 
-    radial-gradient(circle at 40% 80%, rgba(76, 29, 149, 0.15) 0%, transparent 50%), 
-    #05050a;
+    radial-gradient(circle at 15% 20%, rgba(41, 52, 122, 0.2) 0%, transparent 45%), 
+    radial-gradient(circle at 85% 70%, rgba(131, 37, 128, 0.15) 0%, transparent 45%), 
+    radial-gradient(circle at 40% 80%, rgba(74, 43, 123, 0.2) 0%, transparent 50%), 
+    #030408;
   --bg-card: #1E293B;
   --bg-hover: #334155;
   --bg-input: #1E293B;

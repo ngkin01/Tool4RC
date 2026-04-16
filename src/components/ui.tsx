@@ -58,8 +58,8 @@ export function Modal({title,subtitle,onClose,children,width=640}: any){
 
 export function TA({value,onChange,placeholder,rows=6,mono,readOnly}: any){
   return <textarea value={value} onChange={onChange?(e: any)=>onChange(e.target.value):undefined} placeholder={placeholder} rows={rows} readOnly={readOnly}
-    style={{width:"100%",border:"1.5px solid var(--border-color)",borderRadius:10,padding:"12px 14px",fontSize:13.5,color:"var(--text-secondary)",lineHeight:1.7,fontFamily:mono?"'IBM Plex Mono','Courier New',monospace":"'DM Sans', 'Noto Sans', system-ui, sans-serif",resize:"none",outline:"none",background:readOnly?"var(--bg-main)":"var(--bg-card)",transition:"border-color .2s"}}
-    onFocus={(e: any)=>{if(!readOnly)e.target.style.borderColor="var(--primary)";}} onBlur={(e: any)=>e.target.style.borderColor="var(--border-color)"}/>;
+    style={{width:"100%",border:"1.5px solid var(--border-glass)",borderRadius:10,padding:"12px 14px",fontSize:13.5,color:"var(--text-primary)",lineHeight:1.7,fontFamily:mono?"'IBM Plex Mono','Courier New',monospace":"'DM Sans', 'Noto Sans', system-ui, sans-serif",resize:"none",outline:"none",background:readOnly?"var(--bg-glass)":"var(--bg-glass)",backdropFilter:"blur(16px)",boxShadow:"var(--shadow-glass)",transition:"border-color .2s"}}
+    onFocus={(e: any)=>{if(!readOnly)e.target.style.borderColor="var(--primary)";}} onBlur={(e: any)=>e.target.style.borderColor="var(--border-glass)"}/>;
 }
 
 export function InputCard({label,hint,required=true,value,onChange,placeholder,rows}: any){
