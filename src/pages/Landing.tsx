@@ -21,7 +21,7 @@ export function Landing() {
     <main style={{ animation: "fadeIn .3s ease" }}>
       <div style={{ padding: "40px 16px 36px", textAlign: "center", borderBottom: "1px solid var(--border-color)" }}>
         <h1 style={{ fontSize: "clamp(28px,6vw,44px)", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-.03em", lineHeight: 1.15, maxWidth: 540, margin: "0 auto 16px" }}>
-          Work faster,<br />{"  "}<span style={{ background: "linear-gradient(135deg,var(--primary),var(--primary))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Close more placements.</span>
+          <span style={{ textShadow: "1px 2px 0px rgba(100, 116, 139, 0.3)" }}>Work faster,</span><br />{"  "}<span style={{ background: "linear-gradient(135deg,var(--primary),var(--primary))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", filter: "drop-shadow(1px 2px 0px rgba(99, 102, 241, 0.3))" }}>Close more placements.</span>
         </h1>
         <p style={{ fontSize: "clamp(12px,3.5vw,16px)", color: "var(--text-muted)", margin: "0 auto", lineHeight: 1.5, padding: "0 8px" }}>Automate the process, humanize the candidate experience.</p>
       </div>
@@ -83,7 +83,7 @@ export function Landing() {
 
       {/* Slogan / Footer */}
       <div style={{ textAlign: "center", paddingBottom: 48, marginTop: 16 }}>
-        <span style={{ fontSize: 13, fontWeight: 500, color: "var(--text-placeholder)", letterSpacing: "0.02em" }}>
+        <span style={{ fontSize: 13, fontWeight: 500, color: "var(--text-secondary)", letterSpacing: "0.02em" }}>
           Tool for Recruitment Consultant - for Real Connections.
         </span>
       </div>
