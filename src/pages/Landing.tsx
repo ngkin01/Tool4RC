@@ -67,8 +67,8 @@ export function Landing() {
                 </div>
               </>
             );
-            return c.href
-              ? <a key={c.id} href={c.href} target="_blank" rel="noopener noreferrer" style={s} onMouseEnter={hIn} onMouseLeave={hOut}>{inner}</a>
+            return (c as any).href
+              ? <a key={c.id} href={(c as any).href} target="_blank" rel="noopener noreferrer" style={s} onMouseEnter={hIn} onMouseLeave={hOut}>{inner}</a>
               : <Link key={c.id} to={c.path || '/'} style={s} onMouseEnter={hIn} onMouseLeave={hOut}>{inner}</Link>;
           })}
         </div>

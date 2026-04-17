@@ -367,45 +367,47 @@ export function InterviewPlanner({toast}: any){
       </div>
 
       {/* Controls */}
-      <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:20,flexWrap:"wrap"}}>
-        <div style={{display:"flex",alignItems:"center",gap:10}}>
-          <span style={{fontSize:14,fontWeight:600,color:"var(--text-secondary)"}}>Date:</span>
-          <DatePicker value={date} onChange={setDate}/>
-        </div>
-        <div style={{position:"relative",flex:"1 1 180px",minWidth:160,maxWidth:320}}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-placeholder)" strokeWidth="2" style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)"}}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input value={tzSearch} onChange={e=>setTzSearch(e.target.value)} placeholder="Search city..." style={{...inpStyle,width:"100%",paddingLeft:32,paddingRight:12}}
-            onFocus={(e: any)=>e.target.style.borderColor="var(--info)"} onBlur={(e: any)=>{setTimeout(()=>setTzResults([]),200);e.target.style.borderColor="var(--border-color)";}}/>
-          {tzResults.length>0&&(
-            <div style={{position:"fixed",left:"50%",transform:"translateX(-50%)",width:"min(380px,92vw)",background:"var(--bg-card)",borderRadius:12,border:"1.5px solid var(--border-color)",boxShadow:"0 12px 40px rgba(0,0,0,.15)",zIndex:300,overflow:"hidden",animation:"slideUp .15s ease"}}>
-              <div style={{maxHeight:320,overflowY:"auto"}}>
-              {tzResults.map((t,i)=>{const dst=getDSTLabel(t.tz,date),now=getCurrentTime(t.tz,is24);return(
-                <div key={t.tz+t.city+i} style={{padding:"10px 14px",display:"flex",alignItems:"center",gap:10,cursor:"default",borderBottom:i<tzResults.length-1?"1px solid var(--bg-hover)":"none"}}
-                  onMouseEnter={(e: any)=>e.currentTarget.style.background="var(--bg-main)"} onMouseLeave={(e: any)=>e.currentTarget.style.background="var(--bg-card)"}>
-                  <div style={{flex:1,minWidth:0}}>
-                    <div style={{fontSize:13,fontWeight:600,color:"var(--text-primary)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.city}, {t.country}</div>
-                    <div style={{display:"flex",alignItems:"center",gap:5,marginTop:2}}>
-                      <span style={{fontSize:11,color:"var(--text-placeholder)",overflow:"hidden",textOverflow:"ellipsis",maxWidth:140,whiteSpace:"nowrap"}}>{t.tz}</span>
-                      <span style={{fontSize:11,color:"var(--text-muted)",whiteSpace:"nowrap"}}>· GMT{dst.label.replace("GMT","")}</span>
-                      {dst.dst&&<span style={{fontSize:10,fontWeight:700,flexShrink:0,color:dst.dst==="DST"?"var(--warning)":"var(--primary)",background:dst.dst==="DST"?"var(--bg-amber-50)":"var(--bg-indigo-50)",padding:"1px 5px",borderRadius:99}}>{dst.dst}</span>}
+      <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:20,flexWrap:"wrap",justifyContent:"space-between"}}>
+        <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap",flex: 1}}>
+          <div style={{display:"flex",alignItems:"center",gap:10}}>
+            <span style={{fontSize:14,fontWeight:600,color:"var(--text-secondary)"}}>Date:</span>
+            <DatePicker value={date} onChange={setDate}/>
+          </div>
+          <div style={{position:"relative",flex:"1 1 180px",minWidth:160,maxWidth:320}}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-placeholder)" strokeWidth="2" style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)"}}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input value={tzSearch} onChange={e=>setTzSearch(e.target.value)} placeholder="Search city..." style={{...inpStyle,width:"100%",paddingLeft:32,paddingRight:12}}
+              onFocus={(e: any)=>e.target.style.borderColor="var(--info)"} onBlur={(e: any)=>{setTimeout(()=>setTzResults([]),200);e.target.style.borderColor="var(--border-color)";}}/>
+            {tzResults.length>0&&(
+              <div style={{position:"fixed",left:"50%",transform:"translateX(-50%)",width:"min(380px,92vw)",background:"var(--bg-card)",borderRadius:12,border:"1.5px solid var(--border-color)",boxShadow:"0 12px 40px rgba(0,0,0,.15)",zIndex:300,overflow:"hidden",animation:"slideUp .15s ease"}}>
+                <div style={{maxHeight:320,overflowY:"auto"}}>
+                {tzResults.map((t,i)=>{const dst=getDSTLabel(t.tz,date),now=getCurrentTime(t.tz,is24);return(
+                  <div key={t.tz+t.city+i} style={{padding:"10px 14px",display:"flex",alignItems:"center",gap:10,cursor:"default",borderBottom:i<tzResults.length-1?"1px solid var(--bg-hover)":"none"}}
+                    onMouseEnter={(e: any)=>e.currentTarget.style.background="var(--bg-main)"} onMouseLeave={(e: any)=>e.currentTarget.style.background="var(--bg-card)"}>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:13,fontWeight:600,color:"var(--text-primary)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.city}, {t.country}</div>
+                      <div style={{display:"flex",alignItems:"center",gap:5,marginTop:2}}>
+                        <span style={{fontSize:11,color:"var(--text-placeholder)",overflow:"hidden",textOverflow:"ellipsis",maxWidth:140,whiteSpace:"nowrap"}}>{t.tz}</span>
+                        <span style={{fontSize:11,color:"var(--text-muted)",whiteSpace:"nowrap"}}>· GMT{dst.label.replace("GMT","")}</span>
+                        {dst.dst&&<span style={{fontSize:10,fontWeight:700,flexShrink:0,color:dst.dst==="DST"?"var(--warning)":"var(--primary)",background:dst.dst==="DST"?"var(--bg-amber-50)":"var(--bg-indigo-50)",padding:"1px 5px",borderRadius:99}}>{dst.dst}</span>}
+                      </div>
+                    </div>
+                    <div style={{textAlign:"right",flexShrink:0,marginLeft:8}}>
+                      <div style={{fontSize:15,fontWeight:700,color:"var(--info)",whiteSpace:"nowrap"}}>{now}</div>
+                      <div style={{fontSize:10,color:"var(--text-placeholder)"}}>now</div>
                     </div>
                   </div>
-                  <div style={{textAlign:"right",flexShrink:0,marginLeft:8}}>
-                    <div style={{fontSize:15,fontWeight:700,color:"var(--info)",whiteSpace:"nowrap"}}>{now}</div>
-                    <div style={{fontSize:10,color:"var(--text-placeholder)"}}>now</div>
-                  </div>
+                );})}
                 </div>
-              );})}
               </div>
-            </div>
-          )}
-        </div>
-        <div style={{display:"flex",alignItems:"center",background:"var(--bg-hover)",borderRadius:10,padding:4,gap:2,flexShrink:0}}>
-          {[false,true].map(v=>(
-            <button key={String(v)} onClick={()=>setIs24(v)} style={{padding:"6px 14px",borderRadius:8,border:"none",cursor:"pointer",fontSize:13,fontWeight:600,transition:"all .15s",background:is24===v?"var(--bg-card)":"transparent",color:is24===v?"var(--text-primary)":"var(--text-muted)",boxShadow:is24===v?"0 1px 4px rgba(0,0,0,.1)":"none"}}>
-              {v?"24h":"12h"}
-            </button>
-          ))}
+            )}
+          </div>
+          <div style={{display:"flex",alignItems:"center",background:"var(--bg-hover)",borderRadius:10,padding:4,gap:2,flexShrink:0}}>
+            {[false,true].map(v=>(
+              <button key={String(v)} onClick={()=>setIs24(v)} style={{padding:"6px 14px",borderRadius:8,border:"none",cursor:"pointer",fontSize:13,fontWeight:600,transition:"all .15s",background:is24===v?"var(--bg-card)":"transparent",color:is24===v?"var(--text-primary)":"var(--text-muted)",boxShadow:is24===v?"0 1px 4px rgba(0,0,0,.1)":"none"}}>
+                {v?"24h":"12h"}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 

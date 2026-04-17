@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import Markdown from 'react-markdown';
 import { gemini } from '../lib/ai';
-import { Spin, Modal } from '../components/ui';
+import { Spin, Modal, TA } from '../components/ui';
 import { LinkedInFormatter } from '../components/LinkedInFormatter';
 
 const DEFAULT_PLATFORMS = [
@@ -218,123 +218,119 @@ Output ONLY the post content. No explanations, no "Here is..." preamble. Just th
       </div>
 
       {/* Input Section */}
-      <div style={{background:"var(--bg-glass)",backdropFilter:"blur(16px)",borderRadius:16,border:"1.5px solid var(--border-glass)",padding:"22px 24px",marginBottom:16,boxShadow:"var(--shadow-glass)"}}>
-        <div style={{fontSize:14,fontWeight:700,color:"var(--text-primary)",marginBottom:12}}>Paste Job description or Job URL</div>
-        <textarea value={jd} onChange={e=>setJd(e.target.value)} rows={7}
-          placeholder="Paste job description..."
-          style={{...inpStyle, resize:"none", background:"var(--bg-glass)", border:"1.5px solid var(--border-glass)", color:"var(--text-primary)"}}
-          onFocus={(e: any)=>e.target.style.borderColor="var(--success)"} onBlur={(e: any)=>e.target.style.borderColor="var(--border-glass)"}/>
-        {isURL && (
-          <div style={{marginTop:10,display:"flex",justifyContent:"flex-end"}}>
-            <button onClick={handleExtractURL} disabled={urlLoading}
-              style={{padding:"8px 16px",border:"1.5px solid var(--border-glass)",borderRadius:8,background:"var(--bg-glass)",backdropFilter:"blur(16px)",fontSize:13,fontWeight:600,cursor:"pointer",color:"var(--text-primary)",display:"flex",alignItems:"center",gap:6}}>
-              {urlLoading?<><Spin size={13}/>Extracting...</>:"Extract JD from URL"}
+      <div style={{display:"flex",flexDirection:"column",gap:20,marginBottom:24}}>
+        
+        {/* Step 1: JD */}
+        <div>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+            <label style={{fontSize:14,fontWeight:700,color:"var(--text-primary)"}}>Job Description or Job URL</label>
+          </div>
+          <div style={{position:"relative"}}>
+            <TA value={jd} onChange={setJd} placeholder="Paste job description..." rows={7}/>
+            {isURL && (
+              <div style={{position:"absolute",bottom:12,right:12}}>
+                <button onClick={handleExtractURL} disabled={urlLoading}
+                  style={{padding:"8px 16px",border:"1.5px solid var(--border-glass)",borderRadius:8,background:"var(--bg-glass)",backdropFilter:"blur(16px)",fontSize:12.5,fontWeight:600,cursor:"pointer",color:"var(--text-primary)",display:"flex",alignItems:"center",gap:6,boxShadow:"var(--shadow-glass)",transition:"all .15s"}}
+                  onMouseEnter={(e: any)=>{e.currentTarget.style.borderColor="var(--success)";e.currentTarget.style.color="var(--success)";}}
+                  onMouseLeave={(e: any)=>{e.currentTarget.style.borderColor="var(--border-glass)";e.currentTarget.style.color="var(--text-primary)";}}>
+                  {urlLoading?<><Spin size={13}/>Extracting...</>:"Extract JD from URL"}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Step 2: Instructions */}
+        <div>
+          <div style={{fontSize:14,fontWeight:700,color:"var(--text-primary)",marginBottom:8}}>Optional Instructions <span style={{fontWeight:400,color:"var(--text-muted)",fontSize:12}}>(Tone, length, highlights)</span></div>
+          <TA value={instruction} onChange={setInstruction} placeholder="E.g., Keep it under 3 paragraphs, highlight remote work benefits..." rows={2}/>
+        </div>
+
+        {/* Step 3: Platforms */}
+        <div>
+          <div style={{fontSize:14,fontWeight:700,color:"var(--text-primary)",marginBottom:12}}>Generate For</div>
+          <div style={{display:"flex",flexWrap:"wrap",gap:10}}>
+            {platforms.map((p: any)=>(
+              <div key={p.id} style={{position:"relative",display:"inline-flex",alignItems:"center"}}>
+                <button
+                  onClick={()=>handleGenerate(p.id)}
+                  disabled={loading||!jd.trim()}
+                  className="jp-btn"
+                  style={{
+                    display:"flex",alignItems:"center",gap:7,padding:"10px 18px",
+                    borderRadius:10,fontWeight:700,fontSize:13.5,
+                    cursor:loading||!jd.trim()?"not-allowed":"pointer",
+                    position:"relative",overflow:"hidden",transition:"all .15s",
+                    ...(loading&&activePlatId===p.id ? {
+                      background:p.color,color:"var(--bg-card)",
+                      border:`1.5px solid ${p.color}`,
+                      boxShadow:`0 4px 20px ${p.color}60`,
+                      transform:"scale(0.96)",
+                    } :
+                    activePlatId===p.id ? {
+                      background:`linear-gradient(135deg,${p.color},${p.color}dd)`,
+                      color:"var(--bg-card)",
+                      border:`1.5px solid ${p.color}`,
+                      boxShadow:`0 6px 20px ${p.color}50`,
+                    } :
+                    loading ? {
+                      background:"var(--bg-glass)",color:"var(--text-muted)",
+                      border:"1.5px solid var(--border-glass)",
+                      opacity:.55,
+                    } :
+                    {
+                      background:"var(--bg-glass)",color:p.color,
+                      border:`1.5px solid var(--border-glass)`,
+                      boxShadow:`var(--shadow-glass)`,
+                      backdropFilter: "blur(16px)"
+                    }),
+                  }}
+                  onMouseEnter={(e: any)=>{
+                    if(loading||!jd.trim()) return;
+                    if(activePlatId===p.id) return;
+                    e.currentTarget.style.background="var(--bg-glass-hover)";
+                    e.currentTarget.style.borderColor=p.color;
+                    e.currentTarget.style.boxShadow=`0 8px 24px ${p.color}35`;
+                    e.currentTarget.style.color=p.color;
+                  }}
+                  onMouseLeave={(e: any)=>{
+                    if(loading||!jd.trim()) return;
+                    if(activePlatId===p.id) return;
+                    e.currentTarget.style.background="var(--bg-glass)";
+                    e.currentTarget.style.borderColor=`var(--border-glass)`;
+                    e.currentTarget.style.boxShadow=`var(--shadow-glass)`;
+                    e.currentTarget.style.color=p.color;
+                  }}
+                >
+                  {loading&&activePlatId===p.id
+                    ?<Spin size={13} color="var(--bg-card)"/>
+                    :<span style={{color:"inherit",display:"flex",alignItems:"center"}}>{p.icon}</span>
+                  }
+                  {p.name}
+                  {activePlatId===p.id&&!loading&&(
+                    <span style={{marginLeft:4,fontSize:11,opacity:.8}}>✓</span>
+                  )}
+                </button>
+                <button onClick={(e: any)=>{e.stopPropagation();setEditingPlat(p);setEditPromptText(p.prompt);}}
+                  style={{position:"absolute",top:-6,right:-6,width:18,height:18,borderRadius:"50%",background:"var(--bg-card)",border:"1.5px solid var(--border-glass)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,color:"var(--text-muted)",zIndex:1}}
+                  title="Edit prompt">✎</button>
+                {p.id.startsWith("custom_")&&(
+                  <button onClick={(e: any)=>{e.stopPropagation();handleDeletePlatform(p.id);}}
+                    style={{position:"absolute",top:-6,left:-6,width:18,height:18,borderRadius:"50%",background:"var(--bg-red-50)",border:"1px solid var(--border-red-200)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,color:"var(--danger)",zIndex:1}}
+                    title="Remove">×</button>
+                )}
+              </div>
+            ))}
+            <button onClick={()=>setShowAddModal(true)} className="jp-btn"
+              style={{display:"flex",alignItems:"center",gap:7,padding:"10px 18px",borderRadius:10,border:"1.5px dashed var(--border-glass)",cursor:"pointer",fontWeight:600,fontSize:13.5,background:"var(--bg-glass)",backdropFilter:"blur(16px)",color:"var(--text-primary)",boxShadow:"var(--shadow-glass)"}}
+              onMouseEnter={(e: any)=>{e.currentTarget.style.borderColor="var(--success)";e.currentTarget.style.color="var(--success)";e.currentTarget.style.background="var(--bg-green-50)";}}
+              onMouseLeave={(e: any)=>{e.currentTarget.style.borderColor="var(--border-glass)";e.currentTarget.style.color="var(--text-primary)";e.currentTarget.style.background="var(--bg-glass)";}}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add Platform
             </button>
           </div>
-        )}
-      </div>
-
-      {/* Platform Buttons */}
-      <div style={{background:"var(--bg-glass)",backdropFilter:"blur(16px)",borderRadius:16,border:"1.5px solid var(--border-glass)",padding:"22px 24px",marginBottom:16,boxShadow:"var(--shadow-glass)"}}>
-        <div style={{fontSize:14,fontWeight:700,color:"var(--text-primary)",marginBottom:14}}>Generate for:</div>
-        <div style={{display:"flex",flexWrap:"wrap",gap:10}}>
-          {platforms.map((p: any)=>(
-            <div key={p.id} style={{position:"relative",display:"inline-flex",alignItems:"center"}}>
-              <button
-                onClick={()=>handleGenerate(p.id)}
-                disabled={loading||!jd.trim()}
-                className="jp-btn"
-                style={{
-                  display:"flex",alignItems:"center",gap:7,padding:"10px 18px",
-                  borderRadius:10,fontWeight:700,fontSize:13.5,
-                  
-                  cursor:loading||!jd.trim()?"not-allowed":"pointer",
-                  position:"relative",overflow:"hidden",
-                  // Active (currently generating this platform)
-                  ...(loading&&activePlatId===p.id ? {
-                    background:p.color,color:"var(--bg-card)",
-                    border:`1.5px solid ${p.color}`,
-                    boxShadow:`0 4px 20px ${p.color}60`,
-                    transform:"scale(0.96)",
-                  } :
-                  // Just generated (done, show as selected)
-                  activePlatId===p.id ? {
-                    background:`linear-gradient(135deg,${p.color},${p.color}dd)`,
-                    color:"var(--bg-card)",
-                    border:`1.5px solid ${p.color}`,
-                    boxShadow:`0 6px 20px ${p.color}50`,
-                  } :
-                  // Disabled
-                  loading ? {
-                    background:"var(--bg-glass)",color:"var(--text-muted)",
-                    border:"1.5px solid var(--border-glass)",
-                    opacity:.55,
-                  } :
-                  // Normal hover-ready
-                  {
-                    background:"var(--bg-glass)",color:p.color,
-                    border:`1.5px solid var(--border-glass)`,
-                    boxShadow:`var(--shadow-glass)`,
-                  }),
-                }}
-                onMouseEnter={(e: any)=>{
-                  if(loading||!jd.trim()) return;
-                  if(activePlatId===p.id) return;
-                  e.currentTarget.style.background="var(--bg-glass-hover)";
-                  e.currentTarget.style.borderColor=p.color;
-                  e.currentTarget.style.boxShadow=`0 8px 24px ${p.color}35`;
-                  e.currentTarget.style.color=p.color;
-                }}
-                onMouseLeave={(e: any)=>{
-                  if(loading||!jd.trim()) return;
-                  if(activePlatId===p.id) return;
-                  e.currentTarget.style.background="var(--bg-glass)";
-                  e.currentTarget.style.borderColor=`var(--border-glass)`;
-                  e.currentTarget.style.boxShadow=`var(--shadow-glass)`;
-                  e.currentTarget.style.color=p.color;
-                }}
-              >
-                {loading&&activePlatId===p.id
-                  ?<Spin size={13} color="var(--bg-card)"/>
-                  :<span style={{color:"inherit",display:"flex",alignItems:"center"}}>{p.icon}</span>
-                }
-                {p.name}
-                {activePlatId===p.id&&!loading&&(
-                  <span style={{marginLeft:4,fontSize:11,opacity:.8}}>✓</span>
-                )}
-              </button>
-              {/* Edit prompt button */}
-              <button onClick={(e: any)=>{e.stopPropagation();setEditingPlat(p);setEditPromptText(p.prompt);}}
-                style={{position:"absolute",top:-6,right:-6,width:18,height:18,borderRadius:"50%",background:"var(--bg-card)",border:"1.5px solid var(--border-glass)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,color:"var(--text-muted)",zIndex:1}}
-                title="Edit prompt">✎</button>
-              {/* Delete custom platforms */}
-              {p.id.startsWith("custom_")&&(
-                <button onClick={(e: any)=>{e.stopPropagation();handleDeletePlatform(p.id);}}
-                  style={{position:"absolute",top:-6,left:-6,width:18,height:18,borderRadius:"50%",background:"var(--bg-red-50)",border:"1px solid var(--border-red-200)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,color:"var(--danger)",zIndex:1}}
-                  title="Remove">×</button>
-              )}
-            </div>
-          ))}
-          <button onClick={()=>setShowAddModal(true)} className="jp-btn"
-            style={{display:"flex",alignItems:"center",gap:7,padding:"10px 18px",borderRadius:10,border:"1.5px dashed var(--border-glass)",cursor:"pointer",fontWeight:600,fontSize:13.5,background:"var(--bg-glass)",backdropFilter:"blur(16px)",color:"var(--text-primary)",boxShadow:"var(--shadow-glass)"}}
-            onMouseEnter={(e: any)=>{e.currentTarget.style.borderColor="var(--success)";e.currentTarget.style.color="var(--success)";e.currentTarget.style.background="var(--bg-green-50)";}}
-            onMouseLeave={(e: any)=>{e.currentTarget.style.borderColor="var(--border-glass)";e.currentTarget.style.color="var(--text-primary)";e.currentTarget.style.background="var(--bg-glass)";}}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            Add Social
-          </button>
+          <div style={{marginTop:10,fontSize:12,color:"var(--text-placeholder)"}}>✎ Hover a platform and click the pencil icon to edit its prompt template</div>
         </div>
-        <div style={{marginTop:10,fontSize:12,color:"var(--text-placeholder)"}}>✎ Hover a platform and click the pencil icon to edit its prompt template</div>
-      </div>
-
-      {/* Additional Instruction */}
-      <div style={{background:"var(--bg-glass)",backdropFilter:"blur(16px)",borderRadius:14,border:"1.5px solid var(--border-glass)",padding:"22px 24px",marginBottom:24,boxShadow:"var(--shadow-glass)"}}>
-        <div style={{fontSize:14,fontWeight:700,color:"var(--text-primary)",marginBottom:4}}>
-          Optional instructions
-        </div>
-        <input value={instruction} onChange={e=>setInstruction(e.target.value)} type="text"
-          placeholder={`E.g., Tone, length, highlight benefits......`}
-          style={{...inpStyle}}
-          onFocus={(e: any)=>e.target.style.borderColor="var(--success)"} onBlur={(e: any)=>e.target.style.borderColor="var(--border-color)"}/>
       </div>
 
       {/* Generated Post */}
@@ -376,14 +372,14 @@ Output ONLY the post content. No explanations, no "Here is..." preamble. Just th
               {/* Action buttons */}
               <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
                 <button onClick={async()=>{await navigator.clipboard.writeText(currentPost?.text||"");setCopiedV(true);setTimeout(()=>setCopiedV(false),2000);}} className="jp-btn"
-                  style={{display:"flex",alignItems:"center",gap:7,padding:"9px 20px",borderRadius:10,border:"none",cursor:"pointer",fontWeight:700,fontSize:13.5,background:copiedV?"var(--success-hover)":"linear-gradient(135deg,var(--success),var(--success-hover))",color:"var(--bg-card)",boxShadow:copiedV?"0 2px 8px rgba(16,185,129,.2)":"0 6px 20px rgba(16,185,129,.35)"}}>
+                  style={{display:"flex",alignItems:"center",gap:7,padding:"9px 20px",borderRadius:10,border:"none",cursor:"pointer",fontWeight:700,fontSize:13.5,background:copiedV?"var(--success-hover)":"linear-gradient(135deg,var(--success),var(--success-hover))",color:"var(--bg-card)",boxShadow:copiedV?"0 2px 8px rgba(16,185,129,.2)":"0 6px 20px rgba(16,185,129,.35)",transition:"all .15s"}}>
                   {copiedV?<><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>Copied!</>:<><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copy</>}
                 </button>
                 <button onClick={handleRegenerate} disabled={loading||!jd.trim()} className="jp-btn"
-                  style={{display:"flex",alignItems:"center",gap:7,padding:"9px 20px",borderRadius:10,border:"1.5px solid var(--border-glass)",cursor:loading?"not-allowed":"pointer",fontWeight:600,fontSize:13.5,background:"var(--bg-glass)",backdropFilter:"blur(16px)",color:"var(--text-primary)",opacity:loading?.5:1,boxShadow:"var(--shadow-glass)"}}
+                  style={{display:"flex",alignItems:"center",gap:7,padding:"9px 20px",borderRadius:10,border:"1.5px solid var(--border-glass)",cursor:loading?"not-allowed":"pointer",fontWeight:600,fontSize:13.5,background:"var(--bg-glass)",backdropFilter:"blur(16px)",color:"var(--text-primary)",opacity:loading?.5:1,boxShadow:"var(--shadow-glass)",transition:"all .15s"}}
                   onMouseEnter={(e: any)=>{if(!loading){e.currentTarget.style.borderColor="var(--success)";e.currentTarget.style.color="var(--success)";e.currentTarget.style.background="var(--bg-green-50)";e.currentTarget.style.boxShadow="0 6px 16px rgba(16,185,129,.15)";}}}
                   onMouseLeave={(e: any)=>{e.currentTarget.style.borderColor="var(--border-glass)";e.currentTarget.style.color="var(--text-primary)";e.currentTarget.style.background="var(--bg-glass)";e.currentTarget.style.boxShadow="var(--shadow-glass)";}}>
-                  {loading?<><Spin size={13}/>Generating...</>:<><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>Generate Another Version</>}
+                  {loading?<><Spin size={13}/>Generating...</>:<><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>Generate Another</>}
                 </button>
               </div>
             </div>

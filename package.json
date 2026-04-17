@@ -14,6 +14,7 @@
     "@google/genai": "^1.29.0",
     "@tailwindcss/vite": "^4.1.14",
     "@vitejs/plugin-react": "^5.0.4",
+    "cobe": "^2.0.1",
     "dotenv": "^17.2.3",
     "express": "^4.21.2",
     "html-react-parser": "^6.0.0",
@@ -27,6 +28,7 @@
     "react-markdown": "^10.1.0",
     "react-quill-new": "^3.8.3",
     "react-router-dom": "^7.13.2",
+    "react-spring": "^10.0.3",
     "vite": "^6.2.0"
   },
   "devDependencies": {
