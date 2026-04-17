@@ -213,7 +213,7 @@ export function AnalysisContent({analysis}: any) {
 
       {/* Copy */}
       <div style={{marginTop:12}}>
-        <button onClick={copyAll} style={{display:"flex",alignItems:"center",gap:8,padding:"9px 20px",borderRadius:10,border:"none",cursor:"pointer",fontWeight:700,fontSize:13.5,transition:"all .15s",background:copied?"var(--success-hover)":"linear-gradient(135deg,var(--primary),var(--primary-hover))",color:"var(--bg-card)",boxShadow:copied?"0 4px 14px rgba(5,150,105,.3)":"0 4px 14px rgba(124,58,237,.35)"}}>
+        <button onClick={copyAll} style={{display:"flex",alignItems:"center",gap:8,padding:"9px 20px",borderRadius:10,border:"none",cursor:"pointer",fontWeight:700,fontSize:13.5,transition:"all .15s",background:copied?"var(--success-hover)":"linear-gradient(135deg,var(--primary),var(--primary-hover))",color:"var(--bg-glass)",boxShadow:copied?"0 4px 14px rgba(5,150,105,.3)":"0 4px 14px rgba(124,58,237,.35)"}}>
           {copied?<><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>Copied!</>:<><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copy Analysis</>}
         </button>
       </div>

@@ -206,7 +206,7 @@ Output ONLY the post content. No explanations, no "Here is..." preamble. Just th
 
   const isURL = jd.trim().startsWith("http");
 
-  const inpStyle: any = {border:"1.5px solid var(--border-color)",borderRadius:10,padding:"12px 14px",fontSize:14,outline:"none",background:"var(--bg-card)",color:"var(--text-secondary)",width:"100%",lineHeight:1.6,transition:"border-color .2s"};
+  const inpStyle: any = {border:"1.5px solid var(--border-glass)",borderRadius:10,padding:"12px 14px",fontSize:14,outline:"none",background:"var(--bg-glass)",color:"var(--text-primary)",width:"100%",lineHeight:1.6,transition:"border-color .2s"};
 
   return (
     <main style={{maxWidth:860,margin:"0 auto",padding:"32px 16px 80px",animation:"fadeIn .25s ease"}}>
@@ -227,7 +227,7 @@ Output ONLY the post content. No explanations, no "Here is..." preamble. Just th
         {isURL && (
           <div style={{marginTop:10,display:"flex",justifyContent:"flex-end"}}>
             <button onClick={handleExtractURL} disabled={urlLoading}
-              style={{padding:"8px 16px",border:"1.5px solid var(--border-color)",borderRadius:8,background:"var(--bg-card)",fontSize:13,fontWeight:600,cursor:"pointer",color:"var(--text-secondary)",display:"flex",alignItems:"center",gap:6}}>
+              style={{padding:"8px 16px",border:"1.5px solid var(--border-glass)",borderRadius:8,background:"var(--bg-glass)",backdropFilter:"blur(16px)",fontSize:13,fontWeight:600,cursor:"pointer",color:"var(--text-primary)",display:"flex",alignItems:"center",gap:6}}>
               {urlLoading?<><Spin size={13}/>Extracting...</>:"Extract JD from URL"}
             </button>
           </div>
@@ -305,7 +305,7 @@ Output ONLY the post content. No explanations, no "Here is..." preamble. Just th
               </button>
               {/* Edit prompt button */}
               <button onClick={(e: any)=>{e.stopPropagation();setEditingPlat(p);setEditPromptText(p.prompt);}}
-                style={{position:"absolute",top:-6,right:-6,width:18,height:18,borderRadius:"50%",background:"var(--bg-hover)",border:"1px solid var(--border-color)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,color:"var(--text-muted)",zIndex:1}}
+                style={{position:"absolute",top:-6,right:-6,width:18,height:18,borderRadius:"50%",background:"var(--bg-card)",border:"1.5px solid var(--border-glass)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,color:"var(--text-muted)",zIndex:1}}
                 title="Edit prompt">✎</button>
               {/* Delete custom platforms */}
               {p.id.startsWith("custom_")&&(
@@ -316,9 +316,9 @@ Output ONLY the post content. No explanations, no "Here is..." preamble. Just th
             </div>
           ))}
           <button onClick={()=>setShowAddModal(true)} className="jp-btn"
-            style={{display:"flex",alignItems:"center",gap:7,padding:"10px 18px",borderRadius:10,border:"1.5px dashed var(--border-color)",cursor:"pointer",fontWeight:600,fontSize:13.5,background:"transparent",color:"var(--text-muted)",boxShadow:"none"}}
-            onMouseEnter={(e: any)=>{e.currentTarget.style.borderColor="var(--success)";e.currentTarget.style.color="var(--success)";e.currentTarget.style.background="var(--bg-green-50)";e.currentTarget.style.boxShadow="0 6px 16px rgba(16,185,129,.15)";}}
-            onMouseLeave={(e: any)=>{e.currentTarget.style.borderColor="var(--border-color)";e.currentTarget.style.color="var(--text-muted)";e.currentTarget.style.background="transparent";e.currentTarget.style.boxShadow="none";}}>
+            style={{display:"flex",alignItems:"center",gap:7,padding:"10px 18px",borderRadius:10,border:"1.5px dashed var(--border-glass)",cursor:"pointer",fontWeight:600,fontSize:13.5,background:"var(--bg-glass)",backdropFilter:"blur(16px)",color:"var(--text-primary)",boxShadow:"var(--shadow-glass)"}}
+            onMouseEnter={(e: any)=>{e.currentTarget.style.borderColor="var(--success)";e.currentTarget.style.color="var(--success)";e.currentTarget.style.background="var(--bg-green-50)";}}
+            onMouseLeave={(e: any)=>{e.currentTarget.style.borderColor="var(--border-glass)";e.currentTarget.style.color="var(--text-primary)";e.currentTarget.style.background="var(--bg-glass)";}}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Add Social
           </button>
@@ -327,7 +327,7 @@ Output ONLY the post content. No explanations, no "Here is..." preamble. Just th
       </div>
 
       {/* Additional Instruction */}
-      <div style={{background:"var(--bg-card)",borderRadius:16,border:"1.5px solid var(--border-color)",padding:"22px 24px",marginBottom:24,boxShadow:"0 1px 4px rgba(0,0,0,.04)"}}>
+      <div style={{background:"var(--bg-glass)",backdropFilter:"blur(16px)",borderRadius:14,border:"1.5px solid var(--border-glass)",padding:"22px 24px",marginBottom:24,boxShadow:"var(--shadow-glass)"}}>
         <div style={{fontSize:14,fontWeight:700,color:"var(--text-primary)",marginBottom:4}}>
           Optional instructions
         </div>
@@ -343,12 +343,12 @@ Output ONLY the post content. No explanations, no "Here is..." preamble. Just th
           <div style={{fontSize:14,fontWeight:700,color:"var(--text-primary)",marginBottom:12}}>Generated Post</div>
 
           {loading&&!currentPost?(
-            <div style={{background:"var(--bg-card)",borderRadius:16,border:"1.5px solid var(--border-color)",padding:"40px",textAlign:"center",boxShadow:"0 1px 4px rgba(0,0,0,.04)"}}>
+            <div style={{background:"var(--bg-glass)",backdropFilter:"blur(16px)",borderRadius:14,border:"1.5px solid var(--border-glass)",padding:"40px",textAlign:"center",boxShadow:"var(--shadow-glass)"}}>
               <Spin size={28} color="var(--success)"/>
-              <div style={{marginTop:12,fontSize:14,color:"var(--text-muted)"}}>Generating your post...</div>
+              <div style={{marginTop:12,fontSize:14,color:"var(--text-primary)"}}>Generating your post...</div>
             </div>
           ):(
-            <div style={{background:"var(--bg-card)",borderRadius:16,border:"1.5px solid var(--border-color)",padding:"22px 24px",boxShadow:"0 2px 12px rgba(0,0,0,.06)"}}>
+            <div style={{background:"var(--bg-glass)",backdropFilter:"blur(16px)",borderRadius:14,border:"1.5px solid var(--border-glass)",padding:"22px 24px",boxShadow:"var(--shadow-glass)"}}>
               {/* Post header */}
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16,flexWrap:"wrap",gap:12}}>
                 <div style={{display:"flex",alignItems:"center",gap:8}}>
@@ -360,7 +360,7 @@ Output ONLY the post content. No explanations, no "Here is..." preamble. Just th
               </div>
 
               {/* Post content */}
-              <div style={{background:"var(--bg-main)",borderRadius:10,border:"1px solid var(--border-color)",padding:"16px 18px",fontSize:14,color:"var(--text-secondary)",lineHeight:1.8,marginBottom:16,minHeight:80}}>
+              <div style={{background:"var(--bg-glass)",backdropFilter:"blur(8px)",borderRadius:10,border:"1px solid var(--border-glass)",padding:"16px 18px",fontSize:14,color:"var(--text-primary)",lineHeight:1.8,marginBottom:16,minHeight:80}}>
                 <Markdown
                   components={{
                     ul: ({node, ...props}) => <ul style={{listStyleType: 'disc', paddingLeft: 20, margin: '8px 0'}} {...props} />,
@@ -380,9 +380,9 @@ Output ONLY the post content. No explanations, no "Here is..." preamble. Just th
                   {copiedV?<><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>Copied!</>:<><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copy</>}
                 </button>
                 <button onClick={handleRegenerate} disabled={loading||!jd.trim()} className="jp-btn"
-                  style={{display:"flex",alignItems:"center",gap:7,padding:"9px 20px",borderRadius:10,border:"1.5px solid var(--border-color)",cursor:loading?"not-allowed":"pointer",fontWeight:600,fontSize:13.5,background:"var(--bg-card)",color:"var(--text-secondary)",opacity:loading?.5:1,boxShadow:"0 2px 8px rgba(0,0,0,.04)"}}
+                  style={{display:"flex",alignItems:"center",gap:7,padding:"9px 20px",borderRadius:10,border:"1.5px solid var(--border-glass)",cursor:loading?"not-allowed":"pointer",fontWeight:600,fontSize:13.5,background:"var(--bg-glass)",backdropFilter:"blur(16px)",color:"var(--text-primary)",opacity:loading?.5:1,boxShadow:"var(--shadow-glass)"}}
                   onMouseEnter={(e: any)=>{if(!loading){e.currentTarget.style.borderColor="var(--success)";e.currentTarget.style.color="var(--success)";e.currentTarget.style.background="var(--bg-green-50)";e.currentTarget.style.boxShadow="0 6px 16px rgba(16,185,129,.15)";}}}
-                  onMouseLeave={(e: any)=>{e.currentTarget.style.borderColor="var(--border-color)";e.currentTarget.style.color="var(--text-secondary)";e.currentTarget.style.background="var(--bg-card)";e.currentTarget.style.boxShadow="0 2px 8px rgba(0,0,0,.04)";}}>
+                  onMouseLeave={(e: any)=>{e.currentTarget.style.borderColor="var(--border-glass)";e.currentTarget.style.color="var(--text-primary)";e.currentTarget.style.background="var(--bg-glass)";e.currentTarget.style.boxShadow="var(--shadow-glass)";}}>
                   {loading?<><Spin size={13}/>Generating...</>:<><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>Generate Another Version</>}
                 </button>
               </div>
@@ -394,7 +394,7 @@ Output ONLY the post content. No explanations, no "Here is..." preamble. Just th
             <div style={{display:"flex",gap:8,marginTop:14,flexWrap:"wrap"}}>
               {versions.map((v: any,i: number)=>(
                 <button key={v.timestamp} onClick={()=>setActiveVersion(i)}
-                  style={{padding:"6px 16px",borderRadius:8,border:`1.5px solid ${activeVersion===i?"var(--success)":"var(--border-color)"}`,cursor:"pointer",fontSize:13,fontWeight:activeVersion===i?700:500,background:activeVersion===i?"var(--bg-emerald-50)":"var(--bg-card)",color:activeVersion===i?"var(--success-hover)":"var(--text-muted)",transition:"all .15s"}}>
+                  style={{padding:"6px 16px",borderRadius:8,border:`1.5px solid ${activeVersion===i?"var(--success)":"var(--border-glass)"}`,cursor:"pointer",fontSize:13,fontWeight:activeVersion===i?700:500,background:activeVersion===i?"var(--bg-emerald-50)":"var(--bg-glass)",backdropFilter:activeVersion===i?"none":"blur(16px)",color:activeVersion===i?"var(--success-hover)":"var(--text-primary)",transition:"all .15s"}}>
                   Version {versions.length-i}
                   <span style={{fontSize:11,marginLeft:4,color:activeVersion===i?"var(--success)":"var(--text-placeholder)"}}>· {v.platform}</span>
                 </button>
@@ -406,8 +406,8 @@ Output ONLY the post content. No explanations, no "Here is..." preamble. Just th
 
       {/* Empty state */}
       {!loading&&versions.length===0&&(
-        <div style={{textAlign:"center",padding:"40px 20px",color:"var(--text-placeholder)",background:"var(--bg-card)",borderRadius:16,border:"1.5px dashed var(--border-color)"}}>
-          <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" style={{margin:"0 auto 12px",display:"block",opacity:.4}}><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        <div style={{textAlign:"center",padding:"40px 20px",color:"var(--text-primary)",background:"var(--bg-glass)",backdropFilter:"blur(16px)",borderRadius:14,border:"1.5px dashed var(--border-glass)",boxShadow:"var(--shadow-glass)"}}>
+          <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" style={{margin:"0 auto 12px",display:"block",opacity:.6}}><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
           <div style={{fontSize:15,fontWeight:500,marginBottom:4}}>Paste JD and choose platform</div>
           <div style={{fontSize:13}}>Select a platform above to generate</div>
         </div>
@@ -426,10 +426,10 @@ Output ONLY the post content. No explanations, no "Here is..." preamble. Just th
       {editingPlat&&(
         <Modal title={`Edit Prompt: ${editingPlat.name}`} subtitle="Customize how AI writes posts for this platform" onClose={()=>setEditingPlat(null)}>
           <div style={{marginBottom:16}}>
-            <label style={{fontSize:13,fontWeight:600,color:"var(--text-secondary)",display:"block",marginBottom:8}}>Prompt Template</label>
+            <label style={{fontSize:13,fontWeight:600,color:"var(--text-primary)",display:"block",marginBottom:8}}>Prompt Template</label>
             <textarea value={editPromptText} onChange={e=>setEditPromptText(e.target.value)} rows={10}
-              style={{width:"100%",border:"1.5px solid var(--border-color)",borderRadius:10,padding:"12px 14px",fontSize:13.5,color:"var(--text-secondary)",lineHeight:1.7,resize:"vertical",outline:"none",}}
-              onFocus={(e: any)=>e.target.style.borderColor="var(--success)"} onBlur={(e: any)=>e.target.style.borderColor="var(--border-color)"}/>
+              style={{width:"100%",border:"1.5px solid var(--border-glass)",borderRadius:10,padding:"12px 14px",fontSize:13.5,color:"var(--text-primary)",lineHeight:1.7,resize:"vertical",outline:"none",background:"var(--bg-glass)"}}
+              onFocus={(e: any)=>e.target.style.borderColor="var(--success)"} onBlur={(e: any)=>e.target.style.borderColor="var(--border-glass)"}/>
             <div style={{fontSize:12,color:"var(--text-placeholder)",marginTop:6}}>The JD and any additional instructions will be appended automatically.</div>
           </div>
           <div style={{display:"flex",gap:10}}>
@@ -438,7 +438,7 @@ Output ONLY the post content. No explanations, no "Here is..." preamble. Just th
               Save Changes
             </button>
             <button onClick={()=>setEditingPlat(null)}
-              style={{padding:"10px 24px",borderRadius:10,border:"1.5px solid var(--border-color)",cursor:"pointer",fontWeight:600,fontSize:14,background:"var(--bg-card)",color:"var(--text-secondary)"}}>
+              style={{padding:"10px 24px",borderRadius:10,border:"1.5px solid var(--border-glass)",cursor:"pointer",fontWeight:600,fontSize:14,background:"var(--bg-glass)",color:"var(--text-primary)"}}>
               Cancel
             </button>
           </div>
@@ -449,18 +449,18 @@ Output ONLY the post content. No explanations, no "Here is..." preamble. Just th
       {showAddModal&&(
         <Modal title="Add Social Platform" subtitle="Create a custom platform with your own prompt" onClose={()=>setShowAddModal(false)}>
           <div style={{marginBottom:14}}>
-            <label style={{fontSize:13,fontWeight:600,color:"var(--text-secondary)",display:"block",marginBottom:8}}>Platform Name</label>
+            <label style={{fontSize:13,fontWeight:600,color:"var(--text-primary)",display:"block",marginBottom:8}}>Platform Name</label>
             <input value={newPlatName} onChange={e=>setNewPlatName(e.target.value)} type="text"
               placeholder="e.g. Telegram Channel, Reddit Jobs, Discord..."
-              style={{width:"100%",border:"1.5px solid var(--border-color)",borderRadius:10,padding:"10px 14px",fontSize:14,outline:"none",}}
-              onFocus={(e: any)=>e.target.style.borderColor="var(--success)"} onBlur={(e: any)=>e.target.style.borderColor="var(--border-color)"}/>
+              style={{width:"100%",border:"1.5px solid var(--border-glass)",borderRadius:10,padding:"10px 14px",fontSize:14,outline:"none",background:"var(--bg-glass)",color:"var(--text-primary)"}}
+              onFocus={(e: any)=>e.target.style.borderColor="var(--success)"} onBlur={(e: any)=>e.target.style.borderColor="var(--border-glass)"}/>
           </div>
           <div style={{marginBottom:20}}>
-            <label style={{fontSize:13,fontWeight:600,color:"var(--text-secondary)",display:"block",marginBottom:8}}>Prompt Template</label>
+            <label style={{fontSize:13,fontWeight:600,color:"var(--text-primary)",display:"block",marginBottom:8}}>Prompt Template</label>
             <textarea value={newPlatPrompt} onChange={e=>setNewPlatPrompt(e.target.value)} rows={7}
               placeholder="Write a job post for [platform name]. Instructions: ..."
-              style={{width:"100%",border:"1.5px solid var(--border-color)",borderRadius:10,padding:"12px 14px",fontSize:13.5,color:"var(--text-secondary)",lineHeight:1.7,resize:"none",outline:"none",}}
-              onFocus={(e: any)=>e.target.style.borderColor="var(--success)"} onBlur={(e: any)=>e.target.style.borderColor="var(--border-color)"}/>
+              style={{width:"100%",border:"1.5px solid var(--border-glass)",borderRadius:10,padding:"12px 14px",fontSize:13.5,color:"var(--text-primary)",lineHeight:1.7,resize:"none",outline:"none",background:"var(--bg-glass)"}}
+              onFocus={(e: any)=>e.target.style.borderColor="var(--success)"} onBlur={(e: any)=>e.target.style.borderColor="var(--border-glass)"}/>
           </div>
           <div style={{display:"flex",gap:10}}>
             <button onClick={handleAddPlatform} disabled={!newPlatName.trim()||!newPlatPrompt.trim()}
@@ -468,7 +468,7 @@ Output ONLY the post content. No explanations, no "Here is..." preamble. Just th
               Add Platform
             </button>
             <button onClick={()=>setShowAddModal(false)}
-              style={{padding:"10px 24px",borderRadius:10,border:"1.5px solid var(--border-color)",cursor:"pointer",fontWeight:600,fontSize:14,background:"var(--bg-card)",color:"var(--text-secondary)"}}>
+              style={{padding:"10px 24px",borderRadius:10,border:"1.5px solid var(--border-glass)",cursor:"pointer",fontWeight:600,fontSize:14,background:"var(--bg-glass)",color:"var(--text-primary)"}}>
               Cancel
             </button>
           </div>

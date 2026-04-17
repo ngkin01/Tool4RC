@@ -37,10 +37,10 @@
   --border-red-200: #FECACA;
   --border-sky-200: #BAE6FD;
   --border-emerald-200: #A7F3D0;
-  --bg-header: rgba(255, 255, 255, 0.92);
+  --bg-header: rgba(255, 255, 255, 0.95);
   --bg-sidebar: #0F172A;
-  --bg-glass: rgba(255, 255, 255, 0.7);
-  --bg-glass-hover: rgba(255, 255, 255, 0.9);
+  --bg-glass: rgba(255, 255, 255, 0.88);
+  --bg-glass-hover: rgba(255, 255, 255, 0.96);
   --border-glass: rgba(255, 255, 255, 1);
   --shadow-glass: 0 10px 32px -4px rgba(0, 0, 0, 0.08), 0 4px 12px -2px rgba(0, 0, 0, 0.04), inset 0 1px 1px rgba(255, 255, 255, 1);
   --glass-inset: rgba(255, 255, 255, 1);

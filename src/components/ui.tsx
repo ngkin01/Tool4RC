@@ -43,7 +43,7 @@ export function Modal({title,subtitle,onClose,children,width=640}: any){
   useEffect(()=>{const h=(e: any)=>{if(e.key==="Escape")onClose();};document.addEventListener("keydown",h);document.body.style.overflow="hidden";return()=>{document.removeEventListener("keydown",h);document.body.style.overflow=""};},[onClose]);
   const modalContent = <div onClick={(e: any)=>e.target===e.currentTarget&&onClose()}
     style={{position:"fixed",inset:0,zIndex:99999,background:"rgba(0,0,0,.5)",backdropFilter:"blur(6px)",display:"flex",alignItems:"center",justifyContent:"center",padding:16,animation:"fadeIn .15s ease"}}>
-    <div style={{background:"var(--bg-card)",borderRadius:20,width:"100%",maxWidth:width,maxHeight:"92vh",display:"flex",flexDirection:"column",boxShadow:"0 24px 80px rgba(0,0,0,.3)",animation:"slideUp .2s ease",position:"relative"}}>
+    <div style={{background:"var(--bg-glass)",backdropFilter:"blur(24px)",borderRadius:20,width:"100%",maxWidth:width,maxHeight:"92vh",display:"flex",flexDirection:"column",border:"1px solid var(--border-glass)",boxShadow:"var(--shadow-glass)",animation:"slideUp .2s ease",position:"relative"}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",padding:"28px 28px 20px",flexShrink:0}}>
         <div><h2 style={{fontSize:22,fontWeight:800,color:"var(--text-primary)",marginBottom:subtitle?4:0}}>{title}</h2>{subtitle&&<p style={{fontSize:13,color:"var(--text-muted)"}}>{subtitle}</p>}</div>
         <button onClick={onClose} style={{background:"var(--bg-hover)",border:"none",borderRadius:8,width:34,height:34,cursor:"pointer",fontSize:20,color:"var(--text-muted)",display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
@@ -63,7 +63,7 @@ export function TA({value,onChange,placeholder,rows=6,mono,readOnly}: any){
 }
 
 export function InputCard({label,hint,required=true,value,onChange,placeholder,rows}: any){
-  return <div style={{background:"var(--bg-card)",borderRadius:16,border:"1.5px solid var(--border-color)",padding:"20px 24px",boxShadow:"0 1px 4px rgba(0,0,0,.04)"}}>
+  return <div style={{background:"var(--bg-glass)",backdropFilter:"blur(16px)",borderRadius:14,border:"1.5px solid var(--border-glass)",padding:"20px 24px",boxShadow:"var(--shadow-glass)"}}>
     <div style={{marginBottom:6}}><span style={{fontSize:14,fontWeight:700,color:"var(--text-primary)"}}>{label}</span>{!required&&<span style={{fontSize:12,color:"var(--text-placeholder)",marginLeft:6}}>Optional</span>}</div>
     {hint&&hint.length>0&&<p style={{margin:"0 0 10px",fontSize:13,color:"var(--text-muted)"}}>{hint}</p>}
     <TA value={value} onChange={onChange} placeholder={placeholder} rows={rows}/>

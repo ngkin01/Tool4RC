@@ -28,7 +28,7 @@ function DatePicker({value,onChange}: any){
   const isTod=(c: any)=>c.cur&&view.year===today.getUTCFullYear()&&view.month===today.getUTCMonth()&&c.day===today.getUTCDate();
   return(
     <div style={{position:"relative",display:"inline-block"}} ref={ref}>
-      <button onClick={()=>setOpen(v=>!v)} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 14px",background:"var(--bg-card)",border:"1.5px solid var(--border-color)",borderRadius:10,fontSize:14,fontWeight:500,color:"var(--text-secondary)",boxShadow:"0 1px 4px rgba(0,0,0,.05)",cursor:"pointer",whiteSpace:"nowrap",transition:"border-color .15s"}}
+      <button onClick={()=>setOpen(v=>!v)} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 14px",background:"var(--bg-glass)",border:"1.5px solid var(--border-glass)",borderRadius:10,fontSize:14,fontWeight:500,color:"var(--text-primary)",boxShadow:"0 1px 4px rgba(0,0,0,.05)",cursor:"pointer",whiteSpace:"nowrap",transition:"border-color .15s"}}
         onMouseEnter={(e: any)=>e.currentTarget.style.borderColor="var(--primary)"} onMouseLeave={(e: any)=>e.currentTarget.style.borderColor="var(--border-color)"}>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
         {disp()}

@@ -431,17 +431,18 @@ export function InterviewMail({ toast }: any) {
   };
 
   const seg = (active: boolean) => ({
-    padding:"7px 14px", borderRadius:8, border:"1.5px solid "+(active?"var(--primary)":"var(--border-glass)"),
-    cursor:"pointer", fontWeight:600, fontSize:13, fontFamily:"'DM Sans',sans-serif",
+    padding:"8px 16px", borderRadius:10, border:"1.5px solid "+(active?"transparent":"var(--border-glass)"),
+    cursor:"pointer", fontWeight:600, fontSize:13.5, fontFamily:"'DM Sans',sans-serif",
     background:active?"linear-gradient(135deg,var(--primary),var(--primary-hover))":"var(--bg-glass)",
-    color:active?"#fff":"var(--text-primary)", transition:"all .12s", backdropFilter: "blur(16px)"
+    color:active?"#fff":"var(--text-secondary)", transition:"all .15s", backdropFilter: "blur(16px)",
+    boxShadow:active?"0 4px 14px rgba(99,102,241,.3)":"var(--shadow-glass)"
   });
 
   const pill = (active: boolean) => ({
-    padding:"5px 14px", borderRadius:7, border:"none", cursor:"pointer", fontSize:12.5,
+    padding:"6px 16px", borderRadius:8, border:"none", cursor:"pointer", fontSize:13,
     fontWeight:700, fontFamily:"'DM Sans',sans-serif",
-    background:active?"var(--bg-card)":"transparent", color:active?"var(--primary)":"var(--text-muted)",
-    boxShadow:active?"0 1px 4px rgba(0,0,0,.1)":"none", transition:"all .12s",
+    background:active?"var(--bg-card)":"transparent", color:active?"var(--primary)":"var(--text-secondary)",
+    boxShadow:active?"0 2px 8px rgba(0,0,0,.08)":"none", transition:"all .15s",
   });
 
   return (
@@ -480,25 +481,30 @@ export function InterviewMail({ toast }: any) {
         </div>
 
         {/* Stage + Mode + Lang */}
-        <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
+        <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"center"}}>
           {/* Stage */}
-          {STAGES.map(s=>(
-            <button key={s.id} onClick={()=>save({stage:s.id})} style={seg(stage===s.id)}>{s.label}</button>
-          ))}
+          <div style={{display:"flex",gap:8}}>
+            {STAGES.map(s=>(
+              <button key={s.id} onClick={()=>save({stage:s.id})} style={seg(stage===s.id)}
+                onMouseEnter={(e: any)=>{if(stage!==s.id) e.currentTarget.style.background="var(--bg-glass-hover)";}}
+                onMouseLeave={(e: any)=>{if(stage!==s.id) e.currentTarget.style.background="var(--bg-glass)";}}
+              >{s.label}</button>
+            ))}
+          </div>
 
-          <div style={{width:1,height:24,background:"var(--border-glass)"}}/>
+          <div style={{width:1.5,height:28,background:"var(--border-glass)"}}/>
 
           {/* Online/Offline */}
-          <div style={{display:"flex",background:"var(--bg-glass)",backdropFilter:"blur(16px)",borderRadius:9,padding:3,gap:2,border:"1.5px solid var(--border-glass)"}}>
+          <div style={{display:"flex",background:"var(--bg-glass)",backdropFilter:"blur(16px)",borderRadius:11,padding:4,gap:2,border:"1.5px solid var(--border-glass)",boxShadow:"var(--shadow-glass)"}}>
             {[["offline","Offline"],["online","Online"]].map(([v,l])=>(
-              <button key={v} onClick={()=>save({type:v})} style={pill(type===v)}>{l}</button>
+              <button key={v} onClick={()=>save({type:v})} style={{...pill(type===v), background:type===v?"var(--bg-glass-hover)":"transparent"}}>{l}</button>
             ))}
           </div>
 
           {/* Lang */}
-          <div style={{display:"flex",background:"var(--bg-glass)",backdropFilter:"blur(16px)",borderRadius:9,padding:3,gap:2,border:"1.5px solid var(--border-glass)"}}>
+          <div style={{display:"flex",background:"var(--bg-glass)",backdropFilter:"blur(16px)",borderRadius:11,padding:4,gap:2,border:"1.5px solid var(--border-glass)",boxShadow:"var(--shadow-glass)"}}>
             {["en","vi"].map(l=>(
-              <button key={l} onClick={()=>save({lang:l})} style={pill(lang===l)}>{l.toUpperCase()}</button>
+              <button key={l} onClick={()=>save({lang:l})} style={{...pill(lang===l), background:lang===l?"var(--bg-glass-hover)":"transparent"}}>{l.toUpperCase()}</button>
             ))}
           </div>
         </div>
@@ -511,7 +517,7 @@ export function InterviewMail({ toast }: any) {
           <div style={{fontSize:13,color:"var(--text-primary)",fontWeight:500,lineHeight:1.5,wordBreak:"break-all"}}>{subject}</div>
         </div>
         <button onClick={()=>copy(subject,"sub")}
-          style={{flexShrink:0,padding:"5px 12px",border:"1.5px solid var(--border-glass)",borderRadius:8,cursor:"pointer",fontSize:11.5,fontWeight:600,color:copied==="sub"?"var(--success)":"var(--primary)",background:"var(--bg-card)",fontFamily:"'DM Sans',sans-serif",transition:"all .15s",display:"flex",alignItems:"center",gap:5}}>
+          style={{flexShrink:0,padding:"5px 12px",border:"1.5px solid var(--border-glass)",borderRadius:8,cursor:"pointer",fontSize:11.5,fontWeight:600,color:copied==="sub"?"var(--success)":"var(--text-primary)",background:"var(--bg-glass)",fontFamily:"'DM Sans',sans-serif",transition:"all .15s",display:"flex",alignItems:"center",gap:5}}>
           {copied==="sub"
             ?<><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>Copied</>
             :<><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copy</>

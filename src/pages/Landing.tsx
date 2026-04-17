@@ -30,8 +30,8 @@ export function Landing() {
           {cards.map(c => {
             const s: any = { 
               background: "var(--bg-glass)", 
-              backdropFilter: "blur(16px) saturate(180%)",
-              WebkitBackdropFilter: "blur(16px) saturate(180%)",
+              backdropFilter: "blur(16px)",
+              WebkitBackdropFilter: "blur(16px)",
               borderRadius: 14, 
               border: "1.5px solid var(--border-glass)", 
               padding: "16px 18px", 
@@ -57,11 +57,11 @@ export function Landing() {
             };
             const inner = (
               <>
-                <div style={{ width: 44, height: 44, borderRadius: 12, background: c.iconBg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, boxShadow: `0 4px 12px ${c.shadow}` }}>{c.icon}</div>
+                <div style={{ width: 44, height: 44, borderRadius: 12, background: c.iconBg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, boxShadow: `0 8px 16px ${c.shadow}` }}>{c.icon}</div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", marginBottom: 2 }}>{c.title}</div>
-                  <div style={{ fontSize: 12.5, color: "var(--text-muted)", lineHeight: 1.4, marginBottom: 7 }}>{c.desc}</div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 4, color: "var(--primary)", fontWeight: 600, fontSize: 12.5 }}>
+                  <div style={{ fontSize: 14.5, fontWeight: 700, color: "var(--text-primary)", marginBottom: 2 }}>{c.title}</div>
+                  <div style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.4, marginBottom: 7 }}>{c.desc}</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 4, color: "var(--primary)", fontWeight: 700, fontSize: 12.5 }}>
                     Open tool <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="9 18 15 12 9 6" /></svg>
                   </div>
                 </div>
