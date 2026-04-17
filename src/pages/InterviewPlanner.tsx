@@ -211,11 +211,11 @@ RULES:
 
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))",gap:16,alignItems:"start"}}>
         <div>
-          <label style={{fontSize:13,fontWeight:600,color:"var(--text-secondary)",display:"block",marginBottom:8}}>Original Message</label>
+          <label style={{fontSize:13,fontWeight:600,color:"var(--text-primary)",display:"block",marginBottom:8}}>Original Message</label>
           <textarea value={inputMsg} onChange={e=>setInputMsg(e.target.value)} rows={9}
             placeholder={`Paste recruiter message here...\n\nExample:\n"Brazil - Maria available\nTuesday 12 May: 14:00-16:00\n\nDenmark - Peter available\nTuesday 12 May: 11:00-13:00\n\nUK Time"`}
-            style={{...inpStyle,resize:"none",lineHeight:1.6,fontSize:13.5}}
-            onFocus={(e: any)=>e.target.style.borderColor="var(--primary)"} onBlur={(e: any)=>e.target.style.borderColor="var(--border-color)"}/>
+            style={{...inpStyle,border:"1.5px solid var(--border-glass)",resize:"none",lineHeight:1.6,fontSize:13.5,background:"var(--bg-glass)"}}
+            onFocus={(e: any)=>e.target.style.borderColor="var(--primary)"} onBlur={(e: any)=>e.target.style.borderColor="var(--border-glass)"}/>
           <div style={{marginTop:10,marginBottom:8}}>
             <label style={{fontSize:12,fontWeight:600,color:"var(--text-muted)",display:"block",marginBottom:6}}>Extra Instructions <span style={{fontWeight:400,color:"var(--text-placeholder)"}}>(optional)</span></label>
             <textarea value={extraPrompt} onChange={e=>setExtraPrompt(e.target.value)} rows={2}
