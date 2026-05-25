@@ -6,10 +6,16 @@ import { UsageTracker } from './usage';
 // Configure PDF.js worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
-export type AIProvider = 'gemini' | 'openai' | 'grok' | 'groq' | 'cerebras';
+export type AIProvider = 'gemini' | 'openai' | 'grok' | 'groq' | 'cerebras' | 'qwen';
 
 export function getProvider(): AIProvider {
   return (localStorage.getItem("ai_provider") as AIProvider) || 'gemini';
+}
+
+export function getQwenClient() {
+  const customKey = localStorage.getItem("custom_qwen_api_key");
+  if (!customKey) throw new Error("Qwen API key is missing");
+  return new OpenAI({ apiKey: customKey, baseURL: "https://dashscope-intl.aliyuncs.com/compatible-mode/v1", dangerouslyAllowBrowser: true });
 }
 
 export function getGeminiClient() {
@@ -66,6 +72,10 @@ export const getCerebrasModel = () => {
   return localStorage.getItem("cerebras_model") || "qwen-3-235b-a22b-instruct-2507";
 };
 
+export const getQwenModel = () => {
+  return localStorage.getItem("qwen_model") || "qwen-plus";
+};
+
 export const getOpenAIModel = () => {
   return localStorage.getItem("openai_model") || "gpt-4o-mini";
 };
@@ -119,6 +129,15 @@ export async function testApiKey(provider: AIProvider, key: string, customProxyU
       const cerebras = new OpenAI({ apiKey: key, baseURL: "https://api.cerebras.ai/v1", dangerouslyAllowBrowser: true });
       const model = currentModel || getCerebrasModel();
       const response = await cerebras.chat.completions.create({
+        model: model,
+        messages: [{ role: "user", content: "Say 'OK'" }],
+        max_tokens: 5,
+      });
+      return { success: !!response.choices[0].message.content };
+    } else if (provider === 'qwen') {
+      const qwen = new OpenAI({ apiKey: key, baseURL: "https://dashscope-intl.aliyuncs.com/compatible-mode/v1", dangerouslyAllowBrowser: true });
+      const model = currentModel || getQwenModel();
+      const response = await qwen.chat.completions.create({
         model: model,
         messages: [{ role: "user", content: "Say 'OK'" }],
         max_tokens: 5,
@@ -186,6 +205,19 @@ export async function gemini(system: string, user: string, maxTokens=1200) {
     });
     if (response.usage) UsageTracker.logUsage(provider, model, response.usage.prompt_tokens, response.usage.completion_tokens);
     return response.choices[0].message.content || "";
+  } else if (provider === 'qwen') {
+    const qwen = getQwenClient();
+    const model = getQwenModel();
+    const response = await qwen.chat.completions.create({
+      model: model,
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: user }
+      ],
+      max_tokens: maxTokens,
+    });
+    if (response.usage) UsageTracker.logUsage(provider, model, response.usage.prompt_tokens, response.usage.completion_tokens);
+    return response.choices[0].message.content || "";
   }
 
   const ai = getGeminiClient();
@@ -227,7 +259,7 @@ async function extractTextFromPdfBase64(base64: string): Promise<string> {
 export async function geminiWithDoc(system: string, userText: string, pdfBase64: string | null = null, maxTokens=1200) {
   const provider = getProvider();
 
-  if (provider === 'openai' || provider === 'grok' || provider === 'groq' || provider === 'cerebras') {
+  if (provider === 'openai' || provider === 'grok' || provider === 'groq' || provider === 'cerebras' || provider === 'qwen') {
     let finalUserText = userText;
     if (pdfBase64) {
       const extractedText = await extractTextFromPdfBase64(pdfBase64);
@@ -272,10 +304,23 @@ export async function geminiWithDoc(system: string, userText: string, pdfBase64:
       });
       if (response.usage) UsageTracker.logUsage(provider, model, response.usage.prompt_tokens, response.usage.completion_tokens);
       return response.choices[0].message.content || "";
-    } else {
+    } else if (provider === 'cerebras') {
       const cerebras = getCerebrasClient();
       const model = getCerebrasModel();
       const response = await cerebras.chat.completions.create({
+        model: model,
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content: finalUserText }
+        ],
+        max_tokens: maxTokens,
+      });
+      if (response.usage) UsageTracker.logUsage(provider, model, response.usage.prompt_tokens, response.usage.completion_tokens);
+      return response.choices[0].message.content || "";
+    } else {
+      const qwen = getQwenClient();
+      const model = getQwenModel();
+      const response = await qwen.chat.completions.create({
         model: model,
         messages: [
           { role: "system", content: system },

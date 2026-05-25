@@ -18,9 +18,11 @@ export function Header({ onMenu }: any) {
   const [grokKey, setGrokKey] = useState("");
   const [groqKey, setGroqKey] = useState("");
   const [cerebrasKey, setCerebrasKey] = useState("");
+  const [qwenKey, setQwenKey] = useState("");
   const [groqModel, setGroqModel] = useState("llama-3.3-70b-versatile");
   const [cerebrasModel, setCerebrasModel] = useState("qwen-3-235b-a22b-instruct-2507");
   const [openaiModel, setOpenaiModel] = useState("gpt-4o-mini");
+  const [qwenModel, setQwenModel] = useState("qwen-plus");
   
   const [isTesting, setIsTesting] = useState(false);
   const [testStatus, setTestStatus] = useState<'idle' | 'success' | 'error'>('idle');
@@ -46,25 +48,30 @@ export function Header({ onMenu }: any) {
       const savedOpenaiModel = localStorage.getItem("openai_model") || "gpt-4o-mini";
       setOpenaiModel(savedOpenaiModel);
       
+      const savedQwenModel = localStorage.getItem("qwen_model") || "qwen-plus";
+      setQwenModel(savedQwenModel);
+      
       const savedGemini = localStorage.getItem("custom_gemini_api_key") || "";
       const savedOpenai = localStorage.getItem("custom_openai_api_key") || "";
       const savedGrok = localStorage.getItem("custom_grok_api_key") || "";
       const savedGroq = localStorage.getItem("custom_groq_api_key") || "";
       const savedCerebras = localStorage.getItem("custom_cerebras_api_key") || "";
+      const savedQwen = localStorage.getItem("custom_qwen_api_key") || "";
       
       setGeminiKey(savedGemini);
       setOpenaiKey(savedOpenai);
       setGrokKey(savedGrok);
       setGroqKey(savedGroq);
       setCerebrasKey(savedCerebras);
+      setQwenKey(savedQwen);
       
-      const currentKey = savedProvider === 'gemini' ? savedGemini : savedProvider === 'openai' ? savedOpenai : savedProvider === 'grok' ? savedGrok : savedProvider === 'groq' ? savedGroq : savedCerebras;
+      const currentKey = savedProvider === 'gemini' ? savedGemini : savedProvider === 'openai' ? savedOpenai : savedProvider === 'grok' ? savedGrok : savedProvider === 'groq' ? savedGroq : savedProvider === 'cerebras' ? savedCerebras : savedQwen;
       setTestStatus(currentKey ? 'success' : 'idle');
       setErrorMessage("");
     }
   }, [showSettings]);
 
-  const currentKey = provider === 'gemini' ? geminiKey : provider === 'openai' ? openaiKey : provider === 'grok' ? grokKey : provider === 'groq' ? groqKey : cerebrasKey;
+  const currentKey = provider === 'gemini' ? geminiKey : provider === 'openai' ? openaiKey : provider === 'grok' ? grokKey : provider === 'groq' ? groqKey : provider === 'cerebras' ? cerebrasKey : qwenKey;
 
   const handleTestKey = async () => {
     if (!currentKey.trim()) return;
@@ -75,7 +82,7 @@ export function Header({ onMenu }: any) {
       provider, 
       currentKey.trim(), 
       provider === 'gemini' ? geminiProxyUrl : undefined,
-      provider === 'gemini' ? geminiModel : provider === 'openai' ? openaiModel : provider === 'groq' ? groqModel : provider === 'cerebras' ? cerebrasModel : undefined
+      provider === 'gemini' ? geminiModel : provider === 'openai' ? openaiModel : provider === 'groq' ? groqModel : provider === 'cerebras' ? cerebrasModel : provider === 'qwen' ? qwenModel : undefined
     );
     if (result.success) {
       setTestStatus('success');
@@ -85,13 +92,15 @@ export function Header({ onMenu }: any) {
       localStorage.setItem("groq_model", groqModel);
       localStorage.setItem("cerebras_model", cerebrasModel);
       localStorage.setItem("openai_model", openaiModel);
+      localStorage.setItem("qwen_model", qwenModel);
       localStorage.setItem("gemini_proxy_url", geminiProxyUrl.trim());
       
       if (provider === 'gemini') localStorage.setItem("custom_gemini_api_key", currentKey.trim());
       else if (provider === 'openai') localStorage.setItem("custom_openai_api_key", currentKey.trim());
       else if (provider === 'grok') localStorage.setItem("custom_grok_api_key", currentKey.trim());
       else if (provider === 'groq') localStorage.setItem("custom_groq_api_key", currentKey.trim());
-      else localStorage.setItem("custom_cerebras_api_key", currentKey.trim());
+      else if (provider === 'cerebras') localStorage.setItem("custom_cerebras_api_key", currentKey.trim());
+      else localStorage.setItem("custom_qwen_api_key", currentKey.trim());
     } else {
       setTestStatus('error');
       let displayError = result.error || "Invalid API Key. Please check and try again.";
@@ -126,6 +135,7 @@ export function Header({ onMenu }: any) {
     localStorage.setItem("groq_model", groqModel);
     localStorage.setItem("cerebras_model", cerebrasModel);
     localStorage.setItem("openai_model", openaiModel);
+    localStorage.setItem("qwen_model", qwenModel);
     
     if (geminiKey.trim()) {
       localStorage.setItem("custom_gemini_api_key", geminiKey.trim());
@@ -156,6 +166,12 @@ export function Header({ onMenu }: any) {
       localStorage.setItem("custom_cerebras_api_key", cerebrasKey.trim());
     } else {
       localStorage.removeItem("custom_cerebras_api_key");
+    }
+
+    if (qwenKey.trim()) {
+      localStorage.setItem("custom_qwen_api_key", qwenKey.trim());
+    } else {
+      localStorage.removeItem("custom_qwen_api_key");
     }
     
     setShowSettings(false);
@@ -225,10 +241,11 @@ export function Header({ onMenu }: any) {
               <option value="grok">xAI (Grok)</option>
               <option value="groq">Groq (Ultra-Fast Llama 3)</option>
               <option value="cerebras">Cerebras (Ultra-Fast AI)</option>
+              <option value="qwen">Qwen (Alibaba DashScope)</option>
             </select>
 
             <label style={{ fontSize: 14, fontWeight: 600, color: "var(--text-secondary)", display: "block", marginBottom: 8 }}>
-              {provider === 'gemini' ? 'Personal Gemini API Key' : provider === 'openai' ? 'Personal OpenAI API Key' : provider === 'grok' ? 'Personal Grok API Key' : provider === 'groq' ? 'Personal Groq API Key' : 'Personal Cerebras API Key'}
+              {provider === 'gemini' ? 'Personal Gemini API Key' : provider === 'openai' ? 'Personal OpenAI API Key' : provider === 'grok' ? 'Personal Grok API Key' : provider === 'groq' ? 'Personal Groq API Key' : provider === 'cerebras' ? 'Personal Cerebras API Key' : 'Personal Qwen API Key'}
             </label>
             <div style={{ display: "flex", gap: 8, marginBottom: provider === 'gemini' ? 16 : 8 }}>
               <input 
@@ -239,10 +256,11 @@ export function Header({ onMenu }: any) {
                   else if (provider === 'openai') setOpenaiKey(e.target.value);
                   else if (provider === 'grok') setGrokKey(e.target.value);
                   else if (provider === 'groq') setGroqKey(e.target.value);
-                  else setCerebrasKey(e.target.value);
+                  else if (provider === 'cerebras') setCerebrasKey(e.target.value);
+                  else setQwenKey(e.target.value);
                   setTestStatus('idle');
                 }} 
-                placeholder={`Paste your ${provider === 'gemini' ? 'Gemini' : provider === 'openai' ? 'OpenAI' : provider === 'grok' ? 'Grok' : provider === 'groq' ? 'Groq' : 'Cerebras'} API Key here...`}
+                placeholder={`Paste your ${provider === 'gemini' ? 'Gemini' : provider === 'openai' ? 'OpenAI' : provider === 'grok' ? 'Grok' : provider === 'groq' ? 'Groq' : provider === 'cerebras' ? 'Cerebras' : 'Qwen'} API Key here...`}
                 style={{ flex: 1, border: "1.5px solid var(--border-color)", borderRadius: 8, padding: "10px 14px", fontSize: 14, outline: "none", transition: "border-color 0.2s" }}
                 onFocus={(e: any) => e.target.style.borderColor = "var(--border-focus)"} 
                 onBlur={(e: any) => e.target.style.borderColor = "var(--border-color)"}
@@ -375,6 +393,24 @@ export function Header({ onMenu }: any) {
               </>
             )}
 
+            {provider === 'qwen' && (
+              <>
+                <label style={{ fontSize: 14, fontWeight: 600, color: "var(--text-secondary)", display: "block", marginBottom: 8 }}>Qwen Model (Alibaba DashScope)</label>
+                <select 
+                  value={qwenModel} 
+                  onChange={(e) => {
+                    setQwenModel(e.target.value);
+                    setTestStatus('idle');
+                  }}
+                  style={{ width: "100%", border: "1.5px solid var(--border-color)", borderRadius: 8, padding: "10px 14px", fontSize: 14, outline: "none", marginBottom: 8, background: "var(--bg-card)" }}
+                >
+                  <option value="qwen-plus">qwen-plus (Balanced)</option>
+                  <option value="qwen-max">qwen-max (Most Capable)</option>
+                  <option value="qwen-turbo">qwen-turbo (Fast)</option>
+                </select>
+              </>
+            )}
+
             {testStatus === 'success' && (
               <div style={{ fontSize: 13, color: "var(--success)", fontWeight: 500, marginBottom: 12, display: "flex", alignItems: "center", gap: 4 }}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
@@ -405,9 +441,13 @@ export function Header({ onMenu }: any) {
                 <div style={{ marginBottom: 8 }}>
                   <strong>Don't have a Groq Key?</strong> Get it from the <a href="https://console.groq.com/keys" target="_blank" rel="noreferrer" style={{ color: "var(--border-focus)", textDecoration: "none", fontWeight: 500 }}>Groq Console</a>.
                 </div>
-              ) : (
+              ) : provider === 'cerebras' ? (
                 <div style={{ marginBottom: 8 }}>
                   <strong>Don't have a Cerebras Key?</strong> Get it from the <a href="https://cloud.cerebras.ai/" target="_blank" rel="noreferrer" style={{ color: "var(--border-focus)", textDecoration: "none", fontWeight: 500 }}>Cerebras Cloud</a>.
+                </div>
+              ) : (
+                <div style={{ marginBottom: 8 }}>
+                  <strong>Don't have a Qwen Key?</strong> Get it from <a href="https://bailian.console.alibabacloud.com" target="_blank" rel="noreferrer" style={{ color: "var(--border-focus)", textDecoration: "none", fontWeight: 500 }}>Alibaba Cloud DashScope</a>.
                 </div>
               )}
               <div style={{ display: "flex", alignItems: "flex-start", gap: 6 }}>
