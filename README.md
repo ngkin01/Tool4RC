@@ -184,7 +184,7 @@ Tool4RC/
 
 ## 👤 Author
 
-**ngkin01** · [@ngkin01](https://github.com/ngkin01)
+**Tommy Nguyen** · [@ngkin01](https://github.com/ngkin01)
 
 ---
 
