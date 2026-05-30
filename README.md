@@ -186,11 +186,6 @@ Tool4RC/
 
 **Tommy Nguyen** · [@ngkin01](https://github.com/ngkin01)
 
----
-
-## 📄 License
-
-This project is licensed under the [Apache-2.0](LICENSE) license.
 
 ---
 
