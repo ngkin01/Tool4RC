@@ -21,9 +21,16 @@ async function startServer() {
 
   app.use(express.json());
 
+  app.get("/api/health", (req, res) => {
+    res.json({ status: "ok" });
+  });
+
   // API route for processing universal input
   app.post("/api/freecai/process", async (req, res) => {
     try {
+      if (!process.env.GEMINI_API_KEY) {
+        return res.status(500).json({ error: "GEMINI_API_KEY is not configured" });
+      }
       const { input, currentClientName, existingJobs } = req.body;
 
       if (!input || !currentClientName) {
@@ -121,6 +128,9 @@ async function startServer() {
   // Chat API route for RAG over client data
   app.post("/api/freecai/chat", async (req, res) => {
     try {
+      if (!process.env.GEMINI_API_KEY) {
+        return res.status(500).json({ error: "GEMINI_API_KEY is not configured" });
+      }
       const { message, clientData } = req.body;
       
       const response = await ai.models.generateContent({
