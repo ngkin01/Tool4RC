@@ -114,3 +114,64 @@ body {
 .dark .sidebar-logo-img {
   mix-blend-mode: lighten;
 }
+
+.markdown-body {
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.markdown-body p {
+  margin-bottom: 1em;
+}
+
+.markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4 {
+  font-weight: 700;
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+  color: inherit;
+}
+
+.markdown-body h1 { font-size: 1.75em; }
+.markdown-body h2 { font-size: 1.5em; border-bottom: 1px solid var(--border-color); padding-bottom: 0.3em; }
+.markdown-body h3 { font-size: 1.25em; }
+
+.markdown-body ul, .markdown-body ol {
+  padding-left: 2em;
+  margin-bottom: 1em;
+}
+
+.markdown-body ul { list-style-type: disc; }
+.markdown-body ol { list-style-type: decimal; }
+
+.markdown-body li {
+  margin-bottom: 0.25em;
+}
+
+.markdown-body table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1em;
+}
+
+.markdown-body th, .markdown-body td {
+  padding: 8px 12px;
+  border: 1px solid var(--border-color);
+}
+
+.markdown-body th {
+  background-color: var(--bg-hover);
+  font-weight: 600;
+  text-align: left;
+}
+
+.markdown-body blockquote {
+  border-left: 4px solid var(--primary);
+  padding-left: 1em;
+  color: var(--text-muted);
+  margin-bottom: 1em;
+  font-style: italic;
+}
+
+.markdown-body strong {
+  font-weight: 700;
+}

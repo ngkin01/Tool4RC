@@ -74,8 +74,9 @@ export function Landing() {
         </div>
       </div>
 
-      {/* Time Buddy */}
-      <div style={{ display: "flex", justifyContent: "center", marginTop: 12, paddingBottom: 32 }}>
+      {/* Footer Tools: Time Buddy & freeC AI */}
+      <div style={{ display: "flex", justifyContent: "center", gap: 64, marginTop: 12, paddingBottom: 32 }}>
+        {/* Time Buddy */}
         <Link to="/planner"
           style={{
             display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
@@ -102,6 +103,35 @@ export function Landing() {
             <img src="/time-buddy.png" alt="Time Buddy" style={{ height: 140, objectFit: 'contain' }} />
           </div>
           <div style={{ fontSize: 14, fontWeight: 800, color: "var(--warning)", letterSpacing: ".02em", marginTop: 2 }}>Time Buddy</div>
+        </Link>
+
+        {/* freeC AI */}
+        <Link to="/freec-ai"
+          style={{
+            display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
+            cursor: "pointer", transition: "all .2s cubic-bezier(0.4, 0, 0.2, 1)", textDecoration: "none"
+          }}
+          onMouseEnter={(e: any) => { 
+            e.currentTarget.style.transform = "translateY(-6px)"; 
+            const wrapper = e.currentTarget.querySelector('.img-wrapper');
+            if (wrapper) wrapper.style.filter = "drop-shadow(0 12px 20px rgba(139, 92, 246, 0.35))";
+          }}
+          onMouseLeave={(e: any) => { 
+            e.currentTarget.style.transform = "translateY(0)"; 
+            const wrapper = e.currentTarget.querySelector('.img-wrapper');
+            if (wrapper) wrapper.style.filter = "drop-shadow(0 4px 12px rgba(139, 92, 246, 0.2))";
+          }}
+          onMouseDown={(e: any) => {
+            e.currentTarget.style.transform = "translateY(-2px) scale(0.98)";
+          }}
+          onMouseUp={(e: any) => {
+            e.currentTarget.style.transform = "translateY(-6px) scale(1)";
+          }}
+        >
+          <div className="img-wrapper" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 140, filter: 'drop-shadow(0 4px 12px rgba(139, 92, 246, 0.2))', transition: 'all .2s cubic-bezier(0.4, 0, 0.2, 1)' }}>
+            <img src="/freec-icon.png" alt="freeC AI" style={{ height: 140, objectFit: 'contain', filter: 'drop-shadow(0.5px 0 0 white) drop-shadow(0 0.5px 0 white) drop-shadow(-0.5px 0 0 white) drop-shadow(0 -0.5px 0 white)' }} />
+          </div>
+          <div style={{ fontSize: 14, fontWeight: 800, color: "#8b5cf6", letterSpacing: ".02em", marginTop: 2 }}>freeC AI</div>
         </Link>
       </div>
 

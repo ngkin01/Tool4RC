@@ -13,6 +13,7 @@ import { InterviewPlanner } from './pages/InterviewPlanner';
 import { InterviewMail } from './pages/InterviewMail';
 import { JobPostGenerator } from './pages/JobPostGenerator';
 import { JDHub } from './pages/JDHub';
+import { FreeCAI } from './pages/FreeCAI';
 import { useToast, Toast } from './components/ui';
 
 export default function App() {
@@ -42,6 +43,7 @@ export default function App() {
               <Route path="/mail" element={<InterviewMail toast={show} />} />
               <Route path="/jobpost" element={<JobPostGenerator toast={show} />} />
               <Route path="/jdhub" element={<JDHub toast={show} />} />
+              <Route path="/freec-ai" element={<FreeCAI toast={show} />} />
             </Routes>
           </div>
         </div>

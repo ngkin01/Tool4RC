@@ -27,6 +27,7 @@ export function NavSidebar({ open, onClose }: any) {
     { path: '/jobpost', label: 'Job Post Generator', icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg> },
     { path: '/mail', label: 'Interview Mail', icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg> },
     { path: '/jdhub', label: 'JD Hub', icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg> },
+    { path: '/freec-ai', label: 'freeC AI', icon: <div className="freec-sidebar-icon" style={{ width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', transition: 'all 0.2s', filter: 'drop-shadow(0.5px 0 0 white) drop-shadow(0 0.5px 0 white) drop-shadow(-0.5px 0 0 white) drop-shadow(0 -0.5px 0 white)' }}><img src="/freec-icon.png" alt="f" style={{ width: '100%', height: '100%', objectFit: 'contain' }} onError={(e: any) => e.currentTarget.style.opacity = '0'} /></div> },
   ];
 
   return (
@@ -47,7 +48,24 @@ export function NavSidebar({ open, onClose }: any) {
             const isActive = location.pathname === item.path;
             return (
               <Link key={item.path} to={item.path} onClick={onClose} style={{ textDecoration: 'none', display: "flex", alignItems: "center", gap: 12, width: "100%", background: isActive ? "var(--text-secondary)" : "none", border: "none", padding: "10px 12px", borderRadius: 8, cursor: "pointer", textAlign: "left", color: isActive ? "var(--bg-card)" : "var(--border-color)", marginBottom: 4 }}
-                onMouseEnter={(e: any) => { if (!isActive) e.currentTarget.style.background = "var(--text-secondary)" }} onMouseLeave={(e: any) => { if (!isActive) e.currentTarget.style.background = "none" }}>
+                onMouseEnter={(e: any) => { 
+                  if (!isActive) e.currentTarget.style.background = "var(--text-secondary)";
+                  const icon = e.currentTarget.querySelector('.freec-sidebar-icon');
+                  if (icon) {
+                    icon.style.transform = 'translateY(-2px)';
+                    icon.style.boxShadow = '0 4px 8px rgba(0,0,0,0.2)';
+                    icon.style.borderColor = 'white';
+                  }
+                }} 
+                onMouseLeave={(e: any) => { 
+                  if (!isActive) e.currentTarget.style.background = "none";
+                  const icon = e.currentTarget.querySelector('.freec-sidebar-icon');
+                  if (icon) {
+                    icon.style.transform = 'translateY(0)';
+                    icon.style.boxShadow = 'none';
+                    icon.style.borderColor = 'rgba(255,255,255,0.8)';
+                  }
+                }}>
                 <span style={{ color: isActive ? "var(--success)" : "var(--text-muted)" }}>{item.icon}</span>
                 <span style={{ fontSize: 13, fontWeight: 500 }}>{item.label}</span>
               </Link>

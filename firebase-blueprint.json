@@ -1,0 +1,33 @@
+{
+  "entities": {
+    "Client": {
+      "title": "Client",
+      "description": "A client entity containing basic info and an array of jobs",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "The UID of the user who owns this client." },
+        "name": { "type": "string" },
+        "website": { "type": "string" },
+        "tagline": { "type": "string" },
+        "summary": {
+          "type": "object",
+          "properties": {
+            "industry": { "type": "string" },
+            "culture": { "type": "string" },
+            "overview": { "type": "string" },
+            "keyInfo": { "type": "array" }
+          }
+        },
+        "timeline": { "type": "array" },
+        "jobs": { "type": "array" }
+      },
+      "required": ["userId", "name"]
+    }
+  },
+  "firestore": {
+    "clients/{clientId}": {
+      "schema": "Client",
+      "description": "Collection of clients"
+    }
+  }
+}
