@@ -122,9 +122,35 @@ If the input title or role matches or is highly related to an existing job, iden
         booleanSearch: "string",
         socialPost: "string",
         interviewQuestions: ["string"],
-        competitorCompanies: ["string"],
-        positionIntelligence: ["string"],
-        sellingPoints: ["string"],
+        competitorCompanies: {
+          directCompetitors: ["string"],
+          similarBusinessModels: ["string"],
+          transferableTalent: ["string"],
+          whyTheseCompanies: "string"
+        },
+        positionIntelligence: {
+          natureOfRole: "string",
+          dayToDayChallenges: ["string"],
+          hiddenExpectations: ["string"],
+          keySuccessFactors: ["string"],
+          commonCandidateBackgrounds: ["string"],
+          commonReasonsCandidatesFail: ["string"],
+          transferableBackgrounds: ["string"]
+        },
+        candidatePersonaObj: {
+          yearsOfExperience: "string",
+          industryBackground: "string",
+          functionalBackground: "string",
+          languageRequirements: "string",
+          personalityTraits: ["string"]
+        },
+        talentMarketInsight: {
+          talentPoolDifficulty: "string",
+          hiringChallenges: ["string"],
+          counterOfferRisk: "string",
+          salaryCompetitiveness: "string",
+          noticePeriodRisk: "string"
+        },
         candidateSellingPoints: ["string"],
         recruitmentStrategy: {
           whereToSource: ["string"],
@@ -143,25 +169,23 @@ If the input title or role matches or is highly related to an existing job, iden
     
     Return a JSON object containing the above fields.
     1. 'hasNewJob': A boolean flag to indicate if a new job opening or job update is detected. If it is a JD or clearly describes a job (new or update), set this to true.
-    2. 'matchedJobId': If this is an update or additional information for an existing job from the list above, set this to the exact 'ID' of that matched job. Otherwise, you MUST set this to the exact string "null" (do not output literal JSON null, output the string "null" and never include any explanations, reasoning, or thinking inside this field).
+    2. 'matchedJobId': If this is an update, feedback, or additional information for an existing job from the list above, you MUST set this to the exact ID of that matched job (e.g. "j1"). Otherwise (if it is a brand new job or doesn't match any existing job ID), you MUST set this field to the exact string "null" (Do NOT output literal JSON null, do NOT output long text with thinking, explanations, or excuses, just output the string "null" or the exact matching ID!).
     3. 'timelineSummary': A string summarizing what happened in this input to add to the timeline.
     4. 'clientUpdates': A structured object with any new information about the client:
        - culture (string)
        - overview (string)
        - industry (string)
        - keyInfo (array of strings)
-    5. 'jobData': If 'hasNewJob' is true, generate a comprehensive object containing:
-       - title (string)
-       - roleOverview: { dept, reportingLine, salaryRange, location }
-       - companyContext: (array of strings)
-       - idealPersona: (array of strings)
-       - mustHave: (array of strings)
-       - niceToHave: (array of strings)
-       - questionsForClient: (array of strings)
-       - booleanSearch: (string)
-       - socialPost: (string)
-       - interviewQuestions: (array of strings)
+    5. 'jobData': If 'hasNewJob' is true, generate a comprehensive object containing all fields matching the schema above.
        
+       ==================================================
+       LANGUAGE & STYLE INSTRUCTIONS
+       ==================================================
+       The primary language of the report MUST be Vietnamese, but you should naturally combine it with English terminology where standard in the recruitment industry in Vietnam (e.g., job titles, technical terms, specific skill sets, certifications, or framework names like "Must Have", "Nice to Have", "Core skills", "Good English", "Hands-on experience", etc.).
+       - Rewrite information in natural, professional recruitment-focused Vietnamese combined with appropriate English terms.
+       - Never write purely rigid, dry English translations. Make it sound like an elite Vietnamese Senior Recruitment Consultant talking to their colleagues or client.
+       - Bullet points, summaries, and descriptions should be punchy, clear, and action-oriented.
+
        ==================================================
        ADDITIONAL RECRUITMENT INTELLIGENCE
        ==================================================

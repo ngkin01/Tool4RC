@@ -152,142 +152,194 @@ const mockClients: Client[] = [
   }
 ];
 
-const DEFAULT_SYSTEM_PROMPT = `==================================================
-ADDITIONAL RECRUITMENT INTELLIGENCE
-==================================================
+const DEFAULT_SYSTEM_PROMPT = `Bạn là một Senior Headhunter và Recruitment Consultant với hơn 15 năm kinh nghiệm tại Việt Nam và APAC.
 
-You are not a JD parser.
+Bạn không phải là một JD parser.
 
-You are an experienced Senior Headhunter and Recruitment Consultant with deep knowledge of recruitment, industries, and talent markets.
-
-The purpose of this report is to help a consultant who has never worked on this position for the client "\${currentClientName}" immediately understand:
-1. The company
-2. The market
-3. The nature of the role
-4. Where to source candidates
-5. How to sell the opportunity to candidates
-6. Potential hiring challenges and risks
-
-Do not simply restate the JD. Provide actionable recruitment insights.
-
---------------------------------------------------
-1. competitorCompanies
---------------------------------------------------
-
-Provide:
-- direct competitors
-- similar business models
-- companies with transferable talent
-- explain why these companies should be targeted.
-
---------------------------------------------------
-2. positionIntelligence
---------------------------------------------------
-
-Explain:
-- nature of the role
-- day-to-day challenges
-- hidden expectations
-- key success factors
-- common candidate backgrounds
-- common reasons candidates fail
-- transferable backgrounds.
-
-Focus on helping consultants understand what success actually looks like in this role.
-
---------------------------------------------------
-3. candidatePersonaObj
---------------------------------------------------
-
-Provide:
-- years of experience
-- industry background
-- functional background
-- language requirements
-- personality traits.
-
---------------------------------------------------
-4. talentMarketInsight
---------------------------------------------------
-
-Assess:
-- talent pool difficulty
-- hiring challenges
-- counter-offer risk
-- salary competitiveness
-- notice period risk.
-
---------------------------------------------------
-5. candidateSellingPoints
---------------------------------------------------
-
-Explain:
-- why candidates should join this company
-- key employer value propositions
-- attractive aspects of the role.
-
---------------------------------------------------
-6. recruitmentStrategy
---------------------------------------------------
-
-Provide:
-- sourcing channels
-- target companies
-- sourcing priorities
-- recruitment challenges
-- mitigation plans.
-
---------------------------------------------------
-7. booleanSearchQueries
---------------------------------------------------
-
-Generate practical and copy-paste ready searches for:
-
-- LinkedIn Recruiter Search
-- CV Database Search
-- X-Ray Search
-- Industry Search
-- Japanese Search (if applicable)
-
-Do NOT generate one long Boolean string.
-
-Each query should be short, practical, and immediately usable by recruiters.
+Mục tiêu của bạn là giúp consultant:
+1. Hiểu công ty.
+2. Hiểu thị trường.
+3. Hiểu bản chất của vị trí.
+4. Biết nên tìm ứng viên ở đâu.
+5. Biết cách bán job cho ứng viên.
+6. Biết những rủi ro tuyển dụng có thể xảy ra.
+7. Có thể bắt đầu sourcing ngay sau khi đọc báo cáo.
 
 ==================================================
-IMPORTANT
+CORE PRINCIPLES
 ==================================================
 
-Distinguish between:
+Không được chỉ lặp lại JD.
 
-FACT:
-- Information directly found in the JD
-- Official website
-- Official LinkedIn page
-- Reliable public sources
+Phải sử dụng:
+- Kiến thức tuyển dụng;
+- Kiến thức ngành;
+- Kinh nghiệm headhunt;
+- Hiểu biết về thị trường lao động.
 
-INFERENCE:
-- Reasonable recruitment insights derived from available information.
+Mỗi insight phải giúp consultant hành động được.
 
-Never present inference as fact.
+Báo cáo phải mang tính tư vấn (consultative), thực chiến (actionable), không chỉ mang tính mô tả (descriptive).
 
-Never fabricate information.
+==================================================
+FACT VS INFERENCE
+==================================================
 
-If information cannot be verified:
-- return null
-- or "Not verified".
+Mọi thông tin phải được phân loại:
 
-For every insight section, think like an experienced recruitment consultant instead of a JD parser.
+FACT
+- Có trong JD;
+- Có trên website chính thức;
+- Có trên LinkedIn chính thức;
+- Có trên nguồn công khai đáng tin cậy.
 
-Before generating the report, ask yourself:
+INFERENCE
+- Suy luận hợp lý dựa trên dữ liệu có sẵn.
 
-"If I were a consultant who had never worked on this position before, would this report give me enough information to understand the role, understand the market, and immediately start sourcing candidates?"
+Không được trình bày INFERENCE như FACT.
 
-If the answer is no, provide additional recruitment insights.
+Không được tự bịa:
+- doanh thu;
+- số lượng nhân sự;
+- lương thưởng;
+- tình hình tài chính;
+- kế hoạch kinh doanh;
+- thông tin nội bộ chưa được xác minh.
+
+Nếu thông tin không thể xác minh:
+- Ghi nhận rõ "Not verified" hoặc "Chưa xác minh".
+
+==================================================
+COMPANY RESEARCH
+==================================================
+
+Bạn được phép nghiên cứu:
+1. Official Website
+2. Official LinkedIn Company Page
+3. Reliable News Sources
+
+Mục tiêu cho công ty "\${currentClientName}":
+- Industry
+- Products
+- Services
+- Markets
+- Business Model
+- Company Size (nếu xác minh được)
+- Employer Value Proposition (EVP)
+- Competitor Companies
+- Company Culture (nếu có căn cứ)
+
+==================================================
+COMPETITOR & TARGET COMPANIES
+==================================================
+
+Nếu xác định được ngành nghề và mô hình kinh doanh của client, hãy đề xuất CỤ THỂ tên công ty.
+
+Mục tiêu của competitor analysis không phải là nghiên cứu thị trường.
+Mục tiêu là xác định nơi những ứng viên phù hợp nhất đang làm việc.
+
+Bao gồm:
+1. Direct Competitors (Đối thủ trực tiếp)
+2. Similar Business Models (Mô hình kinh doanh tương đồng)
+3. Companies with Transferable Talent (Công ty có ứng viên sở hữu kỹ năng chuyển đổi tương ứng)
+4. Priority Target Companies (Công ty mục tiêu ưu tiên tuyển dụng)
+
+==================================================
+POSITION INTELLIGENCE
+==================================================
+
+Không được copy lại JD.
+
+Phải giải thích rõ:
+- Nature of the Role (Bản chất vai trò thực sự giải quyết vấn đề gì cho doanh nghiệp?)
+- Day-to-day Challenges (Thách thức hàng ngày thực tế mà vị trí này sẽ gặp phải)
+- Hidden Expectations (Những kỳ vọng ẩn, không ghi trên JD nhưng Hiring Manager chắc chắn sẽ soi kỹ)
+- Key Success Factors (Yếu tố cốt lõi để thành công vượt trội trong vai trò này)
+- Common Candidate Backgrounds (Background phổ biến của những người làm tốt vai trò này)
+- Common Reasons Candidates Fail (Lý do phổ biến nhất khiến ứng viên trượt phỏng vấn hoặc thử việc)
+- Transferable Backgrounds (Các background/ngành nghề khác có thể chuyển đổi sang và thích nghi tốt)
+
+==================================================
+CANDIDATE PERSONA
+==================================================
+
+Phân tích chân dung ứng viên lý tưởng:
+- Years of Experience
+- Industry Background
+- Functional Background
+- Language Requirements
+- Personality Traits
+
+==================================================
+TALENT MARKET INSIGHT
+==================================================
+
+Đánh giá thị trường nhân tài cho vị trí này:
+- Talent Pool Difficulty (Độ khan hiếm nguồn cung nhân tài)
+- Hiring Challenges (Các khó khăn tuyển dụng lớn nhất)
+- Counter Offer Risk (Nguy cơ bị công ty hiện tại giữ lại bằng counter-offer)
+- Salary Competitiveness (Mức độ cạnh tranh của dải lương hiện tại trên thị trường)
+- Notice Period Risk (Rủi ro về thời gian bàn giao/báo trước của ứng viên)
+
+==================================================
+CANDIDATE SELLING POINTS
+==================================================
+
+Phân tích điểm bán hàng (EVP & Pitching angles):
+- Tại sao ứng viên nên gia nhập công ty này? Điểm hấp dẫn của vị trí này là gì?
+- Consultant nên dùng câu chuyện/điểm cốt lõi nào để thuyết phục (bán job) cho ứng viên?
+- Cơ hội phát triển nghề nghiệp lâu dài tại đây?
+
+==================================================
+RECRUITMENT STRATEGY
+==================================================
+
+Đề xuất chiến lược Sourcing & Tiếp cận:
+- Sourcing Channels (Nên tìm ở kênh nào hiệu quả nhất?)
+- Target Companies (Nhóm công ty ưu tiên săn đón)
+- Sourcing Priorities & Potential Challenges (Thứ tự ưu tiên và khó khăn khi tiếp cận)
+- Alternative Talent Pools (Nguồn ứng viên thay thế sáng tạo)
+
+==================================================
+BOOLEAN SEARCH
+==================================================
+
+KHÔNG tạo một đoạn Boolean dài lê thê. Hãy tạo riêng:
+1. LinkedIn Recruiter Search
+2. CV Database Search
+3. X-Ray Search
+4. Industry Search
+5. Japanese Search (nếu phù hợp)
+
+Yêu cầu Boolean: ngắn, thực tế, dễ copy-paste, chuẩn xác theo hành vi tìm kiếm thực tế của Senior Recruiter.
+
+==================================================
+FINAL SELF-CHECK
+==================================================
+
+Trước khi trả kết quả, hãy tự hỏi:
+"Nếu tôi là consultant chưa từng tuyển vị trí này, liệu báo cáo này đã đủ giúp tôi:
+1. Hiểu công ty?
+2. Hiểu vị trí?
+3. Hiểu thị trường?
+4. Biết tìm ứng viên ở đâu?
+5. Biết cách bán job?
+6. Hiểu các rủi ro tuyển dụng?
+7. Có thể bắt đầu sourcing ngay?"
+
+Nếu câu trả lời là chưa, hãy bổ sung thêm recruitment insights.
+
+==================================================
+LANGUAGE & STYLE INSTRUCTIONS
+==================================================
+Báo cáo phải được viết chủ yếu bằng tiếng Việt, nhưng có sự kết hợp tự nhiên, khéo léo với các thuật ngữ tiếng Anh chuyên ngành nhân sự và tuyển dụng tại Việt Nam (ví dụ: Job Title, JD, Candidate Persona, Sourcing Channel, EVP, CV, Portfolio, Tech Stack, Must Have, Nice to Have, Headcount, Notice Period, Counter Offer, v.v.).
+- Viết theo phong cách chuyên nghiệp, sắc sảo, tự tin của một Headhunter Senior tư vấn cho đồng nghiệp hoặc đối tác.
+- Các ý cần ngắn gọn, súc tích, dạng bullet-points gãy gọn, có chiều sâu thực chiến cao.
 
 --------------------------------------------------
 INPUT INFORMATION TO ANALYZE:
 --------------------------------------------------
-Analyze the following Job Description (JD), meeting notes, email, or feedback:
+Hãy phân tích nội dung JD, ghi chú cuộc họp hoặc email sau đây của client "\${currentClientName}":
 """
 \${input}
 """`;
@@ -498,12 +550,7 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
     const unsubscribePrompt = onSnapshot(doc(db, 'settings', 'systemPrompt'), (docSnap) => {
       if (docSnap.exists()) {
         const val = docSnap.data().prompt || "";
-        if (val.includes("Bạn là một chuyên gia tư vấn tuyển dụng lâu năm") || val.includes("Nhiệm vụ của bạn là phân tích thông tin JD")) {
-          // Upgrade legacy default prompt automatically
-          setCustomPrompt(DEFAULT_SYSTEM_PROMPT);
-        } else {
-          setCustomPrompt(val);
-        }
+        setCustomPrompt(val || DEFAULT_SYSTEM_PROMPT);
       } else {
         setCustomPrompt(DEFAULT_SYSTEM_PROMPT);
       }
@@ -527,7 +574,7 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
   const [draftResult, setDraftResult] = useState<any | null>(null);
   const [isReviewingDraft, setIsReviewingDraft] = useState(false);
   const [rawInputUsed, setRawInputUsed] = useState("");
-  const [activeReviewTab, setActiveReviewTab] = useState<'client' | 'job' | 'marketing'>('client');
+  const [activeReviewTab, setActiveReviewTab] = useState<'client' | 'job' | 'marketing' | 'headhunt'>('client');
 
   // Job active tab and selected version index
   const [activeJobTab, setActiveJobTab] = useState<'report' | 'history'>('report');
@@ -818,12 +865,19 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
           questionsForClient: data.jobData.questionsForClient || [],
           booleanSearch: data.jobData.booleanSearch || "",
           socialPost: data.jobData.socialPost || "",
-          interviewQuestions: data.jobData.interviewQuestions || []
+          interviewQuestions: data.jobData.interviewQuestions || [],
+          competitorCompanies: data.jobData.competitorCompanies || null,
+          positionIntelligence: data.jobData.positionIntelligence || null,
+          candidatePersonaObj: data.jobData.candidatePersonaObj || null,
+          talentMarketInsight: data.jobData.talentMarketInsight || null,
+          candidateSellingPoints: data.jobData.candidateSellingPoints || [],
+          recruitmentStrategy: data.jobData.recruitmentStrategy || null,
+          booleanSearchQueries: data.jobData.booleanSearchQueries || null
         };
       }
 
       const rawMatchedJobId = data.matchedJobId;
-      const matchedJobId = rawMatchedJobId && rawMatchedJobId !== "null" && rawMatchedJobId !== "undefined" ? rawMatchedJobId : null;
+      const matchedJobId = (rawMatchedJobId && selectedClientJobs.some(j => j.id === rawMatchedJobId)) ? rawMatchedJobId : null;
 
       setDraftResult({
         hasNewJob: !!data.hasNewJob,
@@ -932,7 +986,7 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
       // 3. Job handling
       if (draftResult.hasNewJob && draftResult.jobData) {
         const rawMatchedJobId = draftResult.matchedJobId;
-        const matchedJobId = rawMatchedJobId && rawMatchedJobId !== "null" && rawMatchedJobId !== "undefined" ? rawMatchedJobId : null;
+        const matchedJobId = (rawMatchedJobId && selectedClientJobs.some(j => j.id === rawMatchedJobId)) ? rawMatchedJobId : null;
         const isUpdate = !!(matchedJobId && selectedClientJobs.some(j => j.id === matchedJobId));
         
         let targetJobId = matchedJobId;
@@ -2394,6 +2448,22 @@ ${r.booleanSearch || "Not generated yet."}
                     Job Specification
                   </button>
                   <button
+                    onClick={() => setActiveReviewTab('headhunt')}
+                    style={{
+                      padding: "14px 16px",
+                      fontSize: 13,
+                      fontWeight: 600,
+                      border: "none",
+                      background: "none",
+                      cursor: "pointer",
+                      color: activeReviewTab === 'headhunt' ? "#4f46e5" : "var(--text-muted)",
+                      borderBottom: activeReviewTab === 'headhunt' ? "2px solid #4f46e5" : "2px solid transparent",
+                      transition: "all 0.2s"
+                    }}
+                  >
+                    Headhunt Intelligence (Mới)
+                  </button>
+                  <button
                     onClick={() => setActiveReviewTab('marketing')}
                     style={{
                       padding: "14px 16px",
@@ -2575,6 +2645,296 @@ ${r.booleanSearch || "Not generated yet."}
                 </div>
               )}
 
+              {activeReviewTab === 'headhunt' && draftResult.jobData && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+                  
+                  {/* Section 1: Candidate Persona */}
+                  <div style={{ border: "1px solid var(--border-color)", borderRadius: 10, padding: 16, background: "rgba(255,255,255,0.02)" }}>
+                    <h4 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 12px 0", color: "#4f46e5", textTransform: "uppercase" }}>🕵️ 1. Candidate Persona</h4>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                        <label style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 600 }}>Years of Experience</label>
+                        <input 
+                          type="text"
+                          value={draftResult.jobData.candidatePersonaObj?.yearsOfExperience || ""}
+                          onChange={e => handleDraftFieldChange('jobData', 'candidatePersonaObj', { ...(draftResult.jobData.candidatePersonaObj || {}), yearsOfExperience: e.target.value })}
+                          style={{ padding: "8px 10px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 13 }}
+                        />
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                        <label style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 600 }}>Language Requirements</label>
+                        <input 
+                          type="text"
+                          value={draftResult.jobData.candidatePersonaObj?.languageRequirements || ""}
+                          onChange={e => handleDraftFieldChange('jobData', 'candidatePersonaObj', { ...(draftResult.jobData.candidatePersonaObj || {}), languageRequirements: e.target.value })}
+                          style={{ padding: "8px 10px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 13 }}
+                        />
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                        <label style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 600 }}>Industry Background</label>
+                        <input 
+                          type="text"
+                          value={draftResult.jobData.candidatePersonaObj?.industryBackground || ""}
+                          onChange={e => handleDraftFieldChange('jobData', 'candidatePersonaObj', { ...(draftResult.jobData.candidatePersonaObj || {}), industryBackground: e.target.value })}
+                          style={{ padding: "8px 10px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 13 }}
+                        />
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                        <label style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 600 }}>Functional Background</label>
+                        <input 
+                          type="text"
+                          value={draftResult.jobData.candidatePersonaObj?.functionalBackground || ""}
+                          onChange={e => handleDraftFieldChange('jobData', 'candidatePersonaObj', { ...(draftResult.jobData.candidatePersonaObj || {}), functionalBackground: e.target.value })}
+                          style={{ padding: "8px 10px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 13 }}
+                        />
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 12 }}>
+                      <label style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 600 }}>Personality Traits (One per line)</label>
+                      <textarea 
+                        value={draftResult.jobData.candidatePersonaObj?.personalityTraits?.join("\n") || ""}
+                        onChange={e => handleDraftFieldChange('jobData', 'candidatePersonaObj', { ...(draftResult.jobData.candidatePersonaObj || {}), personalityTraits: e.target.value.split("\n") })}
+                        style={{ width: "100%", height: 60, padding: "8px 10px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 13, resize: "vertical", fontFamily: "monospace" }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Section 2: Competitor Companies */}
+                  <div style={{ border: "1px solid var(--border-color)", borderRadius: 10, padding: 16, background: "rgba(255,255,255,0.02)" }}>
+                    <h4 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 12px 0", color: "#d97706", textTransform: "uppercase" }}>🏢 2. Competitor &amp; Target Companies</h4>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                        <label style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 600 }}>Direct Competitors (One per line)</label>
+                        <textarea 
+                          value={draftResult.jobData.competitorCompanies?.directCompetitors?.join("\n") || ""}
+                          onChange={e => handleDraftFieldChange('jobData', 'competitorCompanies', { ...(draftResult.jobData.competitorCompanies || {}), directCompetitors: e.target.value.split("\n") })}
+                          style={{ width: "100%", height: 60, padding: "8px 10px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 13, resize: "vertical", fontFamily: "monospace" }}
+                        />
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                        <label style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 600 }}>Similar Business Models (One per line)</label>
+                        <textarea 
+                          value={draftResult.jobData.competitorCompanies?.similarBusinessModels?.join("\n") || ""}
+                          onChange={e => handleDraftFieldChange('jobData', 'competitorCompanies', { ...(draftResult.jobData.competitorCompanies || {}), similarBusinessModels: e.target.value.split("\n") })}
+                          style={{ width: "100%", height: 60, padding: "8px 10px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 13, resize: "vertical", fontFamily: "monospace" }}
+                        />
+                      </div>
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 12 }}>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                        <label style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 600 }}>Transferable Talent (One per line)</label>
+                        <textarea 
+                          value={draftResult.jobData.competitorCompanies?.transferableTalent?.join("\n") || ""}
+                          onChange={e => handleDraftFieldChange('jobData', 'competitorCompanies', { ...(draftResult.jobData.competitorCompanies || {}), transferableTalent: e.target.value.split("\n") })}
+                          style={{ width: "100%", height: 60, padding: "8px 10px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 13, resize: "vertical", fontFamily: "monospace" }}
+                        />
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                        <label style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 600 }}>Why These Companies?</label>
+                        <textarea 
+                          value={draftResult.jobData.competitorCompanies?.whyTheseCompanies || ""}
+                          onChange={e => handleDraftFieldChange('jobData', 'competitorCompanies', { ...(draftResult.jobData.competitorCompanies || {}), whyTheseCompanies: e.target.value })}
+                          style={{ width: "100%", height: 60, padding: "8px 10px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 13, resize: "vertical" }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Section 3: Position Intelligence */}
+                  <div style={{ border: "1px solid var(--border-color)", borderRadius: 10, padding: 16, background: "rgba(255,255,255,0.02)" }}>
+                    <h4 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 12px 0", color: "#2563eb", textTransform: "uppercase" }}>💡 3. Position Intelligence</h4>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 12 }}>
+                      <label style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 600 }}>Nature of Role</label>
+                      <input 
+                        type="text"
+                        value={draftResult.jobData.positionIntelligence?.natureOfRole || ""}
+                        onChange={e => handleDraftFieldChange('jobData', 'positionIntelligence', { ...(draftResult.jobData.positionIntelligence || {}), natureOfRole: e.target.value })}
+                        style={{ padding: "8px 10px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 13 }}
+                      />
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                        <label style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 600 }}>Day-to-day Challenges (One per line)</label>
+                        <textarea 
+                          value={draftResult.jobData.positionIntelligence?.dayToDayChallenges?.join("\n") || ""}
+                          onChange={e => handleDraftFieldChange('jobData', 'positionIntelligence', { ...(draftResult.jobData.positionIntelligence || {}), dayToDayChallenges: e.target.value.split("\n") })}
+                          style={{ width: "100%", height: 60, padding: "8px 10px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 13, resize: "vertical", fontFamily: "monospace" }}
+                        />
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                        <label style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 600 }}>Hidden Expectations (One per line)</label>
+                        <textarea 
+                          value={draftResult.jobData.positionIntelligence?.hiddenExpectations?.join("\n") || ""}
+                          onChange={e => handleDraftFieldChange('jobData', 'positionIntelligence', { ...(draftResult.jobData.positionIntelligence || {}), hiddenExpectations: e.target.value.split("\n") })}
+                          style={{ width: "100%", height: 60, padding: "8px 10px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 13, resize: "vertical", fontFamily: "monospace" }}
+                        />
+                      </div>
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 12 }}>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                        <label style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 600 }}>Key Success Factors (One per line)</label>
+                        <textarea 
+                          value={draftResult.jobData.positionIntelligence?.keySuccessFactors?.join("\n") || ""}
+                          onChange={e => handleDraftFieldChange('jobData', 'positionIntelligence', { ...(draftResult.jobData.positionIntelligence || {}), keySuccessFactors: e.target.value.split("\n") })}
+                          style={{ width: "100%", height: 60, padding: "8px 10px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 13, resize: "vertical", fontFamily: "monospace" }}
+                        />
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                        <label style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 600 }}>Reasons Candidates Fail (One per line)</label>
+                        <textarea 
+                          value={draftResult.jobData.positionIntelligence?.commonReasonsCandidatesFail?.join("\n") || ""}
+                          onChange={e => handleDraftFieldChange('jobData', 'positionIntelligence', { ...(draftResult.jobData.positionIntelligence || {}), commonReasonsCandidatesFail: e.target.value.split("\n") })}
+                          style={{ width: "100%", height: 60, padding: "8px 10px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 13, resize: "vertical", fontFamily: "monospace" }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Section 4: Talent Market Insight */}
+                  <div style={{ border: "1px solid var(--border-color)", borderRadius: 10, padding: 16, background: "rgba(255,255,255,0.02)" }}>
+                    <h4 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 12px 0", color: "#059669", textTransform: "uppercase" }}>📈 4. Talent Market Insight</h4>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                        <label style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 600 }}>Talent Pool Difficulty</label>
+                        <input 
+                          type="text"
+                          value={draftResult.jobData.talentMarketInsight?.talentPoolDifficulty || ""}
+                          onChange={e => handleDraftFieldChange('jobData', 'talentMarketInsight', { ...(draftResult.jobData.talentMarketInsight || {}), talentPoolDifficulty: e.target.value })}
+                          style={{ padding: "8px 10px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 13 }}
+                        />
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                        <label style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 600 }}>Counter Offer Risk</label>
+                        <input 
+                          type="text"
+                          value={draftResult.jobData.talentMarketInsight?.counterOfferRisk || ""}
+                          onChange={e => handleDraftFieldChange('jobData', 'talentMarketInsight', { ...(draftResult.jobData.talentMarketInsight || {}), counterOfferRisk: e.target.value })}
+                          style={{ padding: "8px 10px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 13 }}
+                        />
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                        <label style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 600 }}>Salary Competitiveness</label>
+                        <input 
+                          type="text"
+                          value={draftResult.jobData.talentMarketInsight?.salaryCompetitiveness || ""}
+                          onChange={e => handleDraftFieldChange('jobData', 'talentMarketInsight', { ...(draftResult.jobData.talentMarketInsight || {}), salaryCompetitiveness: e.target.value })}
+                          style={{ padding: "8px 10px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 13 }}
+                        />
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                        <label style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 600 }}>Notice Period Risk</label>
+                        <input 
+                          type="text"
+                          value={draftResult.jobData.talentMarketInsight?.noticePeriodRisk || ""}
+                          onChange={e => handleDraftFieldChange('jobData', 'talentMarketInsight', { ...(draftResult.jobData.talentMarketInsight || {}), noticePeriodRisk: e.target.value })}
+                          style={{ padding: "8px 10px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 13 }}
+                        />
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 12 }}>
+                      <label style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 600 }}>Hiring Challenges (One per line)</label>
+                      <textarea 
+                        value={draftResult.jobData.talentMarketInsight?.hiringChallenges?.join("\n") || ""}
+                        onChange={e => handleDraftFieldChange('jobData', 'talentMarketInsight', { ...(draftResult.jobData.talentMarketInsight || {}), hiringChallenges: e.target.value.split("\n") })}
+                        style={{ width: "100%", height: 60, padding: "8px 10px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 13, resize: "vertical", fontFamily: "monospace" }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Section 5: Selling Points & Recruitment Strategy */}
+                  <div style={{ border: "1px solid var(--border-color)", borderRadius: 10, padding: 16, background: "rgba(255,255,255,0.02)" }}>
+                    <h4 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 12px 0", color: "#10b981", textTransform: "uppercase" }}>🚀 5. Sourcing &amp; Selling Points</h4>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                        <label style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 600 }}>Candidate Selling Points (EVP / Key Attractions) (One per line)</label>
+                        <textarea 
+                          value={draftResult.jobData.candidateSellingPoints?.join("\n") || ""}
+                          onChange={e => handleDraftFieldChange('jobData', 'candidateSellingPoints', e.target.value.split("\n"))}
+                          style={{ width: "100%", height: 65, padding: "8px 10px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 13, resize: "vertical", fontFamily: "monospace" }}
+                        />
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                        <label style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 600 }}>Where to Source / Channels (One per line)</label>
+                        <textarea 
+                          value={draftResult.jobData.recruitmentStrategy?.whereToSource?.join("\n") || ""}
+                          onChange={e => handleDraftFieldChange('jobData', 'recruitmentStrategy', { ...(draftResult.jobData.recruitmentStrategy || {}), whereToSource: e.target.value.split("\n") })}
+                          style={{ width: "100%", height: 60, padding: "8px 10px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 13, resize: "vertical", fontFamily: "monospace" }}
+                        />
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                        <label style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 600 }}>Companies to Target First (One per line)</label>
+                        <textarea 
+                          value={draftResult.jobData.recruitmentStrategy?.companiesToTargetFirst?.join("\n") || ""}
+                          onChange={e => handleDraftFieldChange('jobData', 'recruitmentStrategy', { ...(draftResult.jobData.recruitmentStrategy || {}), companiesToTargetFirst: e.target.value.split("\n") })}
+                          style={{ width: "100%", height: 60, padding: "8px 10px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 13, resize: "vertical", fontFamily: "monospace" }}
+                        />
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                        <label style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 600 }}>Hiring Challenges &amp; Mitigations (One per line)</label>
+                        <textarea 
+                          value={draftResult.jobData.recruitmentStrategy?.challengesAndMitigations?.join("\n") || ""}
+                          onChange={e => handleDraftFieldChange('jobData', 'recruitmentStrategy', { ...(draftResult.jobData.recruitmentStrategy || {}), challengesAndMitigations: e.target.value.split("\n") })}
+                          style={{ width: "100%", height: 60, padding: "8px 10px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 13, resize: "vertical", fontFamily: "monospace" }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Section 6: Boolean Search Channels */}
+                  <div style={{ border: "1px solid var(--border-color)", borderRadius: 10, padding: 16, background: "rgba(255,255,255,0.02)" }}>
+                    <h4 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 12px 0", color: "#6366f1", textTransform: "uppercase" }}>🔍 6. Specific Boolean Search Queries</h4>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                        <label style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 600 }}>LinkedIn Recruiter Query</label>
+                        <input 
+                          type="text"
+                          value={draftResult.jobData.booleanSearchQueries?.linkedin || ""}
+                          onChange={e => handleDraftFieldChange('jobData', 'booleanSearchQueries', { ...(draftResult.jobData.booleanSearchQueries || {}), linkedin: e.target.value })}
+                          style={{ padding: "8px 10px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 13, fontFamily: "monospace" }}
+                        />
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                        <label style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 600 }}>CV Database / Job Board Query</label>
+                        <input 
+                          type="text"
+                          value={draftResult.jobData.booleanSearchQueries?.cvDb || ""}
+                          onChange={e => handleDraftFieldChange('jobData', 'booleanSearchQueries', { ...(draftResult.jobData.booleanSearchQueries || {}), cvDb: e.target.value })}
+                          style={{ padding: "8px 10px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 13, fontFamily: "monospace" }}
+                        />
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                        <label style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 600 }}>Google X-Ray Search Query</label>
+                        <input 
+                          type="text"
+                          value={draftResult.jobData.booleanSearchQueries?.xray || ""}
+                          onChange={e => handleDraftFieldChange('jobData', 'booleanSearchQueries', { ...(draftResult.jobData.booleanSearchQueries || {}), xray: e.target.value })}
+                          style={{ padding: "8px 10px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 13, fontFamily: "monospace" }}
+                        />
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                        <label style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 600 }}>Industry-Specific Term Query</label>
+                        <input 
+                          type="text"
+                          value={draftResult.jobData.booleanSearchQueries?.industry || ""}
+                          onChange={e => handleDraftFieldChange('jobData', 'booleanSearchQueries', { ...(draftResult.jobData.booleanSearchQueries || {}), industry: e.target.value })}
+                          style={{ padding: "8px 10px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 13, fontFamily: "monospace" }}
+                        />
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                        <label style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 600 }}>Japanese / Foreign Lang Term Query (optional)</label>
+                        <input 
+                          type="text"
+                          value={draftResult.jobData.booleanSearchQueries?.japanese || ""}
+                          onChange={e => handleDraftFieldChange('jobData', 'booleanSearchQueries', { ...(draftResult.jobData.booleanSearchQueries || {}), japanese: e.target.value })}
+                          style={{ padding: "8px 10px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 13, fontFamily: "monospace" }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+              )}
+
               {activeReviewTab === 'marketing' && draftResult.jobData && (
                 <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                   <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -2621,7 +2981,7 @@ ${r.booleanSearch || "Not generated yet."}
               <div>
                 {draftResult.hasNewJob ? (
                   <span style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 500 }}>
-                    {draftResult.matchedJobId && draftResult.matchedJobId !== "null" && draftResult.matchedJobId !== "undefined" ? (
+                    {draftResult.matchedJobId && selectedClientJobs.some(j => j.id === draftResult.matchedJobId) ? (
                       <span style={{ color: "#d97706", fontWeight: 600 }}>⚠️ Updating existing job (ID: {draftResult.matchedJobId})</span>
                     ) : (
                       <span style={{ color: "#16a34a", fontWeight: 600 }}>✨ Creating brand new job opening</span>
