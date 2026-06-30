@@ -1,583 +1,430 @@
 import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
-import { GoogleGenAI, Type } from "@google/genai";
-import OpenAI from "openai";
-import dotenv from "dotenv";
+import { Type } from "@google/genai";
+import { callLLM, safeParseJson } from "./api/_lib/ai";
 
-dotenv.config();
+export const app = express();
+const PORT = process.env.PORT || 3000;
 
-// Default fallback client for Gemini
-const defaultGeminiAi = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY,
-  httpOptions: {
-    headers: {
-      "User-Agent": "aistudio-build",
-    },
-  },
+app.use(express.json());
+
+app.get("/api/health", (req, res) => {
+  res.json({ status: "ok" });
 });
 
-// Clean JSON Parsing Helper
-function safeParseJson(text: string) {
-  let cleaned = text.trim();
-  if (cleaned.startsWith("```json")) {
-    cleaned = cleaned.substring(7);
-  } else if (cleaned.startsWith("```")) {
-    cleaned = cleaned.substring(3);
-  }
-  if (cleaned.endsWith("```")) {
-    cleaned = cleaned.substring(0, cleaned.length - 3);
-  }
-  cleaned = cleaned.trim();
-  return JSON.parse(cleaned);
-}
+// API route for processing universal input
+app.post("/api/freecai/process", async (req, res) => {
+  console.log("Processing /api/freecai/process...");
+  try {
+    const provider = (req.headers["x-ai-provider"] as string) || "gemini";
+    const headerKey = req.headers["x-ai-key"] as string;
+    const model = (req.headers["x-ai-model"] as string) || "";
+    const customEndpoint = (req.headers["x-ai-custom-endpoint"] as string) || "";
 
-// Unified callLLM function
-async function callLLM({
-  provider,
-  apiKey,
-  model,
-  customEndpoint,
-  prompt,
-  systemInstruction,
-  responseSchema,
-}: {
-  provider: string;
-  apiKey: string;
-  model: string;
-  customEndpoint?: string;
-  prompt: string;
-  systemInstruction?: string;
-  responseSchema?: any;
-}): Promise<string> {
-  console.log(`callLLM triggered. Provider: ${provider}, Model: ${model || "default"}`);
-
-  if (provider === "gemini") {
-    const aiClient = apiKey 
-      ? new GoogleGenAI({ apiKey, httpOptions: { headers: { "User-Agent": "aistudio-build" } } })
-      : defaultGeminiAi;
-
-    const targetModel = model || "gemini-3.5-flash";
-    const config: any = {};
-    if (responseSchema) {
-      config.responseMimeType = "application/json";
-      config.responseSchema = responseSchema;
-    }
-    if (systemInstruction) {
-      config.systemInstruction = systemInstruction;
+    let apiKey = headerKey;
+    if (!apiKey && provider === "gemini") {
+      apiKey = process.env.GEMINI_API_KEY || "";
     }
 
-    const response = await aiClient.models.generateContent({
-      model: targetModel,
-      contents: prompt,
-      config,
-    });
-    return response.text || "";
-  }
-
-  if (provider === "openai" || provider === "grok" || provider === "deepseek" || provider === "custom" || provider === "groq" || provider === "cerebras" || provider === "qwen" || provider === "github") {
-    let baseURL = undefined;
-    if (provider === "grok") {
-      baseURL = "https://api.x.ai/v1";
-    } else if (provider === "deepseek") {
-      baseURL = "https://api.deepseek.com/v1";
-    } else if (provider === "groq") {
-      baseURL = "https://api.groq.com/openai/v1";
-    } else if (provider === "cerebras") {
-      baseURL = "https://api.cerebras.ai/v1";
-    } else if (provider === "qwen") {
-      baseURL = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1";
-    } else if (provider === "github") {
-      baseURL = "https://models.github.ai/inference";
-    } else if (provider === "custom" && customEndpoint) {
-      baseURL = customEndpoint;
+    if (!apiKey) {
+      return res.status(400).json({ 
+        error: `Vui lòng cấu hình API Key cho nhà cung cấp ${provider.toUpperCase()} của bạn trong bảng cài đặt!` 
+      });
     }
 
-    const openaiClient = new OpenAI({
-      apiKey: apiKey,
-      baseURL: baseURL,
-    });
+    const { input, currentClientName, customPrompt, existingJobs } = req.body;
 
-    const targetModel = model || (
-      provider === "openai" ? "gpt-4o-mini" :
-      provider === "grok" ? "grok-2-latest" :
-      provider === "deepseek" ? "deepseek-chat" :
-      provider === "groq" ? "llama-3.3-70b-versatile" :
-      provider === "cerebras" ? "qwen-3-235b-a22b-instruct-2507" :
-      provider === "qwen" ? "qwen-plus" :
-      provider === "github" ? "openai/gpt-4o-mini" : "gpt-4o-mini"
-    );
-
-    const messages: any[] = [];
-    if (systemInstruction) {
-      messages.push({ role: "system", content: systemInstruction });
-    }
-    messages.push({ role: "user", content: prompt });
-
-    const responseFormat: any = responseSchema ? { type: "json_object" } : undefined;
-
-    const chatCompletion = await openaiClient.chat.completions.create({
-      model: targetModel,
-      messages: messages,
-      response_format: responseFormat,
-    });
-
-    return chatCompletion.choices[0]?.message?.content || "";
-  }
-
-  if (provider === "claude") {
-    const targetModel = model || "claude-3-5-sonnet-latest";
-    const headers: Record<string, string> = {
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-      "content-type": "application/json",
-    };
-    
-    const body: any = {
-      model: targetModel,
-      max_tokens: 4000,
-      messages: [{ role: "user", content: prompt }],
-    };
-
-    if (systemInstruction) {
-      body.system = systemInstruction;
+    if (!input || !currentClientName) {
+      console.error("Missing input or currentClientName");
+      return res.status(400).json({ error: "Missing required fields" });
     }
 
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers,
-      body: JSON.stringify(body),
-    });
+    console.log(`Sending request to LLM (${provider}) for client: ${currentClientName}`);
 
-    if (!response.ok) {
-      const errText = await response.text();
-      throw new Error(`Anthropic API Error: ${errText}`);
+    let basePrompt = "";
+    if (customPrompt && customPrompt.trim()) {
+      basePrompt = customPrompt
+        .replace(/\${currentClientName}/g, currentClientName)
+        .replace(/\${input}/g, input);
+    } else {
+      basePrompt = `You are an AI assistant for recruiters. A recruiter has pasted some information about a client named "${currentClientName}".
+      The information might be a Job Description (JD), meeting notes, emails, or feedback.
+      
+      Information:
+      """
+      ${input}
+      """`;
     }
 
-    const data = await response.json();
-    return data.content?.[0]?.text || "";
-  }
-
-  throw new Error(`Unsupported provider: ${provider}`);
-}
-
-async function startServer() {
-  const app = express();
-  const PORT = 3000;
-
-  app.use(express.json());
-
-  app.get("/api/health", (req, res) => {
-    res.json({ status: "ok" });
-  });
-
-  // API route for processing universal input
-  app.post("/api/freecai/process", async (req, res) => {
-    console.log("Processing /api/freecai/process...");
-    try {
-      const provider = (req.headers["x-ai-provider"] as string) || "gemini";
-      const headerKey = req.headers["x-ai-key"] as string;
-      const model = (req.headers["x-ai-model"] as string) || "";
-      const customEndpoint = (req.headers["x-ai-custom-endpoint"] as string) || "";
-
-      let apiKey = headerKey;
-      if (!apiKey && provider === "gemini") {
-        apiKey = process.env.GEMINI_API_KEY || "";
-      }
-
-      if (!apiKey) {
-        return res.status(400).json({ 
-          error: `Vui lòng cấu hình API Key cho nhà cung cấp ${provider.toUpperCase()} của bạn trong bảng cài đặt!` 
-        });
-      }
-
-      const { input, currentClientName, customPrompt, existingJobs } = req.body;
-
-      if (!input || !currentClientName) {
-        console.error("Missing input or currentClientName");
-        return res.status(400).json({ error: "Missing required fields" });
-      }
-
-      console.log(`Sending request to LLM (${provider}) for client: ${currentClientName}`);
-
-      let basePrompt = "";
-      if (customPrompt && customPrompt.trim()) {
-        basePrompt = customPrompt
-          .replace(/\${currentClientName}/g, currentClientName)
-          .replace(/\${input}/g, input);
-      } else {
-        basePrompt = `You are an AI assistant for recruiters. A recruiter has pasted some information about a client named "${currentClientName}".
-        The information might be a Job Description (JD), meeting notes, emails, or feedback.
-        
-        Information:
-        """
-        ${input}
-        """`;
-      }
-
-      let existingJobsPrompt = "";
-      if (existingJobs && Array.isArray(existingJobs) && existingJobs.length > 0) {
-        existingJobsPrompt = `
+    let existingJobsPrompt = "";
+    if (existingJobs && Array.isArray(existingJobs) && existingJobs.length > 0) {
+      existingJobsPrompt = `
 Here is a list of existing jobs for this client:
 ${existingJobs.map((j: any) => `- ID: "${j.id}", Title: "${j.title}"`).join("\n")}
 
 Please carefully compare the input with these existing jobs. Determine if the input refers to a brand NEW job opening, or if it represents an UPDATE / additional information for one of the existing jobs listed above.
 If the input title or role matches or is highly related to an existing job, identify it as an update to that job.
 `;
-      } else {
-        existingJobsPrompt = `\nThere are no existing jobs for this client. This is likely a new job if any job is detected.\n`;
-      }
+    } else {
+      existingJobsPrompt = `\nThere are no existing jobs for this client. This is likely a new job if any job is detected.\n`;
+    }
 
-      const finalPrompt = `${basePrompt}
-      ${existingJobsPrompt}
+    const finalPrompt = `${basePrompt}
+    ${existingJobsPrompt}
 
-      --------------------------------------------------
-      IMPORTANT SYSTEM DIRECTIVE:
-      You must analyze the information and output the extracted fields as JSON conforming EXACTLY to the schema.
-      
-      Return a JSON object containing:
-      1. 'hasNewJob': A boolean flag to indicate if a new job opening or job update is detected. If it is a JD or clearly describes a job (new or update), set this to true.
-      2. 'matchedJobId': A string or null. If this is an update or additional information for an existing job from the list above, set this to the exact 'ID' of that matched job. Otherwise, set this to null.
-      3. 'timelineSummary': A string summarizing what happened in this input to add to the timeline.
-      4. 'clientUpdates': A structured object with any new information about the client:
-         - culture (string)
-         - overview (string)
-         - industry (string)
-         - keyInfo (array of strings)
-      5. 'jobData': If 'hasNewJob' is true, generate a comprehensive object containing:
-         - title (string)
-         - roleOverview: { dept, reportingLine, salaryRange, location }
-         - companyContext: (array of strings)
-         - idealPersona: (array of strings)
-         - mustHave: (array of strings)
-         - niceToHave: (array of strings)
-         - questionsForClient: (array of strings)
-         - booleanSearch: (string)
-         - socialPost: (string)
-         - interviewQuestions: (array of strings)
-         
-         ==================================================
-         ADDITIONAL RECRUITMENT INTELLIGENCE
-         ==================================================
-         
-         You are not a JD parser.
-         
-         You are an experienced Senior Headhunter and Recruitment Consultant with deep knowledge of recruitment, industries, and talent markets.
-         
-         The purpose of this report is to help a consultant who has never worked on this position immediately understand:
-         1. The company
-         2. The market
-         3. The nature of the role
-         4. Where to source candidates
-         5. How to sell the opportunity to candidates
-         6. Potential hiring challenges and risks
-         
-         Do not simply restate the JD. Provide actionable recruitment insights.
-         
-         --------------------------------------------------
-         1. competitorCompanies
-         --------------------------------------------------
-         
-         Provide:
-         - direct competitors
-         - similar business models
-         - companies with transferable talent
-         - explain why these companies should be targeted.
-         
-         --------------------------------------------------
-         2. positionIntelligence
-         --------------------------------------------------
-         
-         Explain:
-         - nature of the role
-         - day-to-day challenges
-         - hidden expectations
-         - key success factors
-         - common candidate backgrounds
-         - common reasons candidates fail
-         - transferable backgrounds.
-         
-         Focus on helping consultants understand what success actually looks like in this role.
-         
-         --------------------------------------------------
-         3. candidatePersonaObj
-         --------------------------------------------------
-         
-         Provide:
-         - years of experience
-         - industry background
-         - functional background
-         - language requirements
-         - personality traits.
-         
-         --------------------------------------------------
-         4. talentMarketInsight
-         --------------------------------------------------
-         
-         Assess:
-         - talent pool difficulty
-         - hiring challenges
-         - counter-offer risk
-         - salary competitiveness
-         - notice period risk.
-         
-         --------------------------------------------------
-         5. candidateSellingPoints
-         --------------------------------------------------
-         
-         Explain:
-         - why candidates should join this company
-         - key employer value propositions
-         - attractive aspects of the role.
-         
-         --------------------------------------------------
-         6. recruitmentStrategy
-         --------------------------------------------------
-         
-         Provide:
-         - sourcing channels
-         - target companies
-         - sourcing priorities
-         - recruitment challenges
-         - mitigation plans.
-         
-         --------------------------------------------------
-         7. booleanSearchQueries
-         --------------------------------------------------
-         
-         Generate practical and copy-paste ready searches for:
-         
-         - LinkedIn Recruiter Search
-         - CV Database Search
-         - X-Ray Search
-         - Industry Search
-         - Japanese Search (if applicable)
-         
-         Do NOT generate one long Boolean string.
-         
-         Each query should be short, practical, and immediately usable by recruiters.
-         
-         ==================================================
-         IMPORTANT
-         ==================================================
-         
-         Distinguish between:
-         
-         FACT:
-         - Information directly found in the JD
-         - Official website
-         - Official LinkedIn page
-         - Reliable public sources
-         
-         INFERENCE:
-         - Reasonable recruitment insights derived from available information.
-         
-         Never present inference as fact.
-         
-         Never fabricate information.
-         
-         If information cannot be verified:
-         - return null
-         - or "Not verified".
-         
-         For every insight section, think like an experienced recruitment consultant instead of a JD parser.
-         
-         Before generating the report, ask yourself:
-         
-         "If I were a consultant who had never worked on this position before, would this report give me enough information to understand the role, understand the market, and immediately start sourcing candidates?"
-         
-         If the answer is no, provide additional recruitment insights.
-      `;
+    --------------------------------------------------
+    IMPORTANT SYSTEM DIRECTIVE:
+    You must analyze the information and output the extracted fields as JSON conforming EXACTLY to the schema.
+    
+    Return a JSON object containing:
+    1. 'hasNewJob': A boolean flag to indicate if a new job opening or job update is detected. If it is a JD or clearly describes a job (new or update), set this to true.
+    2. 'matchedJobId': A string or null. If this is an update or additional information for an existing job from the list above, set this to the exact 'ID' of that matched job. Otherwise, set this to null.
+    3. 'timelineSummary': A string summarizing what happened in this input to add to the timeline.
+    4. 'clientUpdates': A structured object with any new information about the client:
+       - culture (string)
+       - overview (string)
+       - industry (string)
+       - keyInfo (array of strings)
+    5. 'jobData': If 'hasNewJob' is true, generate a comprehensive object containing:
+       - title (string)
+       - roleOverview: { dept, reportingLine, salaryRange, location }
+       - companyContext: (array of strings)
+       - idealPersona: (array of strings)
+       - mustHave: (array of strings)
+       - niceToHave: (array of strings)
+       - questionsForClient: (array of strings)
+       - booleanSearch: (string)
+       - socialPost: (string)
+       - interviewQuestions: (array of strings)
+       
+       ==================================================
+       ADDITIONAL RECRUITMENT INTELLIGENCE
+       ==================================================
+       
+       You are not a JD parser.
+       
+       You are an experienced Senior Headhunter and Recruitment Consultant with deep knowledge of recruitment, industries, and talent markets.
+       
+       The purpose of this report is to help a consultant who has never worked on this position immediately understand:
+       1. The company
+       2. The market
+       3. The nature of the role
+       4. Where to source candidates
+       5. How to sell the opportunity to candidates
+       6. Potential hiring challenges and risks
+       
+       Do not simply restate the JD. Provide actionable recruitment insights.
+       
+       --------------------------------------------------
+       1. competitorCompanies
+       --------------------------------------------------
+       
+       Provide:
+       - direct competitors
+       - similar business models
+       - companies with transferable talent
+       - explain why these companies should be targeted.
+       
+       --------------------------------------------------
+       2. positionIntelligence
+       --------------------------------------------------
+       
+       Explain:
+       - nature of the role
+       - day-to-day challenges
+       - hidden expectations
+       - key success factors
+       - common candidate backgrounds
+       - common reasons candidates fail
+       - transferable backgrounds.
+       
+       Focus on helping consultants understand what success actually looks like in this role.
+       
+       --------------------------------------------------
+       3. candidatePersonaObj
+       --------------------------------------------------
+       
+       Provide:
+       - years of experience
+       - industry background
+       - functional background
+       - language requirements
+       - personality traits.
+       
+       --------------------------------------------------
+       4. talentMarketInsight
+       --------------------------------------------------
+       
+       Assess:
+       - talent pool difficulty
+       - hiring challenges
+       - counter-offer risk
+       - salary competitiveness
+       - notice period risk.
+       
+       --------------------------------------------------
+       5. candidateSellingPoints
+       --------------------------------------------------
+       
+       Explain:
+       - why candidates should join this company
+       - key employer value propositions
+       - attractive aspects of the role.
+       
+       --------------------------------------------------
+       6. recruitmentStrategy
+       --------------------------------------------------
+       
+       Provide:
+       - sourcing channels
+       - target companies
+       - sourcing priorities
+       - recruitment challenges
+       - mitigation plans.
+       
+       --------------------------------------------------
+       7. booleanSearchQueries
+       --------------------------------------------------
+       
+       Generate practical and copy-paste ready searches for:
+       
+       - LinkedIn Recruiter Search
+       - CV Database Search
+       - X-Ray Search
+       - Industry Search
+       - Japanese Search (if applicable)
+       
+       Do NOT generate one long Boolean string.
+       
+       Each query should be short, practical, and immediately usable by recruiters.
+       
+       ==================================================
+       IMPORTANT
+       ==================================================
+       
+       Distinguish between:
+       
+       FACT:
+       - Information directly found in the JD
+       - Official website
+       - Official LinkedIn page
+       - Reliable public sources
+       
+       INFERENCE:
+       - Reasonable recruitment insights derived from available information.
+       
+       Never present inference as fact.
+       
+       Never fabricate information.
+       
+       If information cannot be verified:
+       - return null
+       - or "Not verified".
+       
+       For every insight section, think like an experienced recruitment consultant instead of a JD parser.
+       
+       Before generating the report, ask yourself:
+       
+       "If I were a consultant who had never worked on this position before, would this report give me enough information to understand the role, understand the market, and immediately start sourcing candidates?"
+       
+       If the answer is no, provide additional recruitment insights.
+    `;
 
-      const responseSchema = {
-        type: Type.OBJECT,
-        properties: {
-          hasNewJob: { type: Type.BOOLEAN },
-          matchedJobId: { type: Type.STRING, description: "ID of the matched existing job, or null if it is a brand new job" },
-          timelineSummary: { type: Type.STRING },
-          clientUpdates: {
-            type: Type.OBJECT,
-            properties: {
-              culture: { type: Type.STRING },
-              overview: { type: Type.STRING },
-              industry: { type: Type.STRING },
-              keyInfo: { type: Type.ARRAY, items: { type: Type.STRING } }
-            }
-          },
-          jobData: {
-            type: Type.OBJECT,
-            properties: {
-              title: { type: Type.STRING },
-              roleOverview: {
-                type: Type.OBJECT,
-                properties: {
-                  dept: { type: Type.STRING },
-                  reportingLine: { type: Type.STRING },
-                  salaryRange: { type: Type.STRING },
-                  location: { type: Type.STRING }
-                }
-              },
-              companyContext: { type: Type.ARRAY, items: { type: Type.STRING } },
-              idealPersona: { type: Type.ARRAY, items: { type: Type.STRING } },
-              mustHave: { type: Type.ARRAY, items: { type: Type.STRING } },
-              niceToHave: { type: Type.ARRAY, items: { type: Type.STRING } },
-              questionsForClient: { type: Type.ARRAY, items: { type: Type.STRING } },
-              booleanSearch: { type: Type.STRING },
-              socialPost: { type: Type.STRING },
-              interviewQuestions: { type: Type.ARRAY, items: { type: Type.STRING } },
-              competitorCompanies: {
-                type: Type.OBJECT,
-                properties: {
-                  directCompetitors: { type: Type.ARRAY, items: { type: Type.STRING } },
-                  similarBusinessModels: { type: Type.ARRAY, items: { type: Type.STRING } },
-                  transferableTalent: { type: Type.ARRAY, items: { type: Type.STRING } },
-                  whyTheseCompanies: { type: Type.STRING }
-                }
-              },
-              positionIntelligence: {
-                type: Type.OBJECT,
-                properties: {
-                  natureOfRole: { type: Type.STRING },
-                  dayToDayChallenges: { type: Type.ARRAY, items: { type: Type.STRING } },
-                  hiddenExpectations: { type: Type.ARRAY, items: { type: Type.STRING } },
-                  keySuccessFactors: { type: Type.ARRAY, items: { type: Type.STRING } },
-                  commonCandidateBackgrounds: { type: Type.ARRAY, items: { type: Type.STRING } },
-                  commonReasonsCandidatesFail: { type: Type.ARRAY, items: { type: Type.STRING } },
-                  transferableBackgrounds: { type: Type.ARRAY, items: { type: Type.STRING } }
-                }
-              },
-              candidatePersonaObj: {
-                type: Type.OBJECT,
-                properties: {
-                  yearsOfExperience: { type: Type.STRING },
-                  industryBackground: { type: Type.STRING },
-                  functionalBackground: { type: Type.STRING },
-                  languageRequirements: { type: Type.STRING },
-                  personalityTraits: { type: Type.ARRAY, items: { type: Type.STRING } }
-                }
-              },
-              talentMarketInsight: {
-                type: Type.OBJECT,
-                properties: {
-                  talentPoolDifficulty: { type: Type.STRING },
-                  hiringChallenges: { type: Type.ARRAY, items: { type: Type.STRING } },
-                  counterOfferRisk: { type: Type.STRING },
-                  salaryCompetitiveness: { type: Type.STRING },
-                  noticePeriodRisk: { type: Type.STRING }
-                }
-              },
-              candidateSellingPoints: { type: Type.ARRAY, items: { type: Type.STRING } },
-              recruitmentStrategy: {
-                type: Type.OBJECT,
-                properties: {
-                  whereToSource: { type: Type.ARRAY, items: { type: Type.STRING } },
-                  companiesToTargetFirst: { type: Type.ARRAY, items: { type: Type.STRING } },
-                  challengesAndMitigations: { type: Type.ARRAY, items: { type: Type.STRING } }
-                }
-              },
-              booleanSearchQueries: {
-                type: Type.OBJECT,
-                properties: {
-                  linkedin: { type: Type.STRING },
-                  cvDb: { type: Type.STRING },
-                  xray: { type: Type.STRING },
-                  industry: { type: Type.STRING },
-                  japanese: { type: Type.STRING }
-                }
+    const responseSchema = {
+      type: Type.OBJECT,
+      properties: {
+        hasNewJob: { type: Type.BOOLEAN },
+        matchedJobId: { type: Type.STRING, description: "ID of the matched existing job, or null if it is a brand new job" },
+        timelineSummary: { type: Type.STRING },
+        clientUpdates: {
+          type: Type.OBJECT,
+          properties: {
+            culture: { type: Type.STRING },
+            overview: { type: Type.STRING },
+            industry: { type: Type.STRING },
+            keyInfo: { type: Type.ARRAY, items: { type: Type.STRING } }
+          }
+        },
+        jobData: {
+          type: Type.OBJECT,
+          properties: {
+            title: { type: Type.STRING },
+            roleOverview: {
+              type: Type.OBJECT,
+              properties: {
+                dept: { type: Type.STRING },
+                reportingLine: { type: Type.STRING },
+                salaryRange: { type: Type.STRING },
+                location: { type: Type.STRING }
+              }
+            },
+            companyContext: { type: Type.ARRAY, items: { type: Type.STRING } },
+            idealPersona: { type: Type.ARRAY, items: { type: Type.STRING } },
+            mustHave: { type: Type.ARRAY, items: { type: Type.STRING } },
+            niceToHave: { type: Type.ARRAY, items: { type: Type.STRING } },
+            questionsForClient: { type: Type.ARRAY, items: { type: Type.STRING } },
+            booleanSearch: { type: Type.STRING },
+            socialPost: { type: Type.STRING },
+            interviewQuestions: { type: Type.ARRAY, items: { type: Type.STRING } },
+            competitorCompanies: {
+              type: Type.OBJECT,
+              properties: {
+                directCompetitors: { type: Type.ARRAY, items: { type: Type.STRING } },
+                similarBusinessModels: { type: Type.ARRAY, items: { type: Type.STRING } },
+                transferableTalent: { type: Type.ARRAY, items: { type: Type.STRING } },
+                whyTheseCompanies: { type: Type.STRING }
+              }
+            },
+            positionIntelligence: {
+              type: Type.OBJECT,
+              properties: {
+                natureOfRole: { type: Type.STRING },
+                dayToDayChallenges: { type: Type.ARRAY, items: { type: Type.STRING } },
+                hiddenExpectations: { type: Type.ARRAY, items: { type: Type.STRING } },
+                keySuccessFactors: { type: Type.ARRAY, items: { type: Type.STRING } },
+                commonCandidateBackgrounds: { type: Type.ARRAY, items: { type: Type.STRING } },
+                commonReasonsCandidatesFail: { type: Type.ARRAY, items: { type: Type.STRING } },
+                transferableBackgrounds: { type: Type.ARRAY, items: { type: Type.STRING } }
+              }
+            },
+            candidatePersonaObj: {
+              type: Type.OBJECT,
+              properties: {
+                yearsOfExperience: { type: Type.STRING },
+                industryBackground: { type: Type.STRING },
+                functionalBackground: { type: Type.STRING },
+                languageRequirements: { type: Type.STRING },
+                personalityTraits: { type: Type.ARRAY, items: { type: Type.STRING } }
+              }
+            },
+            talentMarketInsight: {
+              type: Type.OBJECT,
+              properties: {
+                talentPoolDifficulty: { type: Type.STRING },
+                hiringChallenges: { type: Type.ARRAY, items: { type: Type.STRING } },
+                counterOfferRisk: { type: Type.STRING },
+                salaryCompetitiveness: { type: Type.STRING },
+                noticePeriodRisk: { type: Type.STRING }
+              }
+            },
+            candidateSellingPoints: { type: Type.ARRAY, items: { type: Type.STRING } },
+            recruitmentStrategy: {
+              type: Type.OBJECT,
+              properties: {
+                whereToSource: { type: Type.ARRAY, items: { type: Type.STRING } },
+                companiesToTargetFirst: { type: Type.ARRAY, items: { type: Type.STRING } },
+                challengesAndMitigations: { type: Type.ARRAY, items: { type: Type.STRING } }
+              }
+            },
+            booleanSearchQueries: {
+              type: Type.OBJECT,
+              properties: {
+                linkedin: { type: Type.STRING },
+                cvDb: { type: Type.STRING },
+                xray: { type: Type.STRING },
+                industry: { type: Type.STRING },
+                japanese: { type: Type.STRING }
               }
             }
           }
-        },
-        required: ["hasNewJob", "timelineSummary"]
-      };
-
-      const resultText = await callLLM({
-        provider,
-        apiKey,
-        model,
-        customEndpoint,
-        prompt: finalPrompt,
-        responseSchema: provider === "gemini" ? responseSchema : undefined,
-      });
-
-      console.log("LLM response received");
-      if (resultText) {
-        try {
-          console.log("Parsing JSON response");
-          const parsed = safeParseJson(resultText);
-          return res.json(parsed);
-        } catch (parseErr) {
-          console.error("JSON Parse Error:", parseErr, "Text:", resultText);
-          return res.status(500).json({ error: "Failed to parse AI response. Ensure your AI model outputs valid JSON conforming to requirements." });
         }
-      } else {
-        console.error("No text in LLM response");
-        return res.status(500).json({ error: "No response text from AI" });
-      }
+      },
+      required: ["hasNewJob", "timelineSummary"]
+    };
 
-    } catch (error) {
-      console.error("LLM API Error:", error);
-      const errorMessage = error instanceof Error 
-        ? error.message 
-        : (typeof error === "string" 
-            ? error 
-            : (error && typeof error === "object" && "message" in error 
-                ? (error as any).message 
-                : JSON.stringify(error) || "Failed to process input"));
-      res.status(500).json({ error: errorMessage });
+    const resultText = await callLLM({
+      provider,
+      apiKey,
+      model,
+      customEndpoint,
+      prompt: finalPrompt,
+      responseSchema: provider === "gemini" ? responseSchema : undefined,
+    });
+
+    console.log("LLM response received");
+    if (resultText) {
+      try {
+        console.log("Parsing JSON response");
+        const parsed = safeParseJson(resultText);
+        return res.json(parsed);
+      } catch (parseErr) {
+        console.error("JSON Parse Error:", parseErr, "Text:", resultText);
+        return res.status(500).json({ error: "Failed to parse AI response. Ensure your AI model outputs valid JSON conforming to requirements." });
+      }
+    } else {
+      console.error("No text in LLM response");
+      return res.status(500).json({ error: "No response text from AI" });
     }
-  });
 
-  // Chat API route for RAG over client data
-  app.post("/api/freecai/chat", async (req, res) => {
-    try {
-      const provider = (req.headers["x-ai-provider"] as string) || "gemini";
-      const headerKey = req.headers["x-ai-key"] as string;
-      const model = (req.headers["x-ai-model"] as string) || "";
-      const customEndpoint = (req.headers["x-ai-custom-endpoint"] as string) || "";
+  } catch (error) {
+    console.error("LLM API Error:", error);
+    const errorMessage = error instanceof Error 
+      ? error.message 
+      : (typeof error === "string" 
+          ? error 
+          : (error && typeof error === "object" && "message" in error 
+              ? (error as any).message 
+              : JSON.stringify(error) || "Failed to process input"));
+    res.status(500).json({ error: errorMessage });
+  }
+});
 
-      let apiKey = headerKey;
-      if (!apiKey && provider === "gemini") {
-        apiKey = process.env.GEMINI_API_KEY || "";
-      }
+// Chat API route for RAG over client data
+app.post("/api/freecai/chat", async (req, res) => {
+  try {
+    const provider = (req.headers["x-ai-provider"] as string) || "gemini";
+    const headerKey = req.headers["x-ai-key"] as string;
+    const model = (req.headers["x-ai-model"] as string) || "";
+    const customEndpoint = (req.headers["x-ai-custom-endpoint"] as string) || "";
 
-      if (!apiKey) {
-        return res.status(400).json({ 
-          error: `Vui lòng cấu hình API Key cho nhà cung cấp ${provider.toUpperCase()} của bạn trong bảng cài đặt!` 
-        });
-      }
+    let apiKey = headerKey;
+    if (!apiKey && provider === "gemini") {
+      apiKey = process.env.GEMINI_API_KEY || "";
+    }
 
-      const { message, clientData } = req.body;
-
-      const resultText = await callLLM({
-        provider,
-        apiKey,
-        model,
-        customEndpoint,
-        prompt: `You are a helpful AI recruiting assistant. 
-        Answer the recruiter's question using the following client data context.
-        
-        Context:
-        ${JSON.stringify(clientData)}
-        
-        Question: ${message}`,
+    if (!apiKey) {
+      return res.status(400).json({ 
+        error: `Vui lòng cấu hình API Key cho nhà cung cấp ${provider.toUpperCase()} của bạn trong bảng cài đặt!` 
       });
-      
-      res.json({ text: resultText });
-    } catch (error) {
-      console.error("Chat API Error:", error);
-      const errorMessage = error instanceof Error 
-        ? error.message 
-        : (typeof error === "string" 
-            ? error 
-            : (error && typeof error === "object" && "message" in error 
-                ? (error as any).message 
-                : JSON.stringify(error) || "Failed to generate chat"));
-      res.status(500).json({ error: errorMessage });
     }
-  });
 
+    const { message, clientData } = req.body;
 
+    let targetModel = model;
+    if (!targetModel && provider === "gemini") {
+      targetModel = "gemini-2.5-flash"; // Default to a standard conversational model
+    }
+
+    const resultText = await callLLM({
+      provider,
+      apiKey,
+      model: targetModel,
+      customEndpoint,
+      prompt: `You are a helpful AI recruiting assistant. 
+      Answer the recruiter's question using the following client data context.
+      
+      Context:
+      ${JSON.stringify(clientData)}
+      
+      Question: ${message}`,
+    });
+    
+    res.json({ text: resultText });
+  } catch (error) {
+    console.error("Chat API Error:", error);
+    const errorMessage = error instanceof Error 
+      ? error.message 
+      : (typeof error === "string" 
+          ? error 
+          : (error && typeof error === "object" && "message" in error 
+              ? (error as any).message 
+              : JSON.stringify(error) || "Failed to generate chat"));
+    res.status(500).json({ error: errorMessage });
+  }
+});
+
+async function startServer() {
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
@@ -588,7 +435,7 @@ If the input title or role matches or is highly related to an existing job, iden
   } else {
     const distPath = path.join(process.cwd(), "dist");
     app.use(express.static(distPath));
-    app.get("*", (req, res) => {
+    app.get("*all", (req, res) => {
       res.sendFile(path.join(distPath, "index.html"));
     });
   }
@@ -598,4 +445,7 @@ If the input title or role matches or is highly related to an existing job, iden
   });
 }
 
-startServer();
+// Only start the server locally, don't run this when imported by Vercel
+if (!process.env.VERCEL) {
+  startServer();
+}
