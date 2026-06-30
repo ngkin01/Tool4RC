@@ -98,7 +98,7 @@ If the input title or role matches or is highly related to an existing job, iden
     Here is the JSON schema you must strictly follow:
     ${JSON.stringify({
       hasNewJob: "boolean",
-      matchedJobId: "string | null",
+      matchedJobId: "string",
       timelineSummary: "string",
       clientUpdates: {
         culture: "string",
@@ -143,7 +143,7 @@ If the input title or role matches or is highly related to an existing job, iden
     
     Return a JSON object containing the above fields.
     1. 'hasNewJob': A boolean flag to indicate if a new job opening or job update is detected. If it is a JD or clearly describes a job (new or update), set this to true.
-    2. 'matchedJobId': A string or null. If this is an update or additional information for an existing job from the list above, set this to the exact 'ID' of that matched job. Otherwise, set this to null.
+    2. 'matchedJobId': If this is an update or additional information for an existing job from the list above, set this to the exact 'ID' of that matched job. Otherwise, you MUST set this to the exact string "null" (do not output literal JSON null, output the string "null" and never include any explanations, reasoning, or thinking inside this field).
     3. 'timelineSummary': A string summarizing what happened in this input to add to the timeline.
     4. 'clientUpdates': A structured object with any new information about the client:
        - culture (string)
@@ -299,7 +299,7 @@ If the input title or role matches or is highly related to an existing job, iden
       type: Type.OBJECT,
       properties: {
         hasNewJob: { type: Type.BOOLEAN },
-        matchedJobId: { type: Type.STRING, description: "ID of the matched existing job, or null if it is a brand new job" },
+        matchedJobId: { type: Type.STRING, description: "ID of the matched existing job, or the exact string 'null' if it is a brand new job" },
         timelineSummary: { type: Type.STRING },
         clientUpdates: {
           type: Type.OBJECT,
