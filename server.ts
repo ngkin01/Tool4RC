@@ -44,8 +44,14 @@ app.post("/api/freecai/process", async (req, res) => {
     let basePrompt = "";
     if (customPrompt && customPrompt.trim()) {
       basePrompt = customPrompt
-        .replace(/\${currentClientName}/g, currentClientName)
-        .replace(/\${input}/g, input);
+        .replace(/\\?\${currentClientName}/g, currentClientName)
+        .replace(/\\?\${input}/g, input);
+      
+      // Defensive fallback: If for any reason ${input} was not present in the customPrompt (e.g. user deleted it or it was corrupted in database),
+      // we append the input JD at the end of the prompt to ensure the AI always receives and processes it.
+      if (!customPrompt.includes("${input}") && !customPrompt.includes("\\${input}")) {
+        basePrompt += `\n\n[System Added Input for analysis as the custom prompt lacks the \${input} placeholder]:\n"""\n${input}\n"""`;
+      }
     } else {
       basePrompt = `You are an AI assistant for recruiters. A recruiter has pasted some information about a client named "${currentClientName}".
       The information might be a Job Description (JD), meeting notes, emails, or feedback.
