@@ -194,7 +194,7 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
       // Load corresponding custom key
       if (effectiveProvider === 'gemini') {
         effectiveKey = localStorage.getItem("custom_gemini_api_key") || "";
-        effectiveModel = localStorage.getItem("gemini_model") || "gemini-2.5-flash";
+        effectiveModel = localStorage.getItem("gemini_model") || "gemini-3.5-flash";
         effectiveEndpoint = localStorage.getItem("gemini_proxy_url") || "";
       } else if (effectiveProvider === 'openai') {
         effectiveKey = localStorage.getItem("custom_openai_api_key") || "";
@@ -217,7 +217,7 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
       if (!effectiveKey) {
         if (effectiveProvider === 'gemini') {
           effectiveKey = localStorage.getItem("custom_gemini_api_key") || "";
-          if (!effectiveModel) effectiveModel = localStorage.getItem("gemini_model") || "gemini-2.5-flash";
+          if (!effectiveModel) effectiveModel = localStorage.getItem("gemini_model") || "gemini-3.5-flash";
           if (!effectiveEndpoint) effectiveEndpoint = localStorage.getItem("gemini_proxy_url") || "";
         } else if (effectiveProvider === 'openai') {
           effectiveKey = localStorage.getItem("custom_openai_api_key") || "";
@@ -236,6 +236,11 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
           if (!effectiveModel) effectiveModel = localStorage.getItem("qwen_model") || "qwen-plus";
         }
       }
+    }
+
+    const validGeminiModels = ["gemini-3.5-flash", "gemini-3.1-pro-preview", "gemini-3.1-flash-lite"];
+    if (effectiveProvider === 'gemini' && !validGeminiModels.includes(effectiveModel)) {
+      effectiveModel = "gemini-3.5-flash";
     }
 
     return {
@@ -634,8 +639,15 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
   };
 
   const handleConfirmDraft = async () => {
-    if (!draftResult || !selectedClient) return;
+    if (!draftResult || !selectedClient) {
+      console.warn("Cannot save draft: missing draftResult or selectedClient", { draftResult, selectedClient });
+      return;
+    }
     try {
+      console.log("Saving draft to Firestore...", {
+        clientId: selectedClient.id,
+        auth: auth.currentUser ? { uid: auth.currentUser.uid, isAnonymous: auth.currentUser.isAnonymous } : "Not signed in"
+      });
       // 1. Create timeline item
       const timelineId = "t" + Date.now();
       const newTimelineItem = {
@@ -910,22 +922,30 @@ ${r.interviewQuestions && r.interviewQuestions.length > 0 ? r.interviewQuestions
                 onMouseEnter={e => {
                   const btn = e.currentTarget.querySelector('.delete-btn') as HTMLElement;
                   if (btn) btn.style.opacity = '1';
+                  if (!isSelected) {
+                    e.currentTarget.style.background = "rgba(0, 0, 0, 0.02)";
+                  }
                 }}
                 onMouseLeave={e => {
                   const btn = e.currentTarget.querySelector('.delete-btn') as HTMLElement;
                   if (btn) btn.style.opacity = '0';
+                  if (!isSelected) {
+                    e.currentTarget.style.background = "transparent";
+                  }
                 }}
                 style={{ 
                   padding: "16px", 
                   borderRadius: 12, 
                   cursor: "pointer",
-                  background: isSelected ? "var(--bg-sidebar)" : "transparent",
+                  background: isSelected ? "rgba(79, 70, 229, 0.08)" : "transparent",
                   display: "flex",
                   alignItems: "flex-start",
                   gap: 12,
-                  transition: "all 0.2s",
+                  transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
                   position: "relative",
-                  border: isSelected ? "none" : "1px solid transparent",
+                  border: isSelected ? "1px solid rgba(79, 70, 229, 0.2)" : "1px solid transparent",
+                  boxShadow: isSelected ? "0 8px 20px -4px rgba(79, 70, 229, 0.12)" : "none",
+                  backdropFilter: isSelected ? "blur(12px)" : "none",
                 }}
               >
                 <div style={{ marginTop: 2, color: isSelected ? "#4f46e5" : "var(--text-muted)" }}>
@@ -1698,7 +1718,7 @@ ${r.interviewQuestions && r.interviewQuestions.length > 0 ? r.interviewQuestions
                         <input 
                           type="text"
                           placeholder={
-                            tempProvider === 'gemini' ? "gemini-2.5-flash (Mặc định)" :
+                            tempProvider === 'gemini' ? "gemini-3.5-flash (Mặc định)" :
                             tempProvider === 'openai' ? "gpt-4o-mini (Mặc định)" :
                             tempProvider === 'grok' ? "grok-2-latest (Mặc định)" :
                             tempProvider === 'claude' ? "claude-3-5-sonnet-latest" :

@@ -57,7 +57,7 @@ async function callLLM({
       ? new GoogleGenAI({ apiKey, httpOptions: { headers: { "User-Agent": "aistudio-build" } } })
       : defaultGeminiAi;
 
-    const targetModel = model || "gemini-2.5-flash";
+    const targetModel = model || "gemini-3.5-flash";
     const config: any = {};
     if (responseSchema) {
       config.responseMimeType = "application/json";

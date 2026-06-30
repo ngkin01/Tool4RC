@@ -11,7 +11,7 @@ export function Header({ onMenu }: any) {
   const [showUsage, setShowUsage] = useState(false);
   
   const [provider, setProvider] = useState<AIProvider>('gemini');
-  const [geminiModel, setGeminiModel] = useState("gemini-2.5-flash");
+  const [geminiModel, setGeminiModel] = useState("gemini-3.5-flash");
   const [geminiKey, setGeminiKey] = useState("");
   const [geminiProxyUrl, setGeminiProxyUrl] = useState("");
   const [openaiKey, setOpenaiKey] = useState("");
@@ -35,7 +35,11 @@ export function Header({ onMenu }: any) {
       const savedProvider = getProvider();
       setProvider(savedProvider);
       
-      const savedGeminiModel = localStorage.getItem("gemini_model") || "gemini-2.5-flash";
+      let savedGeminiModel = localStorage.getItem("gemini_model") || "gemini-3.5-flash";
+      const validGeminiModels = ["gemini-3.5-flash", "gemini-3.1-pro-preview", "gemini-3.1-flash-lite"];
+      if (!validGeminiModels.includes(savedGeminiModel)) {
+        savedGeminiModel = "gemini-3.5-flash";
+      }
       setGeminiModel(savedGeminiModel);
       
       const savedGeminiProxy = localStorage.getItem("gemini_proxy_url") || "";
@@ -321,19 +325,13 @@ export function Header({ onMenu }: any) {
                   style={{ width: "100%", border: "1.5px solid var(--border-color)", borderRadius: 8, padding: "10px 14px", fontSize: 14, outline: "none", marginBottom: 8, background: "var(--bg-card)" }}
                 >
                   <optgroup label="Pro">
-                    <option value="gemini-3.1-pro-preview">Gemini 3.1 Pro</option>
-                    <option value="gemini-3-pro-preview">Gemini 3 Pro</option>
-                    <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
+                    <option value="gemini-3.1-pro-preview">Gemini 3.1 Pro (Preview)</option>
                   </optgroup>
                   <optgroup label="Flash">
-                    <option value="gemini-3-flash-preview">Gemini 3 Flash</option>
-                    <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
-                    <option value="gemini-2.5-flash-live-preview">Gemini 2.5 Flash Live API</option>
-                    <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+                    <option value="gemini-3.5-flash">Gemini 3.5 Flash (Mặc định)</option>
                   </optgroup>
                   <optgroup label="Flash-Lite">
-                    <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash-Lite</option>
-                    <option value="gemini-2.0-flash-lite">Gemini 2.0 Flash-Lite</option>
+                    <option value="gemini-3.1-flash-lite">Gemini 3.1 Flash-Lite</option>
                   </optgroup>
                 </select>
                 

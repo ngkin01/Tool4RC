@@ -2,7 +2,7 @@
   "entities": {
     "Client": {
       "title": "Client",
-      "description": "A client entity containing basic info and an array of jobs",
+      "description": "A client entity containing basic info",
       "type": "object",
       "properties": {
         "userId": { "type": "string", "description": "The UID of the user who owns this client." },
@@ -17,17 +17,75 @@
             "overview": { "type": "string" },
             "keyInfo": { "type": "array" }
           }
-        },
-        "timeline": { "type": "array" },
-        "jobs": { "type": "array" }
+        }
       },
-      "required": ["userId", "name"]
+      "required": ["name"]
+    },
+    "Job": {
+      "title": "Job",
+      "description": "A job opening under a client",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "report": { "$ref": "#/entities/JobReport" },
+        "versions": { "type": "array" }
+      }
+    },
+    "JobReport": {
+      "title": "JobReport",
+      "description": "The extracted details of a job",
+      "type": "object",
+      "properties": {
+        "roleOverview": { "type": "object" },
+        "companyContext": { "type": "array" },
+        "idealPersona": { "type": "array" },
+        "mustHave": { "type": "array" },
+        "niceToHave": { "type": "array" },
+        "questionsForClient": { "type": "array" },
+        "challenges": { "type": "array" },
+        "targetCompanies": { "type": "array" },
+        "booleanSearch": { "type": "string" },
+        "interviewQuestions": { "type": "array" },
+        "socialPost": { "type": "string" }
+      }
+    },
+    "TimelineItem": {
+      "title": "TimelineItem",
+      "description": "A timeline note for a client",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "date": { "type": "string" },
+        "content": { "type": "string" }
+      }
+    },
+    "Setting": {
+      "title": "Setting",
+      "description": "Global or user settings",
+      "type": "object",
+      "properties": {
+        "prompt": { "type": "string" }
+      }
     }
   },
   "firestore": {
     "clients/{clientId}": {
       "schema": "Client",
       "description": "Collection of clients"
+    },
+    "clients/{clientId}/jobs/{jobId}": {
+      "schema": "Job",
+      "description": "Jobs under a client"
+    },
+    "clients/{clientId}/timeline/{itemId}": {
+      "schema": "TimelineItem",
+      "description": "Timeline items for a client"
+    },
+    "settings/{settingId}": {
+      "schema": "Setting",
+      "description": "System settings"
     }
   }
 }
