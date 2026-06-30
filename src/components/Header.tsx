@@ -36,7 +36,17 @@ export function Header({ onMenu }: any) {
       setProvider(savedProvider);
       
       let savedGeminiModel = localStorage.getItem("gemini_model") || "gemini-3.5-flash";
-      const validGeminiModels = ["gemini-3.5-flash", "gemini-3.1-pro-preview", "gemini-3.1-flash-lite"];
+      const validGeminiModels = [
+        "gemini-3.5-flash",
+        "gemini-3.1-pro-preview",
+        "gemini-3.1-flash-lite",
+        "gemini-2.5-pro",
+        "gemini-2.5-flash",
+        "gemini-2.0-flash",
+        "gemini-1.5-pro",
+        "gemini-1.5-flash",
+        "gemini-2.0-flash-lite-preview-02-05"
+      ];
       if (!validGeminiModels.includes(savedGeminiModel)) {
         savedGeminiModel = "gemini-3.5-flash";
       }
@@ -325,15 +335,18 @@ export function Header({ onMenu }: any) {
                   style={{ width: "100%", border: "1.5px solid var(--border-color)", borderRadius: 8, padding: "10px 14px", fontSize: 14, outline: "none", marginBottom: 8, background: "var(--bg-card)" }}
                 >
                   <optgroup label="Pro">
+                    <option value="gemini-3.1-pro-preview">Gemini 3.1 Pro (Preview)</option>
                     <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
                     <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
                   </optgroup>
                   <optgroup label="Flash">
-                    <option value="gemini-2.5-flash">Gemini 2.5 Flash (Mặc định)</option>
+                    <option value="gemini-3.5-flash">Gemini 3.5 Flash (Mới & Tốt nhất)</option>
+                    <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
                     <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
                     <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
                   </optgroup>
                   <optgroup label="Flash-Lite">
+                    <option value="gemini-3.1-flash-lite">Gemini 3.1 Flash-Lite</option>
                     <option value="gemini-2.0-flash-lite-preview-02-05">Gemini 2.0 Flash-Lite</option>
                   </optgroup>
                 </select>

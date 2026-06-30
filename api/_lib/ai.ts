@@ -55,8 +55,7 @@ export async function* callLLMStream({
       ? new GoogleGenAI({ apiKey, httpOptions: { headers: { "User-Agent": "aistudio-build" } } })
       : getDefaultGeminiAi();
 
-    let targetModel = model || "gemini-2.0-flash";
-    if (targetModel.includes("3.5-flash")) targetModel = "gemini-2.0-flash";
+    let targetModel = model || "gemini-3.5-flash";
     const config: any = {};
     if (responseSchema) {
       config.responseMimeType = "application/json";
@@ -226,8 +225,7 @@ export async function callLLM({
       ? new GoogleGenAI({ apiKey, httpOptions: { headers: { "User-Agent": "aistudio-build" } } })
       : getDefaultGeminiAi();
 
-    let targetModel = model || "gemini-2.0-flash";
-    if (targetModel.includes("3.5-flash")) targetModel = "gemini-2.0-flash";
+    let targetModel = model || "gemini-3.5-flash";
     const config: any = {};
     if (responseSchema) {
       config.responseMimeType = "application/json";

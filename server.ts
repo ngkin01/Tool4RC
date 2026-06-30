@@ -4,7 +4,7 @@ import { Type } from "@google/genai";
 import { callLLM, callLLMStream, safeParseJson } from "./api/_lib/ai.js";
 
 export const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = Number(process.env.PORT) || 3000;
 
 app.use(express.json());
 
@@ -437,10 +437,7 @@ app.post("/api/freecai/chat", async (req, res) => {
 
     let targetModel = model;
     if (!targetModel && provider === "gemini") {
-      targetModel = "gemini-2.0-flash"; // Default to a standard conversational model
-    }
-    if (provider === "gemini" && targetModel.includes("3.5-flash")) {
-      targetModel = "gemini-2.0-flash";
+      targetModel = "gemini-3.5-flash"; // Default to a standard conversational model
     }
 
     const stream = callLLMStream({
