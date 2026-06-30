@@ -74,6 +74,17 @@ If the input title or role matches or is highly related to an existing job, iden
 
     --------------------------------------------------
     IMPORTANT SYSTEM DIRECTIVE:
+    CRITICAL RULE FOR hasNewJob DETECTION:
+    Set hasNewJob = true if the input text contains ANY of the following signals, 
+    even partially: a job title; section headers like 'Job description', 
+    'Responsibilities', 'Requirements', 'Qualifications', 'Work Experience'; 
+    a list of duties or required skills; or any description of a role someone 
+    would be hired to perform.
+    Only set hasNewJob = false if the input is clearly just casual conversation, 
+    a greeting, or generic info with no role described.
+    When in doubt, prefer hasNewJob = true and use 'Not verified' for fields 
+    you cannot determine, rather than defaulting to false.
+
     You must analyze the information and output the extracted fields as JSON conforming EXACTLY to the schema.
     DO NOT INCLUDE markdown like \`\`\`json. DO NOT INCLUDE any conversational text before or after the JSON.
     OUTPUT ONLY THE RAW JSON OBJECT.
