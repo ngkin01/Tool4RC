@@ -4,15 +4,17 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-// Default fallback client for Gemini
-const defaultGeminiAi = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY,
-  httpOptions: {
-    headers: {
-      "User-Agent": "aistudio-build",
+// Default fallback client getter
+function getDefaultGeminiAi() {
+  return new GoogleGenAI({
+    apiKey: process.env.GEMINI_API_KEY || "missing-api-key",
+    httpOptions: {
+      headers: {
+        "User-Agent": "aistudio-build",
+      },
     },
-  },
-});
+  });
+}
 
 // Clean JSON Parsing Helper
 export function safeParseJson(text: string) {
@@ -52,7 +54,7 @@ export async function callLLM({
   if (provider === "gemini") {
     const aiClient = apiKey 
       ? new GoogleGenAI({ apiKey, httpOptions: { headers: { "User-Agent": "aistudio-build" } } })
-      : defaultGeminiAi;
+      : getDefaultGeminiAi();
 
     const targetModel = model || "gemini-2.5-flash";
     const config: any = {};
