@@ -341,7 +341,12 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
   };
 
   useEffect(() => {
-    signInAnonymously(auth).catch(err => console.error("Anonymous sign-in failed:", err));
+    signInAnonymously(auth).catch(err => {
+      console.error("Anonymous sign-in failed:", err);
+      if (err.code === 'auth/admin-restricted-operation' || err.code === 'auth/operation-not-allowed') {
+        toast("Vui lòng bật Anonymous Sign-in trong Firebase Console (Authentication > Sign-in method)", "error");
+      }
+    });
     const q = query(collection(db, 'clients'));
     const unsubscribeClients = onSnapshot(q, (snapshot) => {
       const loaded: Client[] = [];
