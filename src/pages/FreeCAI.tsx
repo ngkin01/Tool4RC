@@ -266,6 +266,9 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
       } else if (effectiveProvider === 'qwen') {
         effectiveKey = localStorage.getItem("custom_qwen_api_key") || "";
         effectiveModel = localStorage.getItem("qwen_model") || "qwen-plus";
+      } else if (effectiveProvider === 'github') {
+        effectiveKey = localStorage.getItem("custom_github_pat") || "";
+        effectiveModel = localStorage.getItem("custom_github_model") || "openai/gpt-4o-mini";
       }
     } else {
       // If they chose a specific provider, but left the key blank, also fallback to the global key of that specific provider
@@ -289,6 +292,9 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
         } else if (effectiveProvider === 'qwen') {
           effectiveKey = localStorage.getItem("custom_qwen_api_key") || "";
           if (!effectiveModel) effectiveModel = localStorage.getItem("qwen_model") || "qwen-plus";
+        } else if (effectiveProvider === 'github') {
+          effectiveKey = localStorage.getItem("custom_github_pat") || "";
+          if (!effectiveModel) effectiveModel = localStorage.getItem("custom_github_model") || "openai/gpt-4o-mini";
         }
       }
     }
@@ -402,6 +408,7 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
   
   const [universalInput, setUniversalInput] = useState("");
   const [isProcessingInput, setIsProcessingInput] = useState(false);
+  const [processingProgress, setProcessingProgress] = useState(0);
   
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [chatMessages, setChatMessages] = useState<{role: 'user'|'assistant', content: string}[]>([{role: 'assistant', content: 'Hi! I am your AI Copilot. Ask me anything about your clients or jobs.'}]);
@@ -575,6 +582,7 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
   const handleUniversalInputSubmit = async () => {
     if (!universalInput.trim() || !selectedClient) return;
     setIsProcessingInput(true);
+    setProcessingProgress(0);
     
     try {
       const response = await fetch('/api/freecai/process', {
@@ -604,7 +612,52 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
         throw new Error(errMsg || "Failed to process input");
       }
 
-      const data = await response.json();
+      let rawResult = "";
+      const reader = response.body?.getReader();
+      if (reader) {
+        const decoder = new TextDecoder();
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const chunk = decoder.decode(value, { stream: true });
+          rawResult += chunk;
+          setProcessingProgress(prev => prev + chunk.length);
+        }
+      } else {
+        rawResult = await response.text();
+        setProcessingProgress(rawResult.length);
+      }
+
+      if (rawResult.includes("ERROR_STREAMING:")) {
+        const parts = rawResult.split("ERROR_STREAMING:");
+        throw new Error(parts[parts.length - 1].trim() || "Failed to process input during stream");
+      }
+
+      let cleaned = rawResult.trim();
+      if (cleaned.startsWith("```json")) {
+        cleaned = cleaned.substring(7);
+      } else if (cleaned.startsWith("```")) {
+        cleaned = cleaned.substring(3);
+      }
+      if (cleaned.endsWith("```")) {
+        cleaned = cleaned.substring(0, cleaned.length - 3);
+      }
+      cleaned = cleaned.trim();
+      
+      // Attempt to extract just the JSON object if there's conversational text
+      const firstBrace = cleaned.indexOf("{");
+      const lastBrace = cleaned.lastIndexOf("}");
+      if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+        cleaned = cleaned.substring(firstBrace, lastBrace + 1);
+      }
+
+      let data;
+      try {
+        data = JSON.parse(cleaned);
+      } catch (parseErr) {
+        console.error("Failed to parse JSON:", cleaned);
+        throw new Error("Lỗi đọc dữ liệu từ AI. Có thể AI trả về định dạng không đúng. Vui lòng thử lại.");
+      }
       
       setRawInputUsed(universalInput);
 
@@ -875,8 +928,35 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
         throw new Error(errMsg || "Failed to chat");
       }
 
-      const data = await response.json();
-      setChatMessages(prev => [...prev, { role: 'assistant', content: data.text }]);
+      const reader = response.body?.getReader();
+      if (reader) {
+        setChatMessages(prev => [...prev, { role: 'assistant', content: "" }]);
+        const decoder = new TextDecoder();
+        let streamedText = "";
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          streamedText += decoder.decode(value, { stream: true });
+          
+          if (streamedText.includes("ERROR_STREAMING:")) {
+            const parts = streamedText.split("ERROR_STREAMING:");
+            throw new Error(parts[parts.length - 1].trim() || "Failed to process chat during stream");
+          }
+
+          setChatMessages(prev => {
+             const newMsgs = [...prev];
+             newMsgs[newMsgs.length - 1].content = streamedText;
+             return newMsgs;
+          });
+        }
+      } else {
+        const text = await response.text();
+        if (text.includes("ERROR_STREAMING:")) {
+            const parts = text.split("ERROR_STREAMING:");
+            throw new Error(parts[parts.length - 1].trim() || "Failed to process chat during stream");
+        }
+        setChatMessages(prev => [...prev, { role: 'assistant', content: text }]);
+      }
     } catch (err) {
       console.error(err);
       if (err instanceof Error) {
@@ -1691,7 +1771,7 @@ ${r.booleanSearch || "Not generated yet."}
                   disabled={isProcessingInput || !universalInput.trim()} 
                   style={{ padding: "10px 24px", background: "#4f46e5", color: "white", border: "none", borderRadius: 8, fontWeight: 600, fontSize: 14 }}
                 >
-                  {isProcessingInput ? "Processing..." : "Save Information"}
+                  {isProcessingInput ? (processingProgress > 0 ? `Processing... (${processingProgress} chars)` : "Processing...") : "Save Information"}
                 </Btn>
               </div>
             </div>
@@ -1929,6 +2009,10 @@ ${r.booleanSearch || "Not generated yet."}
                       <option value="grok">xAI Grok</option>
                       <option value="claude">Anthropic Claude</option>
                       <option value="deepseek">DeepSeek</option>
+                      <option value="groq">Groq</option>
+                      <option value="cerebras">Cerebras</option>
+                      <option value="qwen">Qwen (Alibaba)</option>
+                      <option value="github">Github Models</option>
                       <option value="custom">Custom (OpenAI-compatible)</option>
                     </select>
                   </div>
@@ -1948,7 +2032,7 @@ ${r.booleanSearch || "Not generated yet."}
                           type="password"
                           placeholder={
                             (() => {
-                              const globalKey = localStorage.getItem(`custom_${tempProvider}_api_key`) || (tempProvider === 'gemini' ? localStorage.getItem("custom_gemini_api_key") : "");
+                              const globalKey = tempProvider === 'github' ? localStorage.getItem("custom_github_pat") : (localStorage.getItem(`custom_${tempProvider}_api_key`) || (tempProvider === 'gemini' ? localStorage.getItem("custom_gemini_api_key") : ""));
                               if (globalKey) {
                                 return "•••••••••••••••• (Đã nhận diện API Key từ hệ thống)";
                               }
@@ -1977,7 +2061,11 @@ ${r.booleanSearch || "Not generated yet."}
                             tempProvider === 'openai' ? "gpt-4o-mini (Mặc định)" :
                             tempProvider === 'grok' ? "grok-2-latest (Mặc định)" :
                             tempProvider === 'claude' ? "claude-3-5-sonnet-latest" :
-                            tempProvider === 'deepseek' ? "deepseek-chat" : "Nhập tên Model cụ thể..."
+                            tempProvider === 'deepseek' ? "deepseek-chat" :
+                            tempProvider === 'groq' ? "llama-3.3-70b-versatile" :
+                            tempProvider === 'cerebras' ? "qwen-3-235b-a22b-instruct-2507" :
+                            tempProvider === 'qwen' ? "qwen-plus" :
+                            tempProvider === 'github' ? "openai/gpt-4o-mini" : "Nhập tên Model cụ thể..."
                           }
                           value={tempModel}
                           onChange={e => setTempModel(e.target.value)}

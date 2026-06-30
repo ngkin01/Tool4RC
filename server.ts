@@ -1,7 +1,7 @@
 import express from "express";
 import path from "path";
 import { Type } from "@google/genai";
-import { callLLM, safeParseJson } from "./api/_lib/ai";
+import { callLLM, callLLMStream, safeParseJson } from "./api/_lib/ai.js";
 
 export const app = express();
 const PORT = process.env.PORT || 3000;
@@ -75,8 +75,56 @@ If the input title or role matches or is highly related to an existing job, iden
     --------------------------------------------------
     IMPORTANT SYSTEM DIRECTIVE:
     You must analyze the information and output the extracted fields as JSON conforming EXACTLY to the schema.
+    DO NOT INCLUDE markdown like \`\`\`json. DO NOT INCLUDE any conversational text before or after the JSON.
+    OUTPUT ONLY THE RAW JSON OBJECT.
+
+    Here is the JSON schema you must strictly follow:
+    ${JSON.stringify({
+      hasNewJob: "boolean",
+      matchedJobId: "string | null",
+      timelineSummary: "string",
+      clientUpdates: {
+        culture: "string",
+        overview: "string",
+        industry: "string",
+        keyInfo: ["string"]
+      },
+      jobData: {
+        title: "string",
+        roleOverview: {
+          dept: "string",
+          reportingLine: "string",
+          salaryRange: "string",
+          location: "string"
+        },
+        companyContext: ["string"],
+        idealPersona: ["string"],
+        mustHave: ["string"],
+        niceToHave: ["string"],
+        questionsForClient: ["string"],
+        booleanSearch: "string",
+        socialPost: "string",
+        interviewQuestions: ["string"],
+        competitorCompanies: ["string"],
+        positionIntelligence: ["string"],
+        sellingPoints: ["string"],
+        candidateSellingPoints: ["string"],
+        recruitmentStrategy: {
+          whereToSource: ["string"],
+          companiesToTargetFirst: ["string"],
+          challengesAndMitigations: ["string"]
+        },
+        booleanSearchQueries: {
+          linkedin: "string",
+          cvDb: "string",
+          xray: "string",
+          industry: "string",
+          japanese: "string"
+        }
+      }
+    }, null, 2)}
     
-    Return a JSON object containing:
+    Return a JSON object containing the above fields.
     1. 'hasNewJob': A boolean flag to indicate if a new job opening or job update is detected. If it is a JD or clearly describes a job (new or update), set this to true.
     2. 'matchedJobId': A string or null. If this is an update or additional information for an existing job from the list above, set this to the exact 'ID' of that matched job. Otherwise, set this to null.
     3. 'timelineSummary': A string summarizing what happened in this input to add to the timeline.
@@ -332,30 +380,22 @@ If the input title or role matches or is highly related to an existing job, iden
       required: ["hasNewJob", "timelineSummary"]
     };
 
-    const resultText = await callLLM({
+    const stream = callLLMStream({
       provider,
       apiKey,
       model,
       customEndpoint,
       prompt: finalPrompt,
-      responseSchema: provider === "gemini" ? responseSchema : undefined,
+      responseSchema: responseSchema,
     });
 
-    console.log("LLM response received");
-    if (resultText) {
-      try {
-        console.log("Parsing JSON response");
-        const parsed = safeParseJson(resultText);
-        return res.json(parsed);
-      } catch (parseErr) {
-        console.error("JSON Parse Error:", parseErr, "Text:", resultText);
-        return res.status(500).json({ error: "Failed to parse AI response. Ensure your AI model outputs valid JSON conforming to requirements." });
-      }
-    } else {
-      console.error("No text in LLM response");
-      return res.status(500).json({ error: "No response text from AI" });
-    }
+    res.setHeader("Content-Type", "text/plain; charset=utf-8");
+    res.setHeader("Transfer-Encoding", "chunked");
 
+    for await (const chunk of stream) {
+      res.write(chunk);
+    }
+    res.end();
   } catch (error) {
     console.error("LLM API Error:", error);
     const errorMessage = error instanceof Error 
@@ -365,7 +405,12 @@ If the input title or role matches or is highly related to an existing job, iden
           : (error && typeof error === "object" && "message" in error 
               ? (error as any).message 
               : JSON.stringify(error) || "Failed to process input"));
-    res.status(500).json({ error: errorMessage });
+    if (res.headersSent) {
+      res.write(`\n\nERROR_STREAMING: ${errorMessage}`);
+      res.end();
+    } else {
+      res.status(500).json({ error: errorMessage });
+    }
   }
 });
 
@@ -392,10 +437,13 @@ app.post("/api/freecai/chat", async (req, res) => {
 
     let targetModel = model;
     if (!targetModel && provider === "gemini") {
-      targetModel = "gemini-2.5-flash"; // Default to a standard conversational model
+      targetModel = "gemini-2.0-flash"; // Default to a standard conversational model
+    }
+    if (provider === "gemini" && targetModel.includes("3.5-flash")) {
+      targetModel = "gemini-2.0-flash";
     }
 
-    const resultText = await callLLM({
+    const stream = callLLMStream({
       provider,
       apiKey,
       model: targetModel,
@@ -408,8 +456,14 @@ app.post("/api/freecai/chat", async (req, res) => {
       
       Question: ${message}`,
     });
+
+    res.setHeader("Content-Type", "text/plain; charset=utf-8");
+    res.setHeader("Transfer-Encoding", "chunked");
     
-    res.json({ text: resultText });
+    for await (const chunk of stream) {
+      res.write(chunk);
+    }
+    res.end();
   } catch (error) {
     console.error("Chat API Error:", error);
     const errorMessage = error instanceof Error 
@@ -419,7 +473,12 @@ app.post("/api/freecai/chat", async (req, res) => {
           : (error && typeof error === "object" && "message" in error 
               ? (error as any).message 
               : JSON.stringify(error) || "Failed to generate chat"));
-    res.status(500).json({ error: errorMessage });
+    if (res.headersSent) {
+      res.write(`\n\nERROR_STREAMING: ${errorMessage}`);
+      res.end();
+    } else {
+      res.status(500).json({ error: errorMessage });
+    }
   }
 });
 
