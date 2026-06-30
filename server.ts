@@ -288,7 +288,7 @@ If the input title or role matches or is highly related to an existing job, iden
        Each query should be short, practical, and immediately usable by recruiters.
        
        ==================================================
-       IMPORTANT
+       IMPORTANT (CRITICAL: DO NOT use parenthetical annotations or labels like '(Fact: ...)' or '(Inference: ...)' in any section. Present all insights naturally and fluidly in Vietnamese recruitment consultant prose without repetitive meta-labeling. Repetitive labeling causes infinite loops.)
        ==================================================
        
        Distinguish between:

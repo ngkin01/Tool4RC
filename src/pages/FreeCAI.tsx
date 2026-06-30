@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Btn } from '../components/ui';
 import { db, auth, handleFirestoreError, OperationType } from '../lib/firebase';
 import { signInAnonymously } from 'firebase/auth';
-import { collection, doc, setDoc, deleteDoc, onSnapshot, query } from 'firebase/firestore';
+import { collection, doc, setDoc, deleteDoc, onSnapshot, query, getDocs } from 'firebase/firestore';
 
 // --- MOCK DATA TYPES ---
 type Client = {
@@ -182,19 +182,17 @@ Mỗi insight phải giúp consultant hành động được.
 Báo cáo phải mang tính tư vấn (consultative), thực chiến (actionable), không chỉ mang tính mô tả (descriptive).
 
 ==================================================
-FACT VS INFERENCE
+FACT VS INFERENCE (QUY TẮC CHỐNG LẶP & GHI NHÃN)
 ==================================================
 
-Mọi thông tin phải được phân loại:
+Mọi thông tin phải được phân loại và xử lý cẩn thận:
 
-FACT
-- Có trong JD;
-- Có trên website chính thức;
-- Có trên LinkedIn chính thức;
-- Có trên nguồn công khai đáng tin cậy.
+FACT: Có trong JD, website, LinkedIn chính thức hoặc nguồn đáng tin cậy.
+INFERENCE: Suy luận hợp lý từ dữ liệu có sẵn.
 
-INFERENCE
-- Suy luận hợp lý dựa trên dữ liệu có sẵn.
+CẢNH BÁO QUAN TRỌNG CHỐNG LẶP VÔ HẠN:
+- TUYỆT ĐỐI KHÔNG ghi chú hoặc thêm các nhãn đóng/mở ngoặc lặp đi lặp lại như "(Fact: ...)", "(Inference: ...)", "(Dựa trên...)" vào cuối mỗi câu hoặc từng ý nhỏ. Việc này làm báo cáo cực kỳ lộn xộn, mất tính chuyên nghiệp, và làm AI bị lặp từ vô hạn gây lỗi hệ thống.
+- Hãy viết nội dung một cách tự nhiên, trôi chảy dưới góc nhìn của chuyên gia tư vấn. Nếu là suy luận, hãy dùng các cụm từ diễn đạt tự nhiên như: "Dựa trên thực tế tuyển dụng...", "Nhiều khả năng...", "Có thể nhận định...", "Từ góc độ thị trường..." thay vì sử dụng nhãn đóng mở ngoặc.
 
 Không được trình bày INFERENCE như FACT.
 
@@ -747,15 +745,58 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
 
   const handleDeleteClient = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
+    if (!window.confirm("Bạn có chắc chắn muốn xóa đối tác (Client) này cùng toàn bộ các Job và lịch sử hoạt động liên quan không? Hành động này không thể khôi phục.")) {
+      return;
+    }
     try {
+      // 1. Delete all jobs under the client's jobs subcollection
+      const jobsRef = collection(db, 'clients', id, 'jobs');
+      const jobsSnapshot = await getDocs(jobsRef);
+      const deletePromises: Promise<void>[] = [];
+      jobsSnapshot.forEach(jobDoc => {
+        deletePromises.push(deleteDoc(doc(db, 'clients', id, 'jobs', jobDoc.id)));
+      });
+
+      // 2. Delete all timeline items under the client's timeline subcollection
+      const timelineRef = collection(db, 'clients', id, 'timeline');
+      const timelineSnapshot = await getDocs(timelineRef);
+      timelineSnapshot.forEach(timelineDoc => {
+        deletePromises.push(deleteDoc(doc(db, 'clients', id, 'timeline', timelineDoc.id)));
+      });
+
+      // Execute all subcollection deletions
+      await Promise.all(deletePromises);
+
+      // 3. Delete the parent client document
       await deleteDoc(doc(db, 'clients', id));
-      toast("Client deleted", "success");
+      
+      toast("Đã xóa client và toàn bộ dữ liệu liên quan thành công!", "success");
+      
       if (selectedClientId === id) {
         setSelectedClientId(null);
+        setSelectedJobId(null);
       }
     } catch (err) {
       handleFirestoreError(err, OperationType.DELETE, 'clients');
-      toast("Failed to delete client", "error");
+      toast("Không thể xóa client", "error");
+    }
+  };
+
+  const handleDeleteJob = async (e: React.MouseEvent, jobId: string) => {
+    e.stopPropagation();
+    if (!selectedClientId) return;
+    if (!window.confirm("Bạn có chắc chắn muốn xóa vị trí (Job) này không? Toàn bộ báo cáo và lịch sử các phiên bản sẽ bị xóa bỏ.")) {
+      return;
+    }
+    try {
+      await deleteDoc(doc(db, 'clients', selectedClientId, 'jobs', jobId));
+      toast("Đã xóa job thành công!", "success");
+      if (selectedJobId === jobId) {
+        setSelectedJobId(null);
+      }
+    } catch (err) {
+      handleFirestoreError(err, OperationType.DELETE, 'clients'); // using 'clients' as the collection prefix for subcollection err
+      toast("Không thể xóa job", "error");
     }
   };
 
@@ -1976,6 +2017,14 @@ ${r.booleanSearch || "Not generated yet."}
                   <div 
                     key={job.id} 
                     onClick={() => setSelectedJobId(job.id)}
+                    onMouseEnter={e => {
+                      const btn = e.currentTarget.querySelector('.job-delete-btn') as HTMLElement;
+                      if (btn) btn.style.opacity = '1';
+                    }}
+                    onMouseLeave={e => {
+                      const btn = e.currentTarget.querySelector('.job-delete-btn') as HTMLElement;
+                      if (btn) btn.style.opacity = '0';
+                    }}
                     style={{ 
                       padding: "20px 24px", 
                       display: "flex", 
@@ -1983,17 +2032,41 @@ ${r.booleanSearch || "Not generated yet."}
                       gap: 16,
                       borderBottom: index < selectedClient.jobs.length - 1 ? "1px solid var(--border-color)" : "none",
                       cursor: "pointer",
-                      transition: "background 0.2s"
+                      transition: "background 0.2s",
+                      position: "relative"
                     }}
                     className="hover:bg-[var(--bg-hover)]"
                   >
                     <div style={{ color: "var(--text-secondary)", display: "flex", alignItems: "center", justifyContent: "center", width: 36, height: 36, borderRadius: 8, background: "var(--bg-body)" }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
                     </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 15, fontWeight: 600, color: "var(--text-primary)", marginBottom: 4 }}>{job.title}</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 15, fontWeight: 600, color: "var(--text-primary)", marginBottom: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{job.title}</div>
                       <div style={{ fontSize: 13, color: "var(--text-secondary)" }}>Updated {job.updatedAt}</div>
                     </div>
+                    
+                    {/* Delete job button (visible on hover) */}
+                    <button 
+                      className="job-delete-btn"
+                      onClick={(e) => handleDeleteJob(e, job.id)}
+                      style={{ 
+                        background: 'none', 
+                        border: 'none', 
+                        color: 'var(--error)', 
+                        cursor: 'pointer', 
+                        padding: 8, 
+                        opacity: 0, 
+                        transition: 'opacity 0.2s',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        borderRadius: 6
+                      }}
+                      title="Xóa Job"
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                    </button>
+
                     <div style={{ color: "var(--text-muted)" }}>
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
                     </div>
