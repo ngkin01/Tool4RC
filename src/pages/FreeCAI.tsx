@@ -138,6 +138,12 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
   const [tempModel, setTempModel] = useState(userModel);
   const [tempEndpoint, setTempEndpoint] = useState(userCustomEndpoint);
 
+  const handleCopySection = (text: string, label: string) => {
+    navigator.clipboard.writeText(text || "")
+      .then(() => toast(`Đã copy ${label}`, "success"))
+      .catch(() => toast("Copy thất bại", "error"));
+  };
+
   const getAiHeaders = () => {
     let effectiveProvider = userProvider;
     let effectiveKey = userApiKey;
@@ -150,7 +156,7 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
       // Load corresponding custom key
       if (effectiveProvider === 'gemini') {
         effectiveKey = localStorage.getItem("custom_gemini_api_key") || "";
-        effectiveModel = localStorage.getItem("gemini_model") || "gemini-3.5-flash";
+        effectiveModel = localStorage.getItem("gemini_model") || "gemini-2.5-flash";
         effectiveEndpoint = localStorage.getItem("gemini_proxy_url") || "";
       } else if (effectiveProvider === 'openai') {
         effectiveKey = localStorage.getItem("custom_openai_api_key") || "";
@@ -173,7 +179,7 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
       if (!effectiveKey) {
         if (effectiveProvider === 'gemini') {
           effectiveKey = localStorage.getItem("custom_gemini_api_key") || "";
-          if (!effectiveModel) effectiveModel = localStorage.getItem("gemini_model") || "gemini-3.5-flash";
+          if (!effectiveModel) effectiveModel = localStorage.getItem("gemini_model") || "gemini-2.5-flash";
           if (!effectiveEndpoint) effectiveEndpoint = localStorage.getItem("gemini_proxy_url") || "";
         } else if (effectiveProvider === 'openai') {
           effectiveKey = localStorage.getItem("custom_openai_api_key") || "";
@@ -1107,7 +1113,7 @@ ${r.interviewQuestions && r.interviewQuestions.length > 0 ? r.interviewQuestions
                 <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 24, paddingRight: 8 }}>
                   
                   {/* 1. Role Overview */}
-                  <div style={{ background: "var(--bg-glass)", backdropFilter: "blur(16px)", padding: 24, borderRadius: 16, border: "1.5px solid var(--border-glass)", boxShadow: "var(--shadow-glass)" }}>
+                  <div style={{ background: "var(--bg-glass-strong)", backdropFilter: "blur(16px)", padding: 24, borderRadius: 16, border: "1.5px solid var(--border-glass-strong)", borderLeft: "3px solid var(--primary)", boxShadow: "var(--shadow-glass)" }}>
                     <h3 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 16px 0", color: "var(--text-primary)" }}>1. Role Overview</h3>
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 24 }}>
                       <div><div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 4 }}>Department</div><div style={{ fontSize: 15, fontWeight: 600 }}>{selectedJob.report.roleOverview.dept || "N/A"}</div></div>
@@ -1149,31 +1155,15 @@ ${r.interviewQuestions && r.interviewQuestions.length > 0 ? r.interviewQuestions
                     </div>
                   </div>
 
-                  {/* 6. Questions for Client */}
-                  <div style={{ background: "var(--bg-glass)", backdropFilter: "blur(16px)", padding: 24, borderRadius: 16, border: "1.5px solid var(--border-glass)", boxShadow: "var(--shadow-glass)" }}>
-                    <h3 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 16px 0", color: "var(--text-primary)" }}>6. Questions for Client</h3>
-                    <ul style={{ margin: 0, paddingLeft: 20, fontSize: 14, lineHeight: 1.7, color: "var(--text-secondary)" }}>
-                      {selectedJob.report.questionsForClient && selectedJob.report.questionsForClient.length > 0 ? (
-                        selectedJob.report.questionsForClient.map((item, i) => <li key={i}>{item}</li>)
-                      ) : (
-                        <li>Not available</li>
-                      )}
-                    </ul>
-                  </div>
-
                   {/* 7. Social Post */}
-                  <div style={{ background: "var(--bg-glass)", backdropFilter: "blur(16px)", padding: 24, borderRadius: 16, border: "1.5px solid var(--border-glass)", boxShadow: "var(--shadow-glass)" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                  <div style={{ background: "var(--bg-output)", border: "1px solid var(--border-output)", borderRadius: 12, padding: 24 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
                       <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: "var(--text-primary)" }}>7. Social Post</h3>
                       <button 
-                        onClick={() => {
-                          navigator.clipboard.writeText(selectedJob.report.socialPost || "")
-                            .then(() => toast("Đã copy Social Post!", "success"))
-                            .catch(() => toast("Copy thất bại", "error"));
-                        }}
+                        onClick={() => handleCopySection(selectedJob.report.socialPost || "", "Social Post")}
                         style={{ 
                           display: "flex", alignItems: "center", gap: 4, padding: "4px 10px", 
-                          background: "var(--bg-body)", border: "1px solid var(--border-color)", 
+                          background: "var(--bg-glass)", border: "1px solid var(--border-output)", 
                           borderRadius: 6, fontSize: 12, color: "var(--text-primary)", cursor: "pointer",
                           fontWeight: 500
                         }}
@@ -1182,31 +1172,97 @@ ${r.interviewQuestions && r.interviewQuestions.length > 0 ? r.interviewQuestions
                         Copy
                       </button>
                     </div>
-                    <div style={{ background: "var(--bg-body)", padding: 16, borderRadius: 8, fontFamily: "monospace", fontSize: 13, border: "1px solid var(--border-color)", color: "var(--text-secondary)", whiteSpace: "pre-wrap" }}>
+                    <div style={{ fontFamily: "monospace", color: "var(--text-output)", fontSize: 13, whiteSpace: "pre-wrap" }}>
                       {selectedJob.report.socialPost || "Not generated yet."}
                     </div>
                   </div>
 
                   {/* 8. Boolean Search */}
-                  <div style={{ background: "var(--bg-glass)", backdropFilter: "blur(16px)", padding: 24, borderRadius: 16, border: "1.5px solid var(--border-glass)", boxShadow: "var(--shadow-glass)" }}>
-                    <h3 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 12px 0", color: "var(--text-primary)" }}>8. Boolean Search</h3>
-                    <div style={{ background: "var(--bg-body)", padding: 16, borderRadius: 8, fontFamily: "monospace", fontSize: 13, border: "1px solid var(--border-color)", color: "var(--text-secondary)" }}>
+                  <div style={{ background: "var(--bg-output)", border: "1px solid var(--border-output)", borderRadius: 12, padding: 24 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                      <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: "var(--text-primary)" }}>8. Boolean Search</h3>
+                      <button 
+                        onClick={() => handleCopySection(selectedJob.report.booleanSearch || "", "Boolean Search")}
+                        style={{ 
+                          display: "flex", alignItems: "center", gap: 4, padding: "4px 10px", 
+                          background: "var(--bg-glass)", border: "1px solid var(--border-output)", 
+                          borderRadius: 6, fontSize: 12, color: "var(--text-primary)", cursor: "pointer",
+                          fontWeight: 500
+                        }}
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                        Copy
+                      </button>
+                    </div>
+                    <div style={{ fontFamily: "monospace", color: "var(--text-output)", fontSize: 13 }}>
                       {selectedJob.report.booleanSearch || "Not generated yet."}
                     </div>
                   </div>
 
-                  {/* 9. Interview Questions */}
-                  <div style={{ background: "var(--bg-glass)", backdropFilter: "blur(16px)", padding: 24, borderRadius: 16, border: "1.5px solid var(--border-glass)", boxShadow: "var(--shadow-glass)" }}>
-                    <h3 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 16px 0", color: "var(--text-primary)" }}>9. Interview Questions</h3>
-                    <ul style={{ margin: 0, paddingLeft: 20, fontSize: 14, lineHeight: 1.7, color: "var(--text-secondary)" }}>
-                      {selectedJob.report.interviewQuestions && selectedJob.report.interviewQuestions.length > 0 ? (
-                        selectedJob.report.interviewQuestions.map((item, i) => <li key={i}>{item}</li>)
-                      ) : (
-                        <li>Not available</li>
-                      )}
-                    </ul>
-                  </div>
+                  {/* 6 & 9: Questions for Client / Interview Questions (Layout 2 cột) */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
+                    {/* 6. Questions for Client */}
+                    <div style={{ background: "var(--bg-glass)", backdropFilter: "blur(16px)", padding: 24, borderRadius: 16, border: "1.5px solid var(--border-glass)", boxShadow: "var(--shadow-glass)" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                        <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: "var(--text-primary)" }}>6. Questions for Client</h3>
+                        <button 
+                          onClick={() => {
+                            const textToCopy = selectedJob.report.questionsForClient && selectedJob.report.questionsForClient.length > 0 
+                              ? selectedJob.report.questionsForClient.map((item, i) => `${i + 1}. ${item}`).join('\n') 
+                              : "";
+                            handleCopySection(textToCopy, "Questions for Client");
+                          }}
+                          style={{ 
+                            display: "flex", alignItems: "center", gap: 4, padding: "4px 10px", 
+                            background: "var(--bg-glass)", border: "1px solid var(--border-glass)", 
+                            borderRadius: 6, fontSize: 12, color: "var(--text-primary)", cursor: "pointer",
+                            fontWeight: 500
+                          }}
+                        >
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                          Copy
+                        </button>
+                      </div>
+                      <ul style={{ margin: 0, paddingLeft: 20, fontSize: 14, lineHeight: 1.7, color: "var(--text-secondary)" }}>
+                        {selectedJob.report.questionsForClient && selectedJob.report.questionsForClient.length > 0 ? (
+                          selectedJob.report.questionsForClient.map((item, i) => <li key={i}>{item}</li>)
+                        ) : (
+                          <li>Not available</li>
+                        )}
+                      </ul>
+                    </div>
 
+                    {/* 9. Interview Questions */}
+                    <div style={{ background: "var(--bg-glass)", backdropFilter: "blur(16px)", padding: 24, borderRadius: 16, border: "1.5px solid var(--border-glass)", boxShadow: "var(--shadow-glass)" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                        <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: "var(--text-primary)" }}>9. Interview Questions</h3>
+                        <button 
+                          onClick={() => {
+                            const textToCopy = selectedJob.report.interviewQuestions && selectedJob.report.interviewQuestions.length > 0 
+                              ? selectedJob.report.interviewQuestions.map((item, i) => `${i + 1}. ${item}`).join('\n') 
+                              : "";
+                            handleCopySection(textToCopy, "Interview Questions");
+                          }}
+                          style={{ 
+                            display: "flex", alignItems: "center", gap: 4, padding: "4px 10px", 
+                            background: "var(--bg-glass)", border: "1px solid var(--border-glass)", 
+                            borderRadius: 6, fontSize: 12, color: "var(--text-primary)", cursor: "pointer",
+                            fontWeight: 500
+                          }}
+                        >
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                          Copy
+                        </button>
+                      </div>
+                      <ul style={{ margin: 0, paddingLeft: 20, fontSize: 14, lineHeight: 1.7, color: "var(--text-secondary)" }}>
+                        {selectedJob.report.interviewQuestions && selectedJob.report.interviewQuestions.length > 0 ? (
+                          selectedJob.report.interviewQuestions.map((item, i) => <li key={i}>{item}</li>)
+                        ) : (
+                          <li>Not available</li>
+                        )}
+                      </ul>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
@@ -1547,7 +1603,7 @@ ${r.interviewQuestions && r.interviewQuestions.length > 0 ? r.interviewQuestions
                         <input 
                           type="text"
                           placeholder={
-                            tempProvider === 'gemini' ? "gemini-3.5-flash (Mặc định)" :
+                            tempProvider === 'gemini' ? "gemini-2.5-flash (Mặc định)" :
                             tempProvider === 'openai' ? "gpt-4o-mini (Mặc định)" :
                             tempProvider === 'grok' ? "grok-2-latest (Mặc định)" :
                             tempProvider === 'claude' ? "claude-3-5-sonnet-latest" :
@@ -1691,7 +1747,7 @@ ${r.interviewQuestions && r.interviewQuestions.length > 0 ? r.interviewQuestions
               alignItems: "center",
               padding: "20px 24px",
               borderBottom: "1px solid var(--border-color)",
-              background: "rgba(79, 70, 229, 0.03)"
+              background: "var(--bg-glass-hover)"
             }}>
               <div>
                 <h3 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: "var(--text-primary)" }}>Review AI Analysis Draft</h3>
@@ -1969,7 +2025,7 @@ ${r.interviewQuestions && r.interviewQuestions.length > 0 ? r.interviewQuestions
               alignItems: "center",
               padding: "16px 24px",
               borderTop: "1px solid var(--border-color)",
-              background: "rgba(0,0,0,0.02)"
+              background: "var(--bg-glass)"
             }}>
               <div>
                 {draftResult.hasNewJob ? (

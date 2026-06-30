@@ -44,6 +44,11 @@
   --border-glass: rgba(255, 255, 255, 1);
   --shadow-glass: 0 10px 32px -4px rgba(0, 0, 0, 0.08), 0 4px 12px -2px rgba(0, 0, 0, 0.04), inset 0 1px 1px rgba(255, 255, 255, 1);
   --glass-inset: rgba(255, 255, 255, 1);
+  --bg-glass-strong: rgba(255, 255, 255, 0.97);
+  --border-glass-strong: rgba(99, 102, 241, 0.35);
+  --bg-output: rgba(15, 23, 42, 0.04);
+  --border-output: rgba(15, 23, 42, 0.1);
+  --text-output: #1e1b4b;
 }
 
 .dark {
@@ -90,6 +95,11 @@
   --border-glass: rgba(255, 255, 255, 0.06);
   --shadow-glass: 0 16px 40px -4px rgba(0, 0, 0, 0.8), 0 8px 16px -4px rgba(0, 0, 0, 0.6), inset 0 1px 1px rgba(255, 255, 255, 0.05);
   --glass-inset: rgba(255, 255, 255, 0.08);
+  --bg-glass-strong: rgba(24, 24, 27, 0.78);
+  --border-glass-strong: rgba(129, 140, 248, 0.4);
+  --bg-output: rgba(0, 0, 0, 0.55);
+  --border-output: rgba(255, 255, 255, 0.08);
+  --text-output: #c7d2fe;
 }
 
 body {

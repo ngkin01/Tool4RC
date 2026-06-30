@@ -57,7 +57,7 @@ async function callLLM({
       ? new GoogleGenAI({ apiKey, httpOptions: { headers: { "User-Agent": "aistudio-build" } } })
       : defaultGeminiAi;
 
-    const targetModel = model || "gemini-3.5-flash";
+    const targetModel = model || "gemini-2.5-flash";
     const config: any = {};
     if (responseSchema) {
       config.responseMimeType = "application/json";
@@ -325,7 +325,14 @@ If the input title or role matches or is highly related to an existing job, iden
 
     } catch (error) {
       console.error("LLM API Error:", error);
-      res.status(500).json({ error: error instanceof Error ? error.message : "Failed to process input" });
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : (typeof error === "string" 
+            ? error 
+            : (error && typeof error === "object" && "message" in error 
+                ? (error as any).message 
+                : JSON.stringify(error) || "Failed to process input"));
+      res.status(500).json({ error: errorMessage });
     }
   });
 
@@ -366,8 +373,15 @@ If the input title or role matches or is highly related to an existing job, iden
       
       res.json({ text: resultText });
     } catch (error) {
-      console.error(error);
-      res.status(500).json({ error: "Failed to generate chat" });
+      console.error("Chat API Error:", error);
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : (typeof error === "string" 
+            ? error 
+            : (error && typeof error === "object" && "message" in error 
+                ? (error as any).message 
+                : JSON.stringify(error) || "Failed to generate chat"));
+      res.status(500).json({ error: errorMessage });
     }
   });
 
