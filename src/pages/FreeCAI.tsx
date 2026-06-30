@@ -122,6 +122,24 @@ Hãy trích xuất thông tin và chuyển đổi thành định dạng JSON có
 
 const LOCAL_STORAGE_KEY = 'freec_ai_clients_v2';
 
+const cleanUndefined = (obj: any): any => {
+  if (obj === null || obj === undefined) return null;
+  if (Array.isArray(obj)) {
+    return obj.map(item => cleanUndefined(item));
+  }
+  if (typeof obj === 'object') {
+    const res: any = {};
+    for (const key of Object.keys(obj)) {
+      const val = obj[key];
+      if (val !== undefined) {
+        res[key] = cleanUndefined(val);
+      }
+    }
+    return res;
+  }
+  return obj;
+};
+
 export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error') => void }) {
   const [clients, setClients] = useState<Client[]>([]);
   const [customPrompt, setCustomPrompt] = useState<string>("");
@@ -138,6 +156,26 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
   const [tempModel, setTempModel] = useState(userModel);
   const [tempEndpoint, setTempEndpoint] = useState(userCustomEndpoint);
 
+  // Sync with global custom keys when configuration modal is opened
+  useEffect(() => {
+    if (isAiSettingsOpen) {
+      const provider = localStorage.getItem('freec_ai_provider') || 'system';
+      const key = localStorage.getItem('freec_ai_api_key') || localStorage.getItem('freec_ai_user_gemini_key') || "";
+      const model = localStorage.getItem('freec_ai_model') || "";
+      const endpoint = localStorage.getItem('freec_ai_custom_endpoint') || "";
+
+      setUserProvider(provider);
+      setUserApiKey(key);
+      setUserModel(model);
+      setUserCustomEndpoint(endpoint);
+
+      setTempProvider(provider);
+      setTempKey(key);
+      setTempModel(model);
+      setTempEndpoint(endpoint);
+    }
+  }, [isAiSettingsOpen]);
+
   const handleCopySection = (text: string, label: string) => {
     navigator.clipboard.writeText(text || "")
       .then(() => toast(`Đã copy ${label}`, "success"))
@@ -145,10 +183,10 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
   };
 
   const getAiHeaders = () => {
-    let effectiveProvider = userProvider;
-    let effectiveKey = userApiKey;
-    let effectiveModel = userModel;
-    let effectiveEndpoint = userCustomEndpoint;
+    let effectiveProvider = localStorage.getItem('freec_ai_provider') || 'system';
+    let effectiveKey = localStorage.getItem('freec_ai_api_key') || localStorage.getItem('freec_ai_user_gemini_key') || "";
+    let effectiveModel = localStorage.getItem('freec_ai_model') || "";
+    let effectiveEndpoint = localStorage.getItem('freec_ai_custom_endpoint') || "";
 
     if (effectiveProvider === 'system') {
       effectiveProvider = localStorage.getItem("ai_provider") || "gemini";
@@ -248,7 +286,11 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
     const unsubscribeClients = onSnapshot(q, (snapshot) => {
       const loaded: Client[] = [];
       snapshot.forEach(docSnap => {
-        loaded.push(docSnap.data() as Client);
+        const data = docSnap.data();
+        loaded.push({
+          ...data,
+          id: data.id || docSnap.id
+        } as Client);
       });
       setClients(loaded);
     }, (err) => {
@@ -322,7 +364,11 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
     const unsubscribeJobs = onSnapshot(jobsRef, (snapshot) => {
       const jobsList: Job[] = [];
       snapshot.forEach(docSnap => {
-        jobsList.push(docSnap.data() as Job);
+        const data = docSnap.data();
+        jobsList.push({
+          ...data,
+          id: data.id || docSnap.id
+        } as Job);
       });
       jobsList.sort((a, b) => b.id.localeCompare(a.id));
       setSelectedClientJobs(jobsList);
@@ -334,7 +380,11 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
     const unsubscribeTimeline = onSnapshot(timelineRef, (snapshot) => {
       const timelineList: any[] = [];
       snapshot.forEach(docSnap => {
-        timelineList.push(docSnap.data());
+        const data = docSnap.data();
+        timelineList.push({
+          ...data,
+          id: data.id || docSnap.id
+        });
       });
       timelineList.sort((a, b) => b.id.localeCompare(a.id));
       setSelectedClientTimeline(timelineList);
@@ -474,8 +524,19 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
       });
 
       if (!response.ok) {
-        const errJson = await response.json().catch(() => ({}));
-        throw new Error(errJson.error || "Failed to process input");
+        let errMsg = "";
+        try {
+          const errText = await response.text();
+          try {
+            const errJson = JSON.parse(errText);
+            errMsg = errJson.error || errJson.message || errText;
+          } catch {
+            errMsg = errText || `HTTP Error ${response.status}`;
+          }
+        } catch {
+          errMsg = "Network error or server unreachable";
+        }
+        throw new Error(errMsg || "Failed to process input");
       }
 
       const data = await response.json();
@@ -510,9 +571,12 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
         };
       }
 
+      const rawMatchedJobId = data.matchedJobId;
+      const matchedJobId = rawMatchedJobId && rawMatchedJobId !== "null" && rawMatchedJobId !== "undefined" ? rawMatchedJobId : null;
+
       setDraftResult({
         hasNewJob: !!data.hasNewJob,
-        matchedJobId: data.matchedJobId || null,
+        matchedJobId,
         timelineSummary: data.timelineSummary || "Processed new input",
         clientUpdates,
         jobData
@@ -578,31 +642,39 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
         id: timelineId,
         date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }),
         content: draftResult.timelineSummary || "Processed new input",
-        rawInput: rawInputUsed
+        rawInput: rawInputUsed || ""
       };
       
       // Save timeline to subcollection
-      await setDoc(doc(db, 'clients', selectedClient.id, 'timeline', timelineId), newTimelineItem);
+      await setDoc(doc(db, 'clients', selectedClient.id, 'timeline', timelineId), cleanUndefined(newTimelineItem));
 
       // 2. Client Updates (merge in parent document)
-      const updatedSummary = { ...selectedClient.summary };
+      const updatedSummary = {
+        industry: "Analyzing...",
+        culture: "Analyzing...",
+        overview: "AI is researching company info...",
+        keyInfo: [],
+        ...(selectedClient.summary || {})
+      };
+
       if (draftResult.clientUpdates) {
         if (draftResult.clientUpdates.culture) updatedSummary.culture = draftResult.clientUpdates.culture;
         if (draftResult.clientUpdates.overview) updatedSummary.overview = draftResult.clientUpdates.overview;
         if (draftResult.clientUpdates.industry) updatedSummary.industry = draftResult.clientUpdates.industry;
         if (draftResult.clientUpdates.keyInfo) {
           const keyInfoFiltered = draftResult.clientUpdates.keyInfo.map((s: string) => s.trim()).filter(Boolean);
-          updatedSummary.keyInfo = [...updatedSummary.keyInfo, ...keyInfoFiltered];
+          updatedSummary.keyInfo = [...(updatedSummary.keyInfo || []), ...keyInfoFiltered];
         }
       }
       
-      await setDoc(doc(db, 'clients', selectedClient.id), {
+      await setDoc(doc(db, 'clients', selectedClient.id), cleanUndefined({
         summary: updatedSummary
-      }, { merge: true });
+      }), { merge: true });
 
       // 3. Job handling
       if (draftResult.hasNewJob && draftResult.jobData) {
-        const matchedJobId = draftResult.matchedJobId;
+        const rawMatchedJobId = draftResult.matchedJobId;
+        const matchedJobId = rawMatchedJobId && rawMatchedJobId !== "null" && rawMatchedJobId !== "undefined" ? rawMatchedJobId : null;
         const isUpdate = !!(matchedJobId && selectedClientJobs.some(j => j.id === matchedJobId));
         
         let targetJobId = matchedJobId;
@@ -634,7 +706,7 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
 
         const newVersionEntry = {
           date: new Date().toLocaleString('vi-VN'),
-          rawInput: rawInputUsed,
+          rawInput: rawInputUsed || "",
           snapshot: previousSnapshot
         };
         const updatedVersions = [...versions, newVersionEntry];
@@ -672,7 +744,7 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
         };
 
         // Save to subcollection
-        await setDoc(doc(db, 'clients', selectedClient.id, 'jobs', targetJobId), updatedJob);
+        await setDoc(doc(db, 'clients', selectedClient.id, 'jobs', targetJobId), cleanUndefined(updatedJob));
         
         if (isUpdate) {
           toast(`Job Updated: ${updatedJob.title}`, "success");
@@ -686,9 +758,9 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
       setUniversalInput("");
       setDraftResult(null);
       setIsReviewingDraft(false);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error saving draft:", err);
-      toast("Failed to save changes", "error");
+      toast(`Failed to save changes: ${err.message || err}`, "error");
     }
   };
 
@@ -709,15 +781,30 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
       });
 
       if (!response.ok) {
-        const errJson = await response.json().catch(() => ({}));
-        throw new Error(errJson.error || "Failed to chat");
+        let errMsg = "";
+        try {
+          const errText = await response.text();
+          try {
+            const errJson = JSON.parse(errText);
+            errMsg = errJson.error || errJson.message || errText;
+          } catch {
+            errMsg = errText || `HTTP Error ${response.status}`;
+          }
+        } catch {
+          errMsg = "Network error or server unreachable";
+        }
+        throw new Error(errMsg || "Failed to chat");
       }
 
       const data = await response.json();
       setChatMessages(prev => [...prev, { role: 'assistant', content: data.text }]);
     } catch (err) {
       console.error(err);
-      toast("Failed to process chat", "error");
+      if (err instanceof Error) {
+        toast(`Error: ${err.message}`, "error");
+      } else {
+        toast("Failed to process chat", "error");
+      }
     }
   };
 
@@ -1584,7 +1671,15 @@ ${r.interviewQuestions && r.interviewQuestions.length > 0 ? r.interviewQuestions
                         </label>
                         <input 
                           type="password"
-                          placeholder={userApiKey && tempProvider === userProvider ? "••••••••••••••••" : "Nhập API Key riêng của bạn..."}
+                          placeholder={
+                            (() => {
+                              const globalKey = localStorage.getItem(`custom_${tempProvider}_api_key`) || (tempProvider === 'gemini' ? localStorage.getItem("custom_gemini_api_key") : "");
+                              if (globalKey) {
+                                return "•••••••••••••••• (Đã nhận diện API Key từ hệ thống)";
+                              }
+                              return "Nhập API Key riêng của bạn...";
+                            })()
+                          }
                           value={tempKey}
                           onChange={e => setTempKey(e.target.value)}
                           style={{ 
@@ -2030,7 +2125,7 @@ ${r.interviewQuestions && r.interviewQuestions.length > 0 ? r.interviewQuestions
               <div>
                 {draftResult.hasNewJob ? (
                   <span style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 500 }}>
-                    {draftResult.matchedJobId ? (
+                    {draftResult.matchedJobId && draftResult.matchedJobId !== "null" && draftResult.matchedJobId !== "undefined" ? (
                       <span style={{ color: "#d97706", fontWeight: 600 }}>⚠️ Updating existing job (ID: {draftResult.matchedJobId})</span>
                     ) : (
                       <span style={{ color: "#16a34a", fontWeight: 600 }}>✨ Creating brand new job opening</span>
