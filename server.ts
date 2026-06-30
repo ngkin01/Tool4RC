@@ -255,6 +255,138 @@ If the input title or role matches or is highly related to an existing job, iden
          - booleanSearch: (string)
          - socialPost: (string)
          - interviewQuestions: (array of strings)
+         
+         ==================================================
+         ADDITIONAL RECRUITMENT INTELLIGENCE
+         ==================================================
+         
+         You are not a JD parser.
+         
+         You are an experienced Senior Headhunter and Recruitment Consultant with deep knowledge of recruitment, industries, and talent markets.
+         
+         The purpose of this report is to help a consultant who has never worked on this position immediately understand:
+         1. The company
+         2. The market
+         3. The nature of the role
+         4. Where to source candidates
+         5. How to sell the opportunity to candidates
+         6. Potential hiring challenges and risks
+         
+         Do not simply restate the JD. Provide actionable recruitment insights.
+         
+         --------------------------------------------------
+         1. competitorCompanies
+         --------------------------------------------------
+         
+         Provide:
+         - direct competitors
+         - similar business models
+         - companies with transferable talent
+         - explain why these companies should be targeted.
+         
+         --------------------------------------------------
+         2. positionIntelligence
+         --------------------------------------------------
+         
+         Explain:
+         - nature of the role
+         - day-to-day challenges
+         - hidden expectations
+         - key success factors
+         - common candidate backgrounds
+         - common reasons candidates fail
+         - transferable backgrounds.
+         
+         Focus on helping consultants understand what success actually looks like in this role.
+         
+         --------------------------------------------------
+         3. candidatePersonaObj
+         --------------------------------------------------
+         
+         Provide:
+         - years of experience
+         - industry background
+         - functional background
+         - language requirements
+         - personality traits.
+         
+         --------------------------------------------------
+         4. talentMarketInsight
+         --------------------------------------------------
+         
+         Assess:
+         - talent pool difficulty
+         - hiring challenges
+         - counter-offer risk
+         - salary competitiveness
+         - notice period risk.
+         
+         --------------------------------------------------
+         5. candidateSellingPoints
+         --------------------------------------------------
+         
+         Explain:
+         - why candidates should join this company
+         - key employer value propositions
+         - attractive aspects of the role.
+         
+         --------------------------------------------------
+         6. recruitmentStrategy
+         --------------------------------------------------
+         
+         Provide:
+         - sourcing channels
+         - target companies
+         - sourcing priorities
+         - recruitment challenges
+         - mitigation plans.
+         
+         --------------------------------------------------
+         7. booleanSearchQueries
+         --------------------------------------------------
+         
+         Generate practical and copy-paste ready searches for:
+         
+         - LinkedIn Recruiter Search
+         - CV Database Search
+         - X-Ray Search
+         - Industry Search
+         - Japanese Search (if applicable)
+         
+         Do NOT generate one long Boolean string.
+         
+         Each query should be short, practical, and immediately usable by recruiters.
+         
+         ==================================================
+         IMPORTANT
+         ==================================================
+         
+         Distinguish between:
+         
+         FACT:
+         - Information directly found in the JD
+         - Official website
+         - Official LinkedIn page
+         - Reliable public sources
+         
+         INFERENCE:
+         - Reasonable recruitment insights derived from available information.
+         
+         Never present inference as fact.
+         
+         Never fabricate information.
+         
+         If information cannot be verified:
+         - return null
+         - or "Not verified".
+         
+         For every insight section, think like an experienced recruitment consultant instead of a JD parser.
+         
+         Before generating the report, ask yourself:
+         
+         "If I were a consultant who had never worked on this position before, would this report give me enough information to understand the role, understand the market, and immediately start sourcing candidates?"
+         
+         If the answer is no, provide additional recruitment insights.
       `;
 
       const responseSchema = {
@@ -292,7 +424,67 @@ If the input title or role matches or is highly related to an existing job, iden
               questionsForClient: { type: Type.ARRAY, items: { type: Type.STRING } },
               booleanSearch: { type: Type.STRING },
               socialPost: { type: Type.STRING },
-              interviewQuestions: { type: Type.ARRAY, items: { type: Type.STRING } }
+              interviewQuestions: { type: Type.ARRAY, items: { type: Type.STRING } },
+              competitorCompanies: {
+                type: Type.OBJECT,
+                properties: {
+                  directCompetitors: { type: Type.ARRAY, items: { type: Type.STRING } },
+                  similarBusinessModels: { type: Type.ARRAY, items: { type: Type.STRING } },
+                  transferableTalent: { type: Type.ARRAY, items: { type: Type.STRING } },
+                  whyTheseCompanies: { type: Type.STRING }
+                }
+              },
+              positionIntelligence: {
+                type: Type.OBJECT,
+                properties: {
+                  natureOfRole: { type: Type.STRING },
+                  dayToDayChallenges: { type: Type.ARRAY, items: { type: Type.STRING } },
+                  hiddenExpectations: { type: Type.ARRAY, items: { type: Type.STRING } },
+                  keySuccessFactors: { type: Type.ARRAY, items: { type: Type.STRING } },
+                  commonCandidateBackgrounds: { type: Type.ARRAY, items: { type: Type.STRING } },
+                  commonReasonsCandidatesFail: { type: Type.ARRAY, items: { type: Type.STRING } },
+                  transferableBackgrounds: { type: Type.ARRAY, items: { type: Type.STRING } }
+                }
+              },
+              candidatePersonaObj: {
+                type: Type.OBJECT,
+                properties: {
+                  yearsOfExperience: { type: Type.STRING },
+                  industryBackground: { type: Type.STRING },
+                  functionalBackground: { type: Type.STRING },
+                  languageRequirements: { type: Type.STRING },
+                  personalityTraits: { type: Type.ARRAY, items: { type: Type.STRING } }
+                }
+              },
+              talentMarketInsight: {
+                type: Type.OBJECT,
+                properties: {
+                  talentPoolDifficulty: { type: Type.STRING },
+                  hiringChallenges: { type: Type.ARRAY, items: { type: Type.STRING } },
+                  counterOfferRisk: { type: Type.STRING },
+                  salaryCompetitiveness: { type: Type.STRING },
+                  noticePeriodRisk: { type: Type.STRING }
+                }
+              },
+              candidateSellingPoints: { type: Type.ARRAY, items: { type: Type.STRING } },
+              recruitmentStrategy: {
+                type: Type.OBJECT,
+                properties: {
+                  whereToSource: { type: Type.ARRAY, items: { type: Type.STRING } },
+                  companiesToTargetFirst: { type: Type.ARRAY, items: { type: Type.STRING } },
+                  challengesAndMitigations: { type: Type.ARRAY, items: { type: Type.STRING } }
+                }
+              },
+              booleanSearchQueries: {
+                type: Type.OBJECT,
+                properties: {
+                  linkedin: { type: Type.STRING },
+                  cvDb: { type: Type.STRING },
+                  xray: { type: Type.STRING },
+                  industry: { type: Type.STRING },
+                  japanese: { type: Type.STRING }
+                }
+              }
             }
           }
         },

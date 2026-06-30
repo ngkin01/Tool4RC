@@ -40,6 +40,48 @@ type JobReport = {
   booleanSearch: string;
   interviewQuestions: string[];
   socialPost: string;
+  competitorCompanies?: {
+    directCompetitors?: string[];
+    similarBusinessModels?: string[];
+    transferableTalent?: string[];
+    whyTheseCompanies?: string;
+  };
+  positionIntelligence?: {
+    natureOfRole?: string;
+    dayToDayChallenges?: string[];
+    hiddenExpectations?: string[];
+    keySuccessFactors?: string[];
+    commonCandidateBackgrounds?: string[];
+    commonReasonsCandidatesFail?: string[];
+    transferableBackgrounds?: string[];
+  };
+  candidatePersonaObj?: {
+    yearsOfExperience?: string;
+    industryBackground?: string;
+    functionalBackground?: string;
+    languageRequirements?: string;
+    personalityTraits?: string[];
+  };
+  talentMarketInsight?: {
+    talentPoolDifficulty?: string;
+    hiringChallenges?: string[];
+    counterOfferRisk?: string;
+    salaryCompetitiveness?: string;
+    noticePeriodRisk?: string;
+  };
+  candidateSellingPoints?: string[];
+  recruitmentStrategy?: {
+    whereToSource?: string[];
+    companiesToTargetFirst?: string[];
+    challengesAndMitigations?: string[];
+  };
+  booleanSearchQueries?: {
+    linkedin?: string;
+    cvDb?: string;
+    xray?: string;
+    industry?: string;
+    japanese?: string;
+  };
 };
 
 const mockClients: Client[] = [
@@ -111,14 +153,27 @@ const mockClients: Client[] = [
 ];
 
 const DEFAULT_SYSTEM_PROMPT = `Bạn là một chuyên gia tư vấn tuyển dụng lâu năm (Senior Recruitment Consultant Expert) tại Việt Nam với am hiểu sâu sắc về thị trường lao động, văn hóa doanh nghiệp và quy trình headhunt.
-Khi tuyển dụng hay phân tích thông tin về khách hàng "\${currentClientName}", hãy trích xuất các thông tin chi tiết một cách sắc bén, chuyên nghiệp và chuẩn tiếng Việt nhất.
+Khi tuyển dụng hay phân tích thông tin về khách hàng "\${currentClientName}", hãy nghiên cứu và trích xuất các thông tin chi tiết một cách sắc bén, chuyên nghiệp và chuẩn tiếng Việt nhất.
 
-Nhiệm vụ của bạn là phân tích đoạn thông tin JD (Job Description), ghi chú cuộc họp, email hoặc phản hồi được cung cấp dưới đây:
+YÊU CẦU NGHIÊN CỨU & PHÂN TÍCH:
+1. Nghiên cứu công ty (Company Research): Kết hợp kiến thức của bạn về công ty, thông tin từ website chính thức, LinkedIn và các nguồn tin cậy. TUYỆT ĐỐI PHÂN BIỆT RÕ giữa SỰ THẬT (FACT) và SUY LUẬN (INFERENCE). Không bao giờ bịa đặt thông tin. Nếu thông tin không thể xác minh, hãy trả về null hoặc "Chưa xác minh" (Not verified).
+2. Report này nhằm giúp một consultant chưa từng làm vị trí này có thể hiểu rõ vai trò, thị trường và ngay lập tức bắt tay vào việc sourcing ứng viên.
+
+Nhiệm vụ của bạn là phân tích thông tin JD (Job Description), ghi chú cuộc họp, email hoặc phản hồi:
 """
 \${input}
 """
 
-Hãy trích xuất thông tin và chuyển đổi thành định dạng JSON có cấu trúc chính xác theo đúng sơ đồ được yêu cầu. Tất cả các nội dung phân tích, mô tả, từ khóa, câu hỏi phỏng vấn, tin đăng mạng xã hội (social post) và chuỗi tìm kiếm Boolean đều phải sử dụng thuật ngữ tuyển dụng chuẩn tiếng Việt chuyên nghiệp nhất, văn phong mạch lạc, thu hút và sắc sảo của một headhunter kỳ cựu.`;
+Hãy trích xuất thông tin thành định dạng JSON với các section quan trọng:
+- Competitor Companies (Đối thủ cạnh tranh, mô hình kinh doanh tương tự, và giải thích tại sao nên target).
+- Position Intelligence (Bản chất công việc, thách thức hàng ngày, kỳ vọng ẩn, yếu tố thành công, lý do fail phổ biến).
+- Candidate Persona (Kinh nghiệm, background ngành/chuyên môn, ngoại ngữ, tính cách).
+- Talent Market Insight (Độ khó của talent pool, rủi ro counter-offer, mức lương).
+- Candidate Selling Points (Tại sao ứng viên nên gia nhập).
+- Recruitment Strategy Recommendation (Chiến lược, nơi tìm kiếm, rủi ro).
+- Boolean Search: KHÔNG tạo 1 chuỗi dài. Hãy tạo các chuỗi ngắn, thực tế, dễ copy-paste cho LinkedIn, CV Database, X-Ray, Industry, Japanese.
+
+Hãy đảm bảo văn phong mạch lạc, thu hút và sắc sảo của một headhunter kỳ cựu.`;
 
 const LOCAL_STORAGE_KEY = 'freec_ai_clients_v2';
 
@@ -744,7 +799,14 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
           targetCompanies: previousReport?.targetCompanies || [],
           booleanSearch: jd.booleanSearch || previousReport?.booleanSearch || "",
           interviewQuestions: jd.interviewQuestions && jd.interviewQuestions.length > 0 ? jd.interviewQuestions.map((s: string) => s.trim()).filter(Boolean) : (previousReport?.interviewQuestions || []),
-          socialPost: jd.socialPost || previousReport?.socialPost || ""
+          socialPost: jd.socialPost || previousReport?.socialPost || "",
+          competitorCompanies: jd.competitorCompanies || previousReport?.competitorCompanies,
+          positionIntelligence: jd.positionIntelligence || previousReport?.positionIntelligence,
+          candidatePersonaObj: jd.candidatePersonaObj || previousReport?.candidatePersonaObj,
+          talentMarketInsight: jd.talentMarketInsight || previousReport?.talentMarketInsight,
+          candidateSellingPoints: jd.candidateSellingPoints || previousReport?.candidateSellingPoints,
+          recruitmentStrategy: jd.recruitmentStrategy || previousReport?.recruitmentStrategy,
+          booleanSearchQueries: jd.booleanSearchQueries || previousReport?.booleanSearchQueries
         };
 
         const updatedJob: Job = {
@@ -851,27 +913,80 @@ Client: ${selectedClient?.name || "N/A"}
 2. Company Context
 ${r.companyContext && r.companyContext.length > 0 ? r.companyContext.map(item => `- ${item}`).join('\n') : "- Not available"}
 
+${r.competitorCompanies ? `
+3. Competitor Companies
+- Direct Competitors: ${r.competitorCompanies.directCompetitors?.join(', ') || 'N/A'}
+- Similar Business Models: ${r.competitorCompanies.similarBusinessModels?.join(', ') || 'N/A'}
+- Transferable Talent: ${r.competitorCompanies.transferableTalent?.join(', ') || 'N/A'}
+- Why These Companies: ${r.competitorCompanies.whyTheseCompanies || 'N/A'}
+` : ''}
+
+${r.positionIntelligence ? `
+4. Position Intelligence
+- Nature of Role: ${r.positionIntelligence.natureOfRole || 'N/A'}
+- Day-to-Day Challenges: ${r.positionIntelligence.dayToDayChallenges?.join(', ') || 'N/A'}
+- Hidden Expectations: ${r.positionIntelligence.hiddenExpectations?.join(', ') || 'N/A'}
+- Key Success Factors: ${r.positionIntelligence.keySuccessFactors?.join(', ') || 'N/A'}
+- Common Reasons Candidates Fail: ${r.positionIntelligence.commonReasonsCandidatesFail?.join(', ') || 'N/A'}
+` : ''}
+
+${r.candidatePersonaObj ? `
+5. Candidate Persona
+- Experience: ${r.candidatePersonaObj.yearsOfExperience || 'N/A'}
+- Industry: ${r.candidatePersonaObj.industryBackground || 'N/A'}
+- Function: ${r.candidatePersonaObj.functionalBackground || 'N/A'}
+- Language: ${r.candidatePersonaObj.languageRequirements || 'N/A'}
+- Traits: ${r.candidatePersonaObj.personalityTraits?.join(', ') || 'N/A'}
+` : `
 3. Ideal Persona
 ${r.idealPersona && r.idealPersona.length > 0 ? r.idealPersona.map(item => `- ${item}`).join('\n') : "- Not available"}
+`}
 
-4. Must Have
+6. Must Have
 ${r.mustHave && r.mustHave.length > 0 ? r.mustHave.map(item => `- ${item}`).join('\n') : "- Not available"}
 
-5. Nice to Have
+7. Nice to Have
 ${r.niceToHave && r.niceToHave.length > 0 ? r.niceToHave.map(item => `- ${item}`).join('\n') : "- Not available"}
 
-6. Questions for Client
+${r.talentMarketInsight ? `
+8. Talent Market Insight
+- Talent Pool Difficulty: ${r.talentMarketInsight.talentPoolDifficulty || 'N/A'}
+- Hiring Challenges: ${r.talentMarketInsight.hiringChallenges?.join(', ') || 'N/A'}
+- Counter Offer Risk: ${r.talentMarketInsight.counterOfferRisk || 'N/A'}
+- Salary Competitiveness: ${r.talentMarketInsight.salaryCompetitiveness || 'N/A'}
+- Notice Period Risk: ${r.talentMarketInsight.noticePeriodRisk || 'N/A'}
+` : ''}
+
+${r.candidateSellingPoints ? `
+9. Candidate Selling Points
+${r.candidateSellingPoints.map(item => `- ${item}`).join('\n')}
+` : ''}
+
+${r.recruitmentStrategy ? `
+10. Recruitment Strategy
+- Where to Source: ${r.recruitmentStrategy.whereToSource?.join(', ') || 'N/A'}
+- Target First: ${r.recruitmentStrategy.companiesToTargetFirst?.join(', ') || 'N/A'}
+- Challenges & Mitigations:
+${r.recruitmentStrategy.challengesAndMitigations?.map(item => `  - ${item}`).join('\n') || '  N/A'}
+` : ''}
+
+11. Questions for Client
 ${r.questionsForClient && r.questionsForClient.length > 0 ? r.questionsForClient.map(item => `- ${item}`).join('\n') : "- Not available"}
 
-7. Social Post
+12. Interview Questions
+${r.interviewQuestions && r.interviewQuestions.length > 0 ? r.interviewQuestions.map(item => `- ${item}`).join('\n') : "- Not available"}
+
+13. Social Post
 ${r.socialPost || "- Not available"}
 
+${r.booleanSearchQueries ? `
+14. Boolean Search
+${Object.entries(r.booleanSearchQueries).map(([key, query]) => query ? `${key.toUpperCase()}:\n${query}` : '').filter(Boolean).join('\n\n')}
+` : `
 8. Boolean Search
 ${r.booleanSearch || "Not generated yet."}
-
-9. Interview Questions
-${r.interviewQuestions && r.interviewQuestions.length > 0 ? r.interviewQuestions.map(item => `- ${item}`).join('\n') : "- Not available"}
-`;
+`}
+`.trim();
 
     navigator.clipboard.writeText(text)
       .then(() => {
@@ -1238,13 +1353,131 @@ ${r.interviewQuestions && r.interviewQuestions.length > 0 ? r.interviewQuestions
                         {selectedJob.report.companyContext.length > 0 ? selectedJob.report.companyContext.map((item, i) => <li key={i}>{item}</li>) : <li>Not available</li>}
                       </ul>
                     </div>
+                    
+                    {selectedJob.report.candidatePersonaObj ? (
+                    <div style={{ background: "var(--bg-glass)", backdropFilter: "blur(16px)", padding: 24, borderRadius: 16, border: "1.5px solid var(--border-glass)", boxShadow: "var(--shadow-glass)" }}>
+                      <h3 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 16px 0", color: "var(--text-primary)" }}>3. Candidate Persona</h3>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, fontSize: 14, color: "var(--text-secondary)" }}>
+                        <div><strong>Experience:</strong> {selectedJob.report.candidatePersonaObj.yearsOfExperience}</div>
+                        <div><strong>Industry:</strong> {selectedJob.report.candidatePersonaObj.industryBackground}</div>
+                        <div><strong>Function:</strong> {selectedJob.report.candidatePersonaObj.functionalBackground}</div>
+                        <div><strong>Language:</strong> {selectedJob.report.candidatePersonaObj.languageRequirements}</div>
+                        <div style={{ gridColumn: "1 / -1" }}>
+                          <strong>Traits:</strong> {selectedJob.report.candidatePersonaObj.personalityTraits?.join(", ")}
+                        </div>
+                      </div>
+                    </div>
+                    ) : (
                     <div style={{ background: "var(--bg-glass)", backdropFilter: "blur(16px)", padding: 24, borderRadius: 16, border: "1.5px solid var(--border-glass)", boxShadow: "var(--shadow-glass)" }}>
                       <h3 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 16px 0", color: "var(--text-primary)" }}>3. Ideal Persona</h3>
                       <ul style={{ margin: 0, paddingLeft: 20, fontSize: 14, lineHeight: 1.7, color: "var(--text-secondary)" }}>
                         {selectedJob.report.idealPersona.length > 0 ? selectedJob.report.idealPersona.map((item, i) => <li key={i}>{item}</li>) : <li>Not available</li>}
                       </ul>
                     </div>
+                    )}
                   </div>
+
+                  {/* Competitor Companies */}
+                  {selectedJob.report.competitorCompanies && (
+                  <div style={{ background: "var(--bg-glass-strong)", backdropFilter: "blur(16px)", padding: 24, borderRadius: 16, border: "1.5px solid var(--border-glass-strong)", borderLeft: "3px solid #f59e0b", boxShadow: "var(--shadow-glass)" }}>
+                    <h3 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 16px 0", color: "var(--text-primary)" }}>Competitor Companies</h3>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                      <div>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", marginBottom: 8 }}>Direct Competitors</div>
+                        <ul style={{ margin: 0, paddingLeft: 20, fontSize: 14, color: "var(--text-secondary)" }}>
+                          {selectedJob.report.competitorCompanies.directCompetitors?.map((c,i)=><li key={i}>{c}</li>)}
+                        </ul>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", marginBottom: 8 }}>Similar Business Models</div>
+                        <ul style={{ margin: 0, paddingLeft: 20, fontSize: 14, color: "var(--text-secondary)" }}>
+                          {selectedJob.report.competitorCompanies.similarBusinessModels?.map((c,i)=><li key={i}>{c}</li>)}
+                        </ul>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", marginBottom: 8 }}>Transferable Talent</div>
+                        <ul style={{ margin: 0, paddingLeft: 20, fontSize: 14, color: "var(--text-secondary)" }}>
+                          {selectedJob.report.competitorCompanies.transferableTalent?.map((c,i)=><li key={i}>{c}</li>)}
+                        </ul>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", marginBottom: 8 }}>Why These Companies</div>
+                        <div style={{ fontSize: 14, color: "var(--text-secondary)" }}>{selectedJob.report.competitorCompanies.whyTheseCompanies}</div>
+                      </div>
+                    </div>
+                  </div>
+                  )}
+
+                  {/* Position Intelligence */}
+                  {selectedJob.report.positionIntelligence && (
+                  <div style={{ background: "var(--bg-glass)", backdropFilter: "blur(16px)", padding: 24, borderRadius: 16, border: "1.5px solid var(--border-glass)", boxShadow: "var(--shadow-glass)" }}>
+                    <h3 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 16px 0", color: "var(--text-primary)" }}>Position Intelligence</h3>
+                    <div style={{ marginBottom: 12 }}>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Nature of Role: </span>
+                      <span style={{ fontSize: 14, color: "var(--text-secondary)" }}>{selectedJob.report.positionIntelligence.natureOfRole}</span>
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                      <div>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", marginBottom: 8 }}>Day-to-day Challenges</div>
+                        <ul style={{ margin: 0, paddingLeft: 20, fontSize: 14, color: "var(--text-secondary)" }}>{selectedJob.report.positionIntelligence.dayToDayChallenges?.map((c,i)=><li key={i}>{c}</li>)}</ul>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", marginBottom: 8 }}>Hidden Expectations</div>
+                        <ul style={{ margin: 0, paddingLeft: 20, fontSize: 14, color: "var(--text-secondary)" }}>{selectedJob.report.positionIntelligence.hiddenExpectations?.map((c,i)=><li key={i}>{c}</li>)}</ul>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", marginBottom: 8 }}>Key Success Factors</div>
+                        <ul style={{ margin: 0, paddingLeft: 20, fontSize: 14, color: "var(--text-secondary)" }}>{selectedJob.report.positionIntelligence.keySuccessFactors?.map((c,i)=><li key={i}>{c}</li>)}</ul>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", marginBottom: 8 }}>Reasons Candidates Fail</div>
+                        <ul style={{ margin: 0, paddingLeft: 20, fontSize: 14, color: "var(--text-secondary)" }}>{selectedJob.report.positionIntelligence.commonReasonsCandidatesFail?.map((c,i)=><li key={i}>{c}</li>)}</ul>
+                      </div>
+                    </div>
+                  </div>
+                  )}
+
+                  {/* Talent Market Insight & Strategy */}
+                  {(selectedJob.report.talentMarketInsight || selectedJob.report.recruitmentStrategy || selectedJob.report.candidateSellingPoints) && (
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
+                    {selectedJob.report.talentMarketInsight && (
+                    <div style={{ background: "var(--bg-glass)", backdropFilter: "blur(16px)", padding: 24, borderRadius: 16, border: "1.5px solid var(--border-glass)", boxShadow: "var(--shadow-glass)" }}>
+                      <h3 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 16px 0", color: "var(--text-primary)" }}>Talent Market Insight</h3>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: 14, color: "var(--text-secondary)" }}>
+                        <div><strong>Talent Pool Difficulty:</strong> {selectedJob.report.talentMarketInsight.talentPoolDifficulty}</div>
+                        <div><strong>Counter Offer Risk:</strong> {selectedJob.report.talentMarketInsight.counterOfferRisk}</div>
+                        <div><strong>Salary Competitiveness:</strong> {selectedJob.report.talentMarketInsight.salaryCompetitiveness}</div>
+                        <div><strong>Notice Period Risk:</strong> {selectedJob.report.talentMarketInsight.noticePeriodRisk}</div>
+                        <div>
+                          <strong>Hiring Challenges:</strong> 
+                          <ul style={{ margin: "4px 0 0", paddingLeft: 20 }}>{selectedJob.report.talentMarketInsight.hiringChallenges?.map((c,i)=><li key={i}>{c}</li>)}</ul>
+                        </div>
+                      </div>
+                    </div>
+                    )}
+                    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+                      {selectedJob.report.recruitmentStrategy && (
+                      <div style={{ background: "var(--bg-glass)", backdropFilter: "blur(16px)", padding: 24, borderRadius: 16, border: "1.5px solid var(--border-glass)", boxShadow: "var(--shadow-glass)" }}>
+                        <h3 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 16px 0", color: "var(--text-primary)" }}>Recruitment Strategy</h3>
+                        <div style={{ fontSize: 14, color: "var(--text-secondary)" }}>
+                          <div style={{ marginBottom: 8 }}><strong>Where to Source:</strong> {selectedJob.report.recruitmentStrategy.whereToSource?.join(", ")}</div>
+                          <div style={{ marginBottom: 8 }}><strong>Target First:</strong> {selectedJob.report.recruitmentStrategy.companiesToTargetFirst?.join(", ")}</div>
+                          <div style={{ marginBottom: 8 }}><strong>Challenges/Mitigations:</strong></div>
+                          <ul style={{ margin: 0, paddingLeft: 20 }}>{selectedJob.report.recruitmentStrategy.challengesAndMitigations?.map((c,i)=><li key={i}>{c}</li>)}</ul>
+                        </div>
+                      </div>
+                      )}
+                      {selectedJob.report.candidateSellingPoints && (
+                      <div style={{ background: "var(--bg-glass)", backdropFilter: "blur(16px)", padding: 24, borderRadius: 16, border: "1.5px solid var(--border-glass)", boxShadow: "var(--shadow-glass)" }}>
+                        <h3 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 16px 0", color: "var(--text-primary)" }}>Selling Points</h3>
+                        <ul style={{ margin: 0, paddingLeft: 20, fontSize: 14, lineHeight: 1.7, color: "var(--text-secondary)" }}>
+                          {selectedJob.report.candidateSellingPoints.map((c,i) => <li key={i}>{c}</li>)}
+                        </ul>
+                      </div>
+                      )}
+                    </div>
+                  </div>
+                  )}
 
                   {/* 4 & 5: Must have / Nice to have */}
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
@@ -1285,9 +1518,25 @@ ${r.interviewQuestions && r.interviewQuestions.length > 0 ? r.interviewQuestions
                   </div>
 
                   {/* 8. Boolean Search */}
+                  {selectedJob.report.booleanSearchQueries ? (
+                  <div style={{ background: "var(--bg-output)", border: "1px solid var(--border-output)", borderRadius: 12, padding: 24 }}>
+                    <h3 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 16px 0", color: "var(--text-primary)" }}>Boolean Search</h3>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                      {Object.entries(selectedJob.report.booleanSearchQueries).map(([key, query]) => query ? (
+                        <div key={key}>
+                          <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", marginBottom: 4 }}>{key}</div>
+                          <div style={{ display: "flex", gap: 8 }}>
+                            <div style={{ flex: 1, fontFamily: "monospace", color: "var(--text-output)", fontSize: 13, background: "rgba(0,0,0,0.1)", padding: "8px 12px", borderRadius: 6 }}>{query}</div>
+                            <button onClick={() => handleCopySection(query as string, `Boolean ${key}`)} style={{ padding: "8px 12px", background: "var(--bg-glass)", border: "1px solid var(--border-output)", borderRadius: 6, fontSize: 12, color: "var(--text-primary)", cursor: "pointer", fontWeight: 500 }}>Copy</button>
+                          </div>
+                        </div>
+                      ) : null)}
+                    </div>
+                  </div>
+                  ) : (
                   <div style={{ background: "var(--bg-output)", border: "1px solid var(--border-output)", borderRadius: 12, padding: 24 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-                      <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: "var(--text-primary)" }}>8. Boolean Search</h3>
+                      <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: "var(--text-primary)" }}>Boolean Search</h3>
                       <button 
                         onClick={() => handleCopySection(selectedJob.report.booleanSearch || "", "Boolean Search")}
                         style={{ 
@@ -1305,6 +1554,7 @@ ${r.interviewQuestions && r.interviewQuestions.length > 0 ? r.interviewQuestions
                       {selectedJob.report.booleanSearch || "Not generated yet."}
                     </div>
                   </div>
+                  )}
 
                   {/* 6 & 9: Questions for Client / Interview Questions (Layout 2 cột) */}
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
