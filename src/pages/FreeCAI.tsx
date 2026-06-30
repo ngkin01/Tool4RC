@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Btn } from '../components/ui';
-import { db, handleFirestoreError, OperationType } from '../lib/firebase';
+import { db, auth, handleFirestoreError, OperationType } from '../lib/firebase';
+import { signInAnonymously } from 'firebase/auth';
 import { collection, doc, setDoc, deleteDoc, onSnapshot, query } from 'firebase/firestore';
 
 // --- MOCK DATA TYPES ---
@@ -24,6 +25,7 @@ type Job = {
   title: string;
   updatedAt: string;
   report: JobReport;
+  versions?: { date: string; rawInput: string; snapshot: JobReport }[];
 };
 
 type JobReport = {
@@ -108,28 +110,177 @@ const mockClients: Client[] = [
   }
 ];
 
+const DEFAULT_SYSTEM_PROMPT = `Bạn là một chuyên gia tư vấn tuyển dụng lâu năm (Senior Recruitment Consultant Expert) tại Việt Nam với am hiểu sâu sắc về thị trường lao động, văn hóa doanh nghiệp và quy trình headhunt.
+Khi tuyển dụng hay phân tích thông tin về khách hàng "\${currentClientName}", hãy trích xuất các thông tin chi tiết một cách sắc bén, chuyên nghiệp và chuẩn tiếng Việt nhất.
+
+Nhiệm vụ của bạn là phân tích đoạn thông tin JD (Job Description), ghi chú cuộc họp, email hoặc phản hồi được cung cấp dưới đây:
+"""
+\${input}
+"""
+
+Hãy trích xuất thông tin và chuyển đổi thành định dạng JSON có cấu trúc chính xác theo đúng sơ đồ được yêu cầu. Tất cả các nội dung phân tích, mô tả, từ khóa, câu hỏi phỏng vấn, tin đăng mạng xã hội (social post) và chuỗi tìm kiếm Boolean đều phải sử dụng thuật ngữ tuyển dụng chuẩn tiếng Việt chuyên nghiệp nhất, văn phong mạch lạc, thu hút và sắc sảo của một headhunter kỳ cựu.`;
+
 const LOCAL_STORAGE_KEY = 'freec_ai_clients_v2';
 
 export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error') => void }) {
   const [clients, setClients] = useState<Client[]>([]);
+  const [customPrompt, setCustomPrompt] = useState<string>("");
+  const [isEditingPrompt, setIsEditingPrompt] = useState(false);
+  const [isAiSettingsOpen, setIsAiSettingsOpen] = useState(false);
+  const [activeConfigTab, setActiveConfigTab] = useState<'api' | 'prompt'>('api');
+  const [userProvider, setUserProvider] = useState<string>(() => localStorage.getItem('freec_ai_provider') || 'system');
+  const [userApiKey, setUserApiKey] = useState<string>(() => localStorage.getItem('freec_ai_api_key') || localStorage.getItem('freec_ai_user_gemini_key') || "");
+  const [userModel, setUserModel] = useState<string>(() => localStorage.getItem('freec_ai_model') || "");
+  const [userCustomEndpoint, setUserCustomEndpoint] = useState<string>(() => localStorage.getItem('freec_ai_custom_endpoint') || "");
+
+  const [tempProvider, setTempProvider] = useState(userProvider);
+  const [tempKey, setTempKey] = useState(userApiKey);
+  const [tempModel, setTempModel] = useState(userModel);
+  const [tempEndpoint, setTempEndpoint] = useState(userCustomEndpoint);
+
+  const getAiHeaders = () => {
+    let effectiveProvider = userProvider;
+    let effectiveKey = userApiKey;
+    let effectiveModel = userModel;
+    let effectiveEndpoint = userCustomEndpoint;
+
+    if (effectiveProvider === 'system') {
+      effectiveProvider = localStorage.getItem("ai_provider") || "gemini";
+      
+      // Load corresponding custom key
+      if (effectiveProvider === 'gemini') {
+        effectiveKey = localStorage.getItem("custom_gemini_api_key") || "";
+        effectiveModel = localStorage.getItem("gemini_model") || "gemini-3.5-flash";
+        effectiveEndpoint = localStorage.getItem("gemini_proxy_url") || "";
+      } else if (effectiveProvider === 'openai') {
+        effectiveKey = localStorage.getItem("custom_openai_api_key") || "";
+        effectiveModel = localStorage.getItem("openai_model") || "gpt-4o-mini";
+      } else if (effectiveProvider === 'grok') {
+        effectiveKey = localStorage.getItem("custom_grok_api_key") || "";
+        effectiveModel = "grok-2-latest";
+      } else if (effectiveProvider === 'groq') {
+        effectiveKey = localStorage.getItem("custom_groq_api_key") || "";
+        effectiveModel = localStorage.getItem("groq_model") || "llama-3.3-70b-versatile";
+      } else if (effectiveProvider === 'cerebras') {
+        effectiveKey = localStorage.getItem("custom_cerebras_api_key") || "";
+        effectiveModel = localStorage.getItem("cerebras_model") || "qwen-3-235b-a22b-instruct-2507";
+      } else if (effectiveProvider === 'qwen') {
+        effectiveKey = localStorage.getItem("custom_qwen_api_key") || "";
+        effectiveModel = localStorage.getItem("qwen_model") || "qwen-plus";
+      }
+    } else {
+      // If they chose a specific provider, but left the key blank, also fallback to the global key of that specific provider
+      if (!effectiveKey) {
+        if (effectiveProvider === 'gemini') {
+          effectiveKey = localStorage.getItem("custom_gemini_api_key") || "";
+          if (!effectiveModel) effectiveModel = localStorage.getItem("gemini_model") || "gemini-3.5-flash";
+          if (!effectiveEndpoint) effectiveEndpoint = localStorage.getItem("gemini_proxy_url") || "";
+        } else if (effectiveProvider === 'openai') {
+          effectiveKey = localStorage.getItem("custom_openai_api_key") || "";
+          if (!effectiveModel) effectiveModel = localStorage.getItem("openai_model") || "gpt-4o-mini";
+        } else if (effectiveProvider === 'grok') {
+          effectiveKey = localStorage.getItem("custom_grok_api_key") || "";
+          if (!effectiveModel) effectiveModel = "grok-2-latest";
+        } else if (effectiveProvider === 'groq') {
+          effectiveKey = localStorage.getItem("custom_groq_api_key") || "";
+          if (!effectiveModel) effectiveModel = localStorage.getItem("groq_model") || "llama-3.3-70b-versatile";
+        } else if (effectiveProvider === 'cerebras') {
+          effectiveKey = localStorage.getItem("custom_cerebras_api_key") || "";
+          if (!effectiveModel) effectiveModel = localStorage.getItem("cerebras_model") || "qwen-3-235b-a22b-instruct-2507";
+        } else if (effectiveProvider === 'qwen') {
+          effectiveKey = localStorage.getItem("custom_qwen_api_key") || "";
+          if (!effectiveModel) effectiveModel = localStorage.getItem("qwen_model") || "qwen-plus";
+        }
+      }
+    }
+
+    return {
+      'Content-Type': 'application/json',
+      'x-ai-provider': effectiveProvider,
+      ...(effectiveKey ? { 'x-ai-key': effectiveKey } : {}),
+      ...(effectiveModel ? { 'x-ai-model': effectiveModel } : {}),
+      ...(effectiveEndpoint ? { 'x-ai-custom-endpoint': effectiveEndpoint } : {})
+    };
+  };
+
+  const handleSaveApiSettings = (provider: string, key: string, model: string, endpoint: string) => {
+    localStorage.setItem('freec_ai_provider', provider);
+    localStorage.setItem('freec_ai_api_key', key.trim());
+    localStorage.setItem('freec_ai_model', model.trim());
+    localStorage.setItem('freec_ai_custom_endpoint', endpoint.trim());
+
+    setUserProvider(provider);
+    setUserApiKey(key.trim());
+    setUserModel(model.trim());
+    setUserCustomEndpoint(endpoint.trim());
+
+    toast("Đã cập nhật cấu hình AI thành công!", "success");
+  };
+
+  const handleClearApiSettings = () => {
+    localStorage.removeItem('freec_ai_provider');
+    localStorage.removeItem('freec_ai_api_key');
+    localStorage.removeItem('freec_ai_user_gemini_key');
+    localStorage.removeItem('freec_ai_model');
+    localStorage.removeItem('freec_ai_custom_endpoint');
+
+    setUserProvider("system");
+    setUserApiKey("");
+    setUserModel("");
+    setUserCustomEndpoint("");
+    setTempProvider("system");
+    setTempKey("");
+    setTempModel("");
+    setTempEndpoint("");
+
+    toast("Đã đặt lại cấu hình AI mặc định (Hệ thống)!", "success");
+  };
 
   useEffect(() => {
+    signInAnonymously(auth).catch(err => console.error("Anonymous sign-in failed:", err));
     const q = query(collection(db, 'clients'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const unsubscribeClients = onSnapshot(q, (snapshot) => {
       const loaded: Client[] = [];
-      snapshot.forEach(doc => {
-        loaded.push(doc.data() as Client);
+      snapshot.forEach(docSnap => {
+        loaded.push(docSnap.data() as Client);
       });
       setClients(loaded);
     }, (err) => {
       handleFirestoreError(err, OperationType.LIST, 'clients');
     });
-    return unsubscribe;
+
+    const unsubscribePrompt = onSnapshot(doc(db, 'settings', 'systemPrompt'), (docSnap) => {
+      if (docSnap.exists()) {
+        setCustomPrompt(docSnap.data().prompt || "");
+      } else {
+        setCustomPrompt(DEFAULT_SYSTEM_PROMPT);
+      }
+    }, (err) => {
+      console.error("Error fetching prompt:", err);
+    });
+
+    return () => {
+      unsubscribeClients();
+      unsubscribePrompt();
+    };
   }, []);
 
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   
+  const [selectedClientJobs, setSelectedClientJobs] = useState<Job[]>([]);
+  const [selectedClientTimeline, setSelectedClientTimeline] = useState<{ id: string; date: string; content: string; rawInput?: string }[]>([]);
+
+  // Draft and review states
+  const [draftResult, setDraftResult] = useState<any | null>(null);
+  const [isReviewingDraft, setIsReviewingDraft] = useState(false);
+  const [rawInputUsed, setRawInputUsed] = useState("");
+  const [activeReviewTab, setActiveReviewTab] = useState<'client' | 'job' | 'marketing'>('client');
+
+  // Job active tab and selected version index
+  const [activeJobTab, setActiveJobTab] = useState<'report' | 'history'>('report');
+  const [selectedVersionIndex, setSelectedVersionIndex] = useState<number | null>(null);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [isCreatingClient, setIsCreatingClient] = useState(false);
   const [newClientName, setNewClientName] = useState("");
@@ -146,6 +297,88 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
   
   const [editingClientId, setEditingClientId] = useState<string | null>(null);
   const [editingNameVal, setEditingNameVal] = useState("");
+
+  // Reset active job tab and selected version index when switching jobs
+  useEffect(() => {
+    setActiveJobTab('report');
+    setSelectedVersionIndex(null);
+  }, [selectedJobId]);
+
+  // Synchronize jobs and timeline from subcollections for the selected client
+  useEffect(() => {
+    if (!selectedClientId) {
+      setSelectedClientJobs([]);
+      setSelectedClientTimeline([]);
+      return;
+    }
+
+    const jobsRef = collection(db, 'clients', selectedClientId, 'jobs');
+    const unsubscribeJobs = onSnapshot(jobsRef, (snapshot) => {
+      const jobsList: Job[] = [];
+      snapshot.forEach(docSnap => {
+        jobsList.push(docSnap.data() as Job);
+      });
+      jobsList.sort((a, b) => b.id.localeCompare(a.id));
+      setSelectedClientJobs(jobsList);
+    }, (err) => {
+      console.error("Error fetching jobs from subcollection:", err);
+    });
+
+    const timelineRef = collection(db, 'clients', selectedClientId, 'timeline');
+    const unsubscribeTimeline = onSnapshot(timelineRef, (snapshot) => {
+      const timelineList: any[] = [];
+      snapshot.forEach(docSnap => {
+        timelineList.push(docSnap.data());
+      });
+      timelineList.sort((a, b) => b.id.localeCompare(a.id));
+      setSelectedClientTimeline(timelineList);
+    }, (err) => {
+      console.error("Error fetching timeline from subcollection:", err);
+    });
+
+    return () => {
+      unsubscribeJobs();
+      unsubscribeTimeline();
+    };
+  }, [selectedClientId]);
+
+  // Migration script (runs in background when clients are fetched)
+  useEffect(() => {
+    if (clients.length === 0) return;
+    
+    const migrateOldData = async () => {
+      for (const client of clients) {
+        const rawJobs = (client as any).jobs;
+        const rawTimeline = (client as any).timeline;
+        
+        if ((Array.isArray(rawJobs) && rawJobs.length > 0) || (Array.isArray(rawTimeline) && rawTimeline.length > 0)) {
+          console.log(`Migrating old embedded data for client: ${client.name}`);
+          
+          if (Array.isArray(rawJobs) && rawJobs.length > 0) {
+            for (const job of rawJobs) {
+              await setDoc(doc(db, 'clients', client.id, 'jobs', job.id), job);
+            }
+          }
+          
+          if (Array.isArray(rawTimeline) && rawTimeline.length > 0) {
+            for (const item of rawTimeline) {
+              await setDoc(doc(db, 'clients', client.id, 'timeline', item.id), item);
+            }
+          }
+          
+          // Clear embedded fields to complete migration and avoid running again
+          await setDoc(doc(db, 'clients', client.id), {
+            jobs: [],
+            timeline: []
+          }, { merge: true });
+          
+          console.log(`Migration completed for client: ${client.name}`);
+        }
+      }
+    };
+    
+    migrateOldData();
+  }, [clients]);
 
   const handleUpdateClientName = async (clientId: string) => {
     if (!editingNameVal.trim()) {
@@ -166,8 +399,14 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatMessages, isChatOpen]);
 
-  const selectedClient = clients.find(c => c.id === selectedClientId);
-  const selectedJob = selectedClient?.jobs.find(j => j.id === selectedJobId);
+  const rawSelectedClient = clients.find(c => c.id === selectedClientId);
+  const selectedClient = rawSelectedClient ? {
+    ...rawSelectedClient,
+    jobs: selectedClientJobs,
+    timeline: selectedClientTimeline
+  } : undefined;
+
+  const selectedJob = selectedClientJobs.find(j => j.id === selectedJobId);
 
   const filteredClients = clients.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
@@ -219,81 +458,231 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
     try {
       const response = await fetch('/api/freecai/process', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAiHeaders(),
         body: JSON.stringify({
           input: universalInput,
           currentClientName: selectedClient.name,
-          existingJobs: selectedClient.jobs
+          existingJobs: selectedClientJobs.map(j => ({ id: j.id, title: j.title })),
+          customPrompt: customPrompt || DEFAULT_SYSTEM_PROMPT
         })
       });
 
       if (!response.ok) {
-        throw new Error("Failed to process input");
+        const errJson = await response.json().catch(() => ({}));
+        throw new Error(errJson.error || "Failed to process input");
       }
 
       const data = await response.json();
       
-      const newTimelineItem = {
-        id: "t" + Date.now(),
-        date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }),
-        content: data.timelineSummary || "Processed new input"
+      setRawInputUsed(universalInput);
+
+      const clientUpdates = {
+        culture: data.clientUpdates?.culture || "",
+        overview: data.clientUpdates?.overview || "",
+        industry: data.clientUpdates?.industry || "",
+        keyInfo: data.clientUpdates?.keyInfo || []
       };
-      
-      let newJob: Job | null = null;
+
+      let jobData = undefined;
       if (data.hasNewJob && data.jobData) {
-        newJob = {
-          id: "j" + Date.now(),
+        jobData = {
           title: data.jobData.title || "New Role (Auto-detected)",
-          updatedAt: "Just now",
-          report: {
-            roleOverview: { 
-              title: data.jobData.title || "New Role", 
-              dept: data.jobData.roleOverview?.dept || "TBD", 
-              reportTo: data.jobData.roleOverview?.reportingLine || "TBD", 
-              salary: data.jobData.roleOverview?.salaryRange || "TBD", 
-              location: data.jobData.roleOverview?.location || "TBD", 
-              teamSize: "TBD" 
-            },
-            companyContext: data.jobData.companyContext || [],
-            idealPersona: data.jobData.idealPersona || [],
-            mustHave: data.jobData.mustHave || [],
-            niceToHave: data.jobData.niceToHave || [],
-            questionsForClient: data.jobData.questionsForClient || [],
-            challenges: [],
-            targetCompanies: [],
-            booleanSearch: data.jobData.booleanSearch || "",
-            interviewQuestions: data.jobData.interviewQuestions || [],
-            socialPost: data.jobData.socialPost || ""
-          }
+          roleOverview: {
+            dept: data.jobData.roleOverview?.dept || "",
+            reportingLine: data.jobData.roleOverview?.reportingLine || "",
+            salaryRange: data.jobData.roleOverview?.salaryRange || "",
+            location: data.jobData.roleOverview?.location || ""
+          },
+          companyContext: data.jobData.companyContext || [],
+          idealPersona: data.jobData.idealPersona || [],
+          mustHave: data.jobData.mustHave || [],
+          niceToHave: data.jobData.niceToHave || [],
+          questionsForClient: data.jobData.questionsForClient || [],
+          booleanSearch: data.jobData.booleanSearch || "",
+          socialPost: data.jobData.socialPost || "",
+          interviewQuestions: data.jobData.interviewQuestions || []
         };
       }
 
-      const updatedJobs = newJob ? [newJob, ...selectedClient.jobs] : selectedClient.jobs;
-      const updatedTimeline = [newTimelineItem, ...selectedClient.timeline];
+      setDraftResult({
+        hasNewJob: !!data.hasNewJob,
+        matchedJobId: data.matchedJobId || null,
+        timelineSummary: data.timelineSummary || "Processed new input",
+        clientUpdates,
+        jobData
+      });
+      setIsReviewingDraft(true);
+
+    } catch (err) {
+      console.error("Universal Input Submit Error:", err);
+      if (err instanceof Error) {
+        toast(`Error: ${err.message}`, "error");
+      } else {
+        toast("Failed to process and update client", "error");
+      }
+    } finally {
+      setIsProcessingInput(false);
+    }
+  };
+
+  const handleDraftFieldChange = (section: string, field: string, value: any) => {
+    if (!draftResult) return;
+    setDraftResult((prev: any) => {
+      if (!prev) return null;
+      if (section === 'clientUpdates') {
+        return {
+          ...prev,
+          clientUpdates: {
+            ...prev.clientUpdates,
+            [field]: value
+          }
+        };
+      }
+      if (section === 'jobData' && prev.jobData) {
+        if (field === 'roleOverview') {
+          return {
+            ...prev,
+            jobData: {
+              ...prev.jobData,
+              roleOverview: value
+            }
+          };
+        }
+        return {
+          ...prev,
+          jobData: {
+            ...prev.jobData,
+            [field]: value
+          }
+        };
+      }
+      return {
+        ...prev,
+        [field]: value
+      };
+    });
+  };
+
+  const handleConfirmDraft = async () => {
+    if (!draftResult || !selectedClient) return;
+    try {
+      // 1. Create timeline item
+      const timelineId = "t" + Date.now();
+      const newTimelineItem = {
+        id: timelineId,
+        date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }),
+        content: draftResult.timelineSummary || "Processed new input",
+        rawInput: rawInputUsed
+      };
       
+      // Save timeline to subcollection
+      await setDoc(doc(db, 'clients', selectedClient.id, 'timeline', timelineId), newTimelineItem);
+
+      // 2. Client Updates (merge in parent document)
       const updatedSummary = { ...selectedClient.summary };
-      if (data.clientUpdates) {
-        if (data.clientUpdates.culture) updatedSummary.culture = data.clientUpdates.culture;
-        if (data.clientUpdates.overview) updatedSummary.overview = data.clientUpdates.overview;
-        if (data.clientUpdates.industry) updatedSummary.industry = data.clientUpdates.industry;
-        if (data.clientUpdates.keyInfo) updatedSummary.keyInfo = [...updatedSummary.keyInfo, ...data.clientUpdates.keyInfo];
+      if (draftResult.clientUpdates) {
+        if (draftResult.clientUpdates.culture) updatedSummary.culture = draftResult.clientUpdates.culture;
+        if (draftResult.clientUpdates.overview) updatedSummary.overview = draftResult.clientUpdates.overview;
+        if (draftResult.clientUpdates.industry) updatedSummary.industry = draftResult.clientUpdates.industry;
+        if (draftResult.clientUpdates.keyInfo) {
+          const keyInfoFiltered = draftResult.clientUpdates.keyInfo.map((s: string) => s.trim()).filter(Boolean);
+          updatedSummary.keyInfo = [...updatedSummary.keyInfo, ...keyInfoFiltered];
+        }
       }
       
       await setDoc(doc(db, 'clients', selectedClient.id), {
-        ...selectedClient,
-        jobs: updatedJobs,
-        timeline: updatedTimeline,
         summary: updatedSummary
       }, { merge: true });
-      
-      if (newJob) toast(`New Job Detected: ${newJob.title}`, "success");
-      else toast("Information saved to Knowledge Base", "success");
-    } catch (err) {
-      console.error(err);
-      toast("Failed to process and update client", "error");
-    } finally {
+
+      // 3. Job handling
+      if (draftResult.hasNewJob && draftResult.jobData) {
+        const matchedJobId = draftResult.matchedJobId;
+        const isUpdate = !!(matchedJobId && selectedClientJobs.some(j => j.id === matchedJobId));
+        
+        let targetJobId = matchedJobId;
+        let existingJob: Job | undefined = undefined;
+        
+        if (isUpdate) {
+          existingJob = selectedClientJobs.find(j => j.id === matchedJobId);
+        }
+        
+        if (!isUpdate || !targetJobId) {
+          targetJobId = "j" + Date.now();
+        }
+
+        // Prepare new versions array
+        const versions = existingJob?.versions || [];
+        const previousSnapshot = existingJob ? existingJob.report : {
+          roleOverview: { title: "", dept: "", reportTo: "", salary: "", location: "", teamSize: "" },
+          companyContext: [],
+          idealPersona: [],
+          mustHave: [],
+          niceToHave: [],
+          questionsForClient: [],
+          challenges: [],
+          targetCompanies: [],
+          booleanSearch: "",
+          interviewQuestions: [],
+          socialPost: ""
+        };
+
+        const newVersionEntry = {
+          date: new Date().toLocaleString('vi-VN'),
+          rawInput: rawInputUsed,
+          snapshot: previousSnapshot
+        };
+        const updatedVersions = [...versions, newVersionEntry];
+
+        const jd = draftResult.jobData;
+        const previousReport = existingJob?.report;
+
+        const mergedReport: JobReport = {
+          roleOverview: {
+            title: jd.title || previousReport?.roleOverview?.title || "",
+            dept: jd.roleOverview?.dept || previousReport?.roleOverview?.dept || "TBD",
+            reportTo: jd.roleOverview?.reportingLine || previousReport?.roleOverview?.reportTo || "TBD",
+            salary: jd.roleOverview?.salaryRange || previousReport?.roleOverview?.salary || "TBD",
+            location: jd.roleOverview?.location || previousReport?.roleOverview?.location || "TBD",
+            teamSize: previousReport?.roleOverview?.teamSize || "TBD"
+          },
+          companyContext: jd.companyContext && jd.companyContext.length > 0 ? jd.companyContext.map((s: string) => s.trim()).filter(Boolean) : (previousReport?.companyContext || []),
+          idealPersona: jd.idealPersona && jd.idealPersona.length > 0 ? jd.idealPersona.map((s: string) => s.trim()).filter(Boolean) : (previousReport?.idealPersona || []),
+          mustHave: jd.mustHave && jd.mustHave.length > 0 ? jd.mustHave.map((s: string) => s.trim()).filter(Boolean) : (previousReport?.mustHave || []),
+          niceToHave: jd.niceToHave && jd.niceToHave.length > 0 ? jd.niceToHave.map((s: string) => s.trim()).filter(Boolean) : (previousReport?.niceToHave || []),
+          questionsForClient: jd.questionsForClient && jd.questionsForClient.length > 0 ? jd.questionsForClient.map((s: string) => s.trim()).filter(Boolean) : (previousReport?.questionsForClient || []),
+          challenges: previousReport?.challenges || [],
+          targetCompanies: previousReport?.targetCompanies || [],
+          booleanSearch: jd.booleanSearch || previousReport?.booleanSearch || "",
+          interviewQuestions: jd.interviewQuestions && jd.interviewQuestions.length > 0 ? jd.interviewQuestions.map((s: string) => s.trim()).filter(Boolean) : (previousReport?.interviewQuestions || []),
+          socialPost: jd.socialPost || previousReport?.socialPost || ""
+        };
+
+        const updatedJob: Job = {
+          id: targetJobId,
+          title: jd.title || existingJob?.title || "New Role (Auto-detected)",
+          updatedAt: "Just now",
+          report: mergedReport,
+          versions: updatedVersions
+        };
+
+        // Save to subcollection
+        await setDoc(doc(db, 'clients', selectedClient.id, 'jobs', targetJobId), updatedJob);
+        
+        if (isUpdate) {
+          toast(`Job Updated: ${updatedJob.title}`, "success");
+        } else {
+          toast(`New Job Detected: ${updatedJob.title}`, "success");
+        }
+      } else {
+        toast("Information saved to Knowledge Base", "success");
+      }
+
       setUniversalInput("");
-      setIsProcessingInput(false);
+      setDraftResult(null);
+      setIsReviewingDraft(false);
+    } catch (err) {
+      console.error("Error saving draft:", err);
+      toast("Failed to save changes", "error");
     }
   };
 
@@ -306,7 +695,7 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
     try {
       const response = await fetch('/api/freecai/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAiHeaders(),
         body: JSON.stringify({
           message: msg,
           clientData: selectedClient
@@ -314,7 +703,8 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
       });
 
       if (!response.ok) {
-        throw new Error("Failed to chat");
+        const errJson = await response.json().catch(() => ({}));
+        throw new Error(errJson.error || "Failed to chat");
       }
 
       const data = await response.json();
@@ -323,6 +713,69 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
       console.error(err);
       toast("Failed to process chat", "error");
     }
+  };
+
+  const handleSavePrompt = async () => {
+    if (!customPrompt.trim()) {
+      toast("Prompt cannot be empty", "error");
+      return;
+    }
+    try {
+      await setDoc(doc(db, 'settings', 'systemPrompt'), { prompt: customPrompt });
+      toast("AI Prompt saved successfully", "success");
+      setIsEditingPrompt(false);
+    } catch (err) {
+      handleFirestoreError(err, OperationType.WRITE, 'settings/systemPrompt');
+      toast("Failed to save AI Prompt", "error");
+    }
+  };
+
+  const handleCopyFullReport = () => {
+    if (!selectedJob) return;
+    const r = selectedJob.report;
+    const o = r.roleOverview;
+    const text = `JOB INTELLIGENCE REPORT: ${selectedJob.title}
+Client: ${selectedClient?.name || "N/A"}
+
+1. Role Overview
+- Department: ${o.dept || "N/A"}
+- Reporting Line: ${o.reportTo || "N/A"}
+- Salary Range: ${o.salary || "N/A"}
+- Location: ${o.location || "N/A"}
+
+2. Company Context
+${r.companyContext && r.companyContext.length > 0 ? r.companyContext.map(item => `- ${item}`).join('\n') : "- Not available"}
+
+3. Ideal Persona
+${r.idealPersona && r.idealPersona.length > 0 ? r.idealPersona.map(item => `- ${item}`).join('\n') : "- Not available"}
+
+4. Must Have
+${r.mustHave && r.mustHave.length > 0 ? r.mustHave.map(item => `- ${item}`).join('\n') : "- Not available"}
+
+5. Nice to Have
+${r.niceToHave && r.niceToHave.length > 0 ? r.niceToHave.map(item => `- ${item}`).join('\n') : "- Not available"}
+
+6. Questions for Client
+${r.questionsForClient && r.questionsForClient.length > 0 ? r.questionsForClient.map(item => `- ${item}`).join('\n') : "- Not available"}
+
+7. Social Post
+${r.socialPost || "- Not available"}
+
+8. Boolean Search
+${r.booleanSearch || "Not generated yet."}
+
+9. Interview Questions
+${r.interviewQuestions && r.interviewQuestions.length > 0 ? r.interviewQuestions.map(item => `- ${item}`).join('\n') : "- Not available"}
+`;
+
+    navigator.clipboard.writeText(text)
+      .then(() => {
+        toast("Đã copy report đầy đủ", "success");
+      })
+      .catch((err) => {
+        console.error("Copy failed:", err);
+        toast("Copy thất bại", "error");
+      });
   };
 
   return (
@@ -342,18 +795,25 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
           />
         </div>
         
-        <Btn onClick={() => { setIsCreatingClient(true); setSelectedJobId(null); }} style={{ width: "100%", padding: "10px", background: "#4f46e5", color: "white", border: "none", fontWeight: 600, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: "0 2px 8px rgba(79, 70, 229, 0.3)" }}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-          New Client
-        </Btn>
+        <div style={{ display: "flex", gap: 10 }}>
+          <Btn onClick={() => { setIsCreatingClient(true); setSelectedJobId(null); setIsEditingPrompt(false); }} style={{ flex: 1, padding: "10px", background: "#4f46e5", color: "white", border: "none", fontWeight: 600, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, boxShadow: "0 2px 8px rgba(79, 70, 229, 0.3)" }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            New Client
+          </Btn>
+
+          <Btn onClick={() => { setIsAiSettingsOpen(true); }} style={{ padding: "10px 12px", background: "var(--bg-glass)", color: "var(--text-primary)", border: "1px solid var(--border-glass)", fontWeight: 600, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }} title="Cấu hình AI (Provider, Keys & Prompt)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+            AI Config
+          </Btn>
+        </div>
         
         <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 8, marginTop: 12 }}>
           {filteredClients.map(client => {
-            const isSelected = selectedClientId === client.id && !isCreatingClient;
+            const isSelected = selectedClientId === client.id && !isCreatingClient && !isEditingPrompt;
             return (
               <div 
                 key={client.id}
-                onClick={() => { setSelectedClientId(client.id); setSelectedJobId(null); setIsCreatingClient(false); }}
+                onClick={() => { setSelectedClientId(client.id); setSelectedJobId(null); setIsCreatingClient(false); setIsEditingPrompt(false); }}
                 onMouseEnter={e => {
                   const btn = e.currentTarget.querySelector('.delete-btn') as HTMLElement;
                   if (btn) btn.style.opacity = '1';
@@ -401,7 +861,51 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
       {/* RIGHT PANE: Main Workspace */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, position: "relative" }}>
         
-        {isCreatingClient ? (
+        {isEditingPrompt ? (
+          <div style={{ padding: 40, background: "var(--bg-glass)", backdropFilter: "blur(16px)", borderRadius: 16, border: "1.5px solid var(--border-glass)", boxShadow: "var(--shadow-glass)", display: "flex", flexDirection: "column", gap: 24, maxWidth: 900 }}>
+            <div>
+              <h2 style={{ fontSize: 24, fontWeight: 800, margin: "0 0 8px 0", color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 12 }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                AI Prompt Configuration
+              </h2>
+              <p style={{ margin: 0, fontSize: 14, color: "var(--text-secondary)", lineHeight: 1.6 }}>
+                Tùy chỉnh các hướng dẫn và góc nhìn mà AI Gemini sẽ sử dụng khi phân tích JD, email, ghi chú cuộc họp. Các thay đổi của bạn sẽ được lưu vào Firestore và áp dụng toàn hệ thống.
+              </p>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-muted)", display: "flex", justifyContent: "space-between" }}>
+                <span>NỘI DUNG PROMPT TEMPLATE</span>
+                <span style={{ color: "var(--text-secondary)" }}>Biến khả dụng: <code>{"${currentClientName}"}</code>, <code>{"${input}"}</code></span>
+              </div>
+              <textarea
+                value={customPrompt}
+                onChange={e => setCustomPrompt(e.target.value)}
+                style={{ 
+                  width: "100%", height: 350, borderRadius: 8, border: "1px solid var(--border-glass)", 
+                  padding: 16, fontSize: 14, background: "var(--bg-body)", color: "var(--text-primary)", 
+                  resize: "vertical", outline: "none", fontFamily: "monospace", lineHeight: 1.6
+                }}
+                placeholder="Nhập nội dung prompt của bạn ở đây..."
+              />
+            </div>
+
+            <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
+              <button 
+                onClick={() => { setCustomPrompt(DEFAULT_SYSTEM_PROMPT); toast("Đã đặt lại prompt tuyển dụng tiếng Việt mẫu chuẩn", "success"); }}
+                style={{ padding: "10px 20px", background: "transparent", color: "var(--text-primary)", borderRadius: 8, border: "1.5px solid var(--border-glass)", cursor: "pointer", fontWeight: 600 }}
+              >
+                Reset to Default
+              </button>
+              <button 
+                onClick={handleSavePrompt}
+                style={{ padding: "10px 24px", background: "#4f46e5", color: "white", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 600 }}
+              >
+                Save Prompt
+              </button>
+            </div>
+          </div>
+        ) : isCreatingClient ? (
           <div style={{ padding: 40, maxWidth: 500, background: "var(--bg-glass)", backdropFilter: "blur(16px)", borderRadius: 16, border: "1.5px solid var(--border-glass)", boxShadow: "var(--shadow-glass)" }}>
             <h2 style={{ fontSize: 24, fontWeight: 800, marginBottom: 24, color: "var(--text-primary)" }}>Create New Client</h2>
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -432,67 +936,279 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
                   <h1 style={{ fontSize: 28, fontWeight: 800, margin: 0, color: "var(--text-primary)" }}>{selectedJob.title}</h1>
                   <div style={{ fontSize: 14, color: "var(--text-secondary)", marginTop: 4 }}>Job Intelligence Report • {selectedClient.name}</div>
                 </div>
-                <Btn style={{ display: "flex", alignItems: "center", gap: 8, background: "white", color: "#111", border: "1px solid #e2e8f0" }}>
+                <Btn 
+                  onClick={handleCopyFullReport}
+                  style={{ display: "flex", alignItems: "center", gap: 8, background: "white", color: "#111", border: "1px solid #e2e8f0" }}
+                >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                   Copy Full Report
                 </Btn>
               </div>
 
-              {/* Job Content Scrollable */}
-              <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 24, paddingRight: 8 }}>
-                
-                {/* 1. Role Overview */}
-                <div style={{ background: "var(--bg-glass)", backdropFilter: "blur(16px)", padding: 24, borderRadius: 16, border: "1.5px solid var(--border-glass)", boxShadow: "var(--shadow-glass)" }}>
-                  <h3 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 16px 0", color: "var(--text-primary)" }}>1. Role Overview</h3>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 24 }}>
-                    <div><div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 4 }}>Department</div><div style={{ fontSize: 15, fontWeight: 600 }}>{selectedJob.report.roleOverview.dept || "N/A"}</div></div>
-                    <div><div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 4 }}>Reporting Line</div><div style={{ fontSize: 15, fontWeight: 600 }}>{selectedJob.report.roleOverview.reportTo || "N/A"}</div></div>
-                    <div><div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 4 }}>Salary Range</div><div style={{ fontSize: 15, fontWeight: 600, color: "#16a34a" }}>{selectedJob.report.roleOverview.salary || "N/A"}</div></div>
-                    <div><div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 4 }}>Location</div><div style={{ fontSize: 15, fontWeight: 600 }}>{selectedJob.report.roleOverview.location || "N/A"}</div></div>
-                  </div>
-                </div>
-
-                {/* 2 & 3: Context and Persona */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
-                  <div style={{ background: "var(--bg-glass)", backdropFilter: "blur(16px)", padding: 24, borderRadius: 16, border: "1.5px solid var(--border-glass)", boxShadow: "var(--shadow-glass)" }}>
-                    <h3 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 16px 0", color: "var(--text-primary)" }}>2. Company Context</h3>
-                    <ul style={{ margin: 0, paddingLeft: 20, fontSize: 14, lineHeight: 1.7, color: "var(--text-secondary)" }}>
-                      {selectedJob.report.companyContext.length > 0 ? selectedJob.report.companyContext.map((item, i) => <li key={i}>{item}</li>) : <li>Not available</li>}
-                    </ul>
-                  </div>
-                  <div style={{ background: "var(--bg-glass)", backdropFilter: "blur(16px)", padding: 24, borderRadius: 16, border: "1.5px solid var(--border-glass)", boxShadow: "var(--shadow-glass)" }}>
-                    <h3 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 16px 0", color: "var(--text-primary)" }}>3. Ideal Persona</h3>
-                    <ul style={{ margin: 0, paddingLeft: 20, fontSize: 14, lineHeight: 1.7, color: "var(--text-secondary)" }}>
-                      {selectedJob.report.idealPersona.length > 0 ? selectedJob.report.idealPersona.map((item, i) => <li key={i}>{item}</li>) : <li>Not available</li>}
-                    </ul>
-                  </div>
-                </div>
-
-                {/* 4 & 5: Must have / Nice to have */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
-                  <div style={{ background: "var(--bg-glass)", backdropFilter: "blur(16px)", padding: 24, borderRadius: 16, border: "1.5px solid var(--border-glass)", boxShadow: "var(--shadow-glass)" }}>
-                    <h3 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 16px 0", color: "var(--text-primary)" }}>4. Must Have</h3>
-                    <ul style={{ margin: 0, paddingLeft: 20, fontSize: 14, lineHeight: 1.7, color: "var(--text-secondary)" }}>
-                      {selectedJob.report.mustHave.length > 0 ? selectedJob.report.mustHave.map((item, i) => <li key={i}>{item}</li>) : <li>Not available</li>}
-                    </ul>
-                  </div>
-                  <div style={{ background: "var(--bg-glass)", backdropFilter: "blur(16px)", padding: 24, borderRadius: 16, border: "1.5px solid var(--border-glass)", boxShadow: "var(--shadow-glass)" }}>
-                    <h3 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 16px 0", color: "var(--text-primary)" }}>5. Nice to Have</h3>
-                    <ul style={{ margin: 0, paddingLeft: 20, fontSize: 14, lineHeight: 1.7, color: "var(--text-secondary)" }}>
-                      {selectedJob.report.niceToHave.length > 0 ? selectedJob.report.niceToHave.map((item, i) => <li key={i}>{item}</li>) : <li>Not available</li>}
-                    </ul>
-                  </div>
-                </div>
-
-                {/* Boolean Search */}
-                <div style={{ background: "var(--bg-glass)", backdropFilter: "blur(16px)", padding: 24, borderRadius: 16, border: "1.5px solid var(--border-glass)", boxShadow: "var(--shadow-glass)" }}>
-                  <h3 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 12px 0", color: "var(--text-primary)" }}>9. Boolean Search</h3>
-                  <div style={{ background: "var(--bg-body)", padding: 16, borderRadius: 8, fontFamily: "monospace", fontSize: 13, border: "1px solid var(--border-color)", color: "var(--text-secondary)" }}>
-                    {selectedJob.report.booleanSearch || "Not generated yet."}
-                  </div>
-                </div>
-
+              {/* Tabs for Report vs History (VẤN ĐỀ 4) */}
+              <div style={{ display: "flex", borderBottom: "1.5px solid var(--border-glass)", gap: 16, marginTop: -8 }}>
+                <button
+                  onClick={() => { setActiveJobTab('report'); setSelectedVersionIndex(null); }}
+                  style={{
+                    padding: "12px 16px",
+                    background: "none",
+                    border: "none",
+                    borderBottom: activeJobTab === 'report' ? "2.5px solid #4f46e5" : "2.5px solid transparent",
+                    color: activeJobTab === 'report' ? "var(--text-primary)" : "var(--text-muted)",
+                    fontWeight: 600,
+                    fontSize: 14,
+                    cursor: "pointer",
+                    transition: "all 0.2s ease"
+                  }}
+                >
+                  AI Report
+                </button>
+                <button
+                  onClick={() => { setActiveJobTab('history'); setSelectedVersionIndex(null); }}
+                  style={{
+                    padding: "12px 16px",
+                    background: "none",
+                    border: "none",
+                    borderBottom: activeJobTab === 'history' ? "2.5px solid #4f46e5" : "2.5px solid transparent",
+                    color: activeJobTab === 'history' ? "var(--text-primary)" : "var(--text-muted)",
+                    fontWeight: 600,
+                    fontSize: 14,
+                    cursor: "pointer",
+                    transition: "all 0.2s ease",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6
+                  }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                  History ({selectedJob.versions?.length || 0})
+                </button>
               </div>
+
+              {activeJobTab === 'history' ? (
+                <div style={{ flex: 1, overflowY: "auto", display: "flex", gap: 24, paddingRight: 8 }}>
+                  {/* Left list of versions */}
+                  <div style={{ width: 280, flexShrink: 0, display: "flex", flexDirection: "column", gap: 12 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Version History</div>
+                    {(!selectedJob.versions || selectedJob.versions.length === 0) ? (
+                      <div style={{ fontSize: 14, color: "var(--text-secondary)", padding: 16, background: "var(--bg-glass)", borderRadius: 12, border: "1.5px solid var(--border-glass)" }}>
+                        No changes recorded yet. Version history starts when a job is modified or updated by new AI input.
+                      </div>
+                    ) : (
+                      selectedJob.versions.map((ver, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => setSelectedVersionIndex(idx)}
+                          style={{
+                            width: "100%",
+                            textAlign: "left",
+                            padding: 16,
+                            background: selectedVersionIndex === idx ? "rgba(79, 70, 229, 0.15)" : "var(--bg-glass)",
+                            border: selectedVersionIndex === idx ? "1.5px solid #4f46e5" : "1.5px solid var(--border-glass)",
+                            borderRadius: 12,
+                            cursor: "pointer",
+                            color: "var(--text-primary)",
+                            transition: "all 0.15s ease"
+                          }}
+                        >
+                          <div style={{ fontWeight: 600, fontSize: 14, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <span>V{idx + 1}</span>
+                            <span style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 500 }}>{ver.date.split(" ")[0]}</span>
+                          </div>
+                          <div style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 6, textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>
+                            {ver.date}
+                          </div>
+                        </button>
+                      ))
+                    )}
+                  </div>
+
+                  {/* Right details panel */}
+                  <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 20 }}>
+                    {selectedVersionIndex === null ? (
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", minHeight: 300, background: "var(--bg-glass)", borderRadius: 16, border: "1.5px solid var(--border-glass)", color: "var(--text-secondary)", padding: 40, textAlign: "center" }}>
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ color: "var(--text-muted)", marginBottom: 16 }}><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                        <h3 style={{ fontSize: 16, fontWeight: 600, margin: "0 0 8px 0" }}>Select a Version</h3>
+                        <p style={{ fontSize: 14, margin: 0, color: "var(--text-muted)" }}>Choose a version from the left panel to inspect the raw input used and the snapshot state before that update.</p>
+                      </div>
+                    ) : (
+                      <>
+                        {/* Raw Input Area */}
+                        <div style={{ background: "var(--bg-glass)", backdropFilter: "blur(16px)", padding: 24, borderRadius: 16, border: "1.5px solid var(--border-glass)", boxShadow: "var(--shadow-glass)" }}>
+                          <h3 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 12px 0", color: "var(--text-primary)", textTransform: "uppercase", letterSpacing: "0.05em", display: "flex", alignItems: "center", gap: 8 }}>
+                            <span style={{ display: "inline-block", width: 6, height: 6, background: "#4f46e5", borderRadius: "50%" }}></span>
+                            Raw input for V{selectedVersionIndex + 1}
+                          </h3>
+                          <div style={{ background: "var(--bg-body)", padding: 16, borderRadius: 8, fontSize: 13, border: "1px solid var(--border-color)", color: "var(--text-secondary)", whiteSpace: "pre-wrap", maxHeight: 150, overflowY: "auto", fontFamily: "monospace" }}>
+                            {selectedJob.versions[selectedVersionIndex].rawInput || "No input recorded."}
+                          </div>
+                        </div>
+
+                        {/* Snapshot Report State */}
+                        <div style={{ background: "var(--bg-glass)", backdropFilter: "blur(16px)", padding: 24, borderRadius: 16, border: "1.5px solid var(--border-glass)", boxShadow: "var(--shadow-glass)", display: "flex", flexDirection: "column", gap: 16 }}>
+                          <h3 style={{ fontSize: 14, fontWeight: 700, margin: 0, color: "var(--text-primary)", textTransform: "uppercase", letterSpacing: "0.05em", display: "flex", alignItems: "center", gap: 8 }}>
+                            <span style={{ display: "inline-block", width: 6, height: 6, background: "#10b981", borderRadius: "50%" }}></span>
+                            Previous Snapshot Report (State before update)
+                          </h3>
+
+                          {/* Render preview of previous state */}
+                          <div style={{ display: "flex", flexDirection: "column", gap: 16, maxHeight: 400, overflowY: "auto", paddingRight: 8 }}>
+                            <div>
+                              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", marginBottom: 4 }}>Role Title</div>
+                              <div style={{ fontSize: 14, color: "var(--text-primary)", fontWeight: 600 }}>{selectedJob.versions[selectedVersionIndex].snapshot.roleOverview?.title || selectedJob.title}</div>
+                            </div>
+
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                              <div>
+                                <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", marginBottom: 4 }}>Dept</div>
+                                <div style={{ fontSize: 13, color: "var(--text-secondary)" }}>{selectedJob.versions[selectedVersionIndex].snapshot.roleOverview?.dept || "N/A"}</div>
+                              </div>
+                              <div>
+                                <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", marginBottom: 4 }}>Salary</div>
+                                <div style={{ fontSize: 13, color: "var(--text-secondary)" }}>{selectedJob.versions[selectedVersionIndex].snapshot.roleOverview?.salary || "N/A"}</div>
+                              </div>
+                            </div>
+
+                            <div>
+                              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", marginBottom: 4 }}>Company Context</div>
+                              <ul style={{ margin: 0, paddingLeft: 16, fontSize: 13, color: "var(--text-secondary)" }}>
+                                {selectedJob.versions[selectedVersionIndex].snapshot.companyContext?.map((item, i) => <li key={i}>{item}</li>) || <li>None</li>}
+                              </ul>
+                            </div>
+
+                            <div>
+                              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", marginBottom: 4 }}>Must Have</div>
+                              <ul style={{ margin: 0, paddingLeft: 16, fontSize: 13, color: "var(--text-secondary)" }}>
+                                {selectedJob.versions[selectedVersionIndex].snapshot.mustHave?.map((item, i) => <li key={i}>{item}</li>) || <li>None</li>}
+                              </ul>
+                            </div>
+
+                            <div>
+                              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", marginBottom: 4 }}>Questions for Client</div>
+                              <ul style={{ margin: 0, paddingLeft: 16, fontSize: 13, color: "var(--text-secondary)" }}>
+                                {selectedJob.versions[selectedVersionIndex].snapshot.questionsForClient?.map((item, i) => <li key={i}>{item}</li>) || <li>None</li>}
+                              </ul>
+                            </div>
+
+                            <div>
+                              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", marginBottom: 4 }}>Social Post</div>
+                              <div style={{ background: "var(--bg-body)", padding: 12, borderRadius: 6, fontSize: 12, border: "1px solid var(--border-color)", color: "var(--text-secondary)", whiteSpace: "pre-wrap" }}>
+                                {selectedJob.versions[selectedVersionIndex].snapshot.socialPost || "None"}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                /* Job Content Scrollable */
+                <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 24, paddingRight: 8 }}>
+                  
+                  {/* 1. Role Overview */}
+                  <div style={{ background: "var(--bg-glass)", backdropFilter: "blur(16px)", padding: 24, borderRadius: 16, border: "1.5px solid var(--border-glass)", boxShadow: "var(--shadow-glass)" }}>
+                    <h3 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 16px 0", color: "var(--text-primary)" }}>1. Role Overview</h3>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 24 }}>
+                      <div><div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 4 }}>Department</div><div style={{ fontSize: 15, fontWeight: 600 }}>{selectedJob.report.roleOverview.dept || "N/A"}</div></div>
+                      <div><div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 4 }}>Reporting Line</div><div style={{ fontSize: 15, fontWeight: 600 }}>{selectedJob.report.roleOverview.reportTo || "N/A"}</div></div>
+                      <div><div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 4 }}>Salary Range</div><div style={{ fontSize: 15, fontWeight: 600, color: "#16a34a" }}>{selectedJob.report.roleOverview.salary || "N/A"}</div></div>
+                      <div><div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 4 }}>Location</div><div style={{ fontSize: 15, fontWeight: 600 }}>{selectedJob.report.roleOverview.location || "N/A"}</div></div>
+                    </div>
+                  </div>
+
+                  {/* 2 & 3: Context and Persona */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
+                    <div style={{ background: "var(--bg-glass)", backdropFilter: "blur(16px)", padding: 24, borderRadius: 16, border: "1.5px solid var(--border-glass)", boxShadow: "var(--shadow-glass)" }}>
+                      <h3 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 16px 0", color: "var(--text-primary)" }}>2. Company Context</h3>
+                      <ul style={{ margin: 0, paddingLeft: 20, fontSize: 14, lineHeight: 1.7, color: "var(--text-secondary)" }}>
+                        {selectedJob.report.companyContext.length > 0 ? selectedJob.report.companyContext.map((item, i) => <li key={i}>{item}</li>) : <li>Not available</li>}
+                      </ul>
+                    </div>
+                    <div style={{ background: "var(--bg-glass)", backdropFilter: "blur(16px)", padding: 24, borderRadius: 16, border: "1.5px solid var(--border-glass)", boxShadow: "var(--shadow-glass)" }}>
+                      <h3 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 16px 0", color: "var(--text-primary)" }}>3. Ideal Persona</h3>
+                      <ul style={{ margin: 0, paddingLeft: 20, fontSize: 14, lineHeight: 1.7, color: "var(--text-secondary)" }}>
+                        {selectedJob.report.idealPersona.length > 0 ? selectedJob.report.idealPersona.map((item, i) => <li key={i}>{item}</li>) : <li>Not available</li>}
+                      </ul>
+                    </div>
+                  </div>
+
+                  {/* 4 & 5: Must have / Nice to have */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
+                    <div style={{ background: "var(--bg-glass)", backdropFilter: "blur(16px)", padding: 24, borderRadius: 16, border: "1.5px solid var(--border-glass)", boxShadow: "var(--shadow-glass)" }}>
+                      <h3 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 16px 0", color: "var(--text-primary)" }}>4. Must Have</h3>
+                      <ul style={{ margin: 0, paddingLeft: 20, fontSize: 14, lineHeight: 1.7, color: "var(--text-secondary)" }}>
+                        {selectedJob.report.mustHave.length > 0 ? selectedJob.report.mustHave.map((item, i) => <li key={i}>{item}</li>) : <li>Not available</li>}
+                      </ul>
+                    </div>
+                    <div style={{ background: "var(--bg-glass)", backdropFilter: "blur(16px)", padding: 24, borderRadius: 16, border: "1.5px solid var(--border-glass)", boxShadow: "var(--shadow-glass)" }}>
+                      <h3 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 16px 0", color: "var(--text-primary)" }}>5. Nice to Have</h3>
+                      <ul style={{ margin: 0, paddingLeft: 20, fontSize: 14, lineHeight: 1.7, color: "var(--text-secondary)" }}>
+                        {selectedJob.report.niceToHave.length > 0 ? selectedJob.report.niceToHave.map((item, i) => <li key={i}>{item}</li>) : <li>Not available</li>}
+                      </ul>
+                    </div>
+                  </div>
+
+                  {/* 6. Questions for Client */}
+                  <div style={{ background: "var(--bg-glass)", backdropFilter: "blur(16px)", padding: 24, borderRadius: 16, border: "1.5px solid var(--border-glass)", boxShadow: "var(--shadow-glass)" }}>
+                    <h3 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 16px 0", color: "var(--text-primary)" }}>6. Questions for Client</h3>
+                    <ul style={{ margin: 0, paddingLeft: 20, fontSize: 14, lineHeight: 1.7, color: "var(--text-secondary)" }}>
+                      {selectedJob.report.questionsForClient && selectedJob.report.questionsForClient.length > 0 ? (
+                        selectedJob.report.questionsForClient.map((item, i) => <li key={i}>{item}</li>)
+                      ) : (
+                        <li>Not available</li>
+                      )}
+                    </ul>
+                  </div>
+
+                  {/* 7. Social Post */}
+                  <div style={{ background: "var(--bg-glass)", backdropFilter: "blur(16px)", padding: 24, borderRadius: 16, border: "1.5px solid var(--border-glass)", boxShadow: "var(--shadow-glass)" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                      <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: "var(--text-primary)" }}>7. Social Post</h3>
+                      <button 
+                        onClick={() => {
+                          navigator.clipboard.writeText(selectedJob.report.socialPost || "")
+                            .then(() => toast("Đã copy Social Post!", "success"))
+                            .catch(() => toast("Copy thất bại", "error"));
+                        }}
+                        style={{ 
+                          display: "flex", alignItems: "center", gap: 4, padding: "4px 10px", 
+                          background: "var(--bg-body)", border: "1px solid var(--border-color)", 
+                          borderRadius: 6, fontSize: 12, color: "var(--text-primary)", cursor: "pointer",
+                          fontWeight: 500
+                        }}
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                        Copy
+                      </button>
+                    </div>
+                    <div style={{ background: "var(--bg-body)", padding: 16, borderRadius: 8, fontFamily: "monospace", fontSize: 13, border: "1px solid var(--border-color)", color: "var(--text-secondary)", whiteSpace: "pre-wrap" }}>
+                      {selectedJob.report.socialPost || "Not generated yet."}
+                    </div>
+                  </div>
+
+                  {/* 8. Boolean Search */}
+                  <div style={{ background: "var(--bg-glass)", backdropFilter: "blur(16px)", padding: 24, borderRadius: 16, border: "1.5px solid var(--border-glass)", boxShadow: "var(--shadow-glass)" }}>
+                    <h3 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 12px 0", color: "var(--text-primary)" }}>8. Boolean Search</h3>
+                    <div style={{ background: "var(--bg-body)", padding: 16, borderRadius: 8, fontFamily: "monospace", fontSize: 13, border: "1px solid var(--border-color)", color: "var(--text-secondary)" }}>
+                      {selectedJob.report.booleanSearch || "Not generated yet."}
+                    </div>
+                  </div>
+
+                  {/* 9. Interview Questions */}
+                  <div style={{ background: "var(--bg-glass)", backdropFilter: "blur(16px)", padding: 24, borderRadius: 16, border: "1.5px solid var(--border-glass)", boxShadow: "var(--shadow-glass)" }}>
+                    <h3 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 16px 0", color: "var(--text-primary)" }}>9. Interview Questions</h3>
+                    <ul style={{ margin: 0, paddingLeft: 20, fontSize: 14, lineHeight: 1.7, color: "var(--text-secondary)" }}>
+                      {selectedJob.report.interviewQuestions && selectedJob.report.interviewQuestions.length > 0 ? (
+                        selectedJob.report.interviewQuestions.map((item, i) => <li key={i}>{item}</li>)
+                      ) : (
+                        <li>Not available</li>
+                      )}
+                    </ul>
+                  </div>
+
+                </div>
+              )}
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 32, maxWidth: 900 }}>
@@ -670,6 +1386,623 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
           )}
         </button>
       </div>
+
+      {/* AI CONFIGURATION MODAL */}
+      {isAiSettingsOpen && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          width: "100vw",
+          height: "100vh",
+          backgroundColor: "rgba(0, 0, 0, 0.4)",
+          backdropFilter: "blur(12px)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 9999,
+          padding: "20px"
+        }}>
+          <div style={{
+            background: "var(--bg-glass)",
+            borderRadius: 16,
+            border: "1.5px solid var(--border-glass)",
+            boxShadow: "var(--shadow-glass)",
+            width: "100%",
+            maxWidth: 680,
+            maxHeight: "90vh",
+            display: "flex",
+            flexDirection: "column",
+            overflow: "hidden"
+          }}>
+            {/* Modal Header */}
+            <div style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              padding: "20px 24px",
+              borderBottom: "1px solid var(--border-color)"
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" strokeWidth="2.5"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                <h3 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: "var(--text-primary)" }}>Smart AI Configuration</h3>
+              </div>
+              <button 
+                onClick={() => setIsAiSettingsOpen(false)}
+                style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+              >
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              </button>
+            </div>
+
+            {/* Modal Tabs */}
+            <div style={{
+              display: "flex",
+              borderBottom: "1px solid var(--border-color)",
+              background: "rgba(0,0,0,0.02)",
+              padding: "0 16px"
+            }}>
+              <button
+                onClick={() => setActiveConfigTab('api')}
+                style={{
+                  padding: "14px 16px",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  border: "none",
+                  background: "none",
+                  cursor: "pointer",
+                  color: activeConfigTab === 'api' ? "#4f46e5" : "var(--text-muted)",
+                  borderBottom: activeConfigTab === 'api' ? "2px solid #4f46e5" : "2px solid transparent",
+                  transition: "all 0.2s"
+                }}
+              >
+                Nhà cung cấp &amp; API Key
+              </button>
+              <button
+                onClick={() => setActiveConfigTab('prompt')}
+                style={{
+                  padding: "14px 16px",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  border: "none",
+                  background: "none",
+                  cursor: "pointer",
+                  color: activeConfigTab === 'prompt' ? "#4f46e5" : "var(--text-muted)",
+                  borderBottom: activeConfigTab === 'prompt' ? "2px solid #4f46e5" : "2px solid transparent",
+                  transition: "all 0.2s"
+                }}
+              >
+                System Prompt Tuyển dụng
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div style={{ padding: "24px", overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: 16 }}>
+              {activeConfigTab === 'api' ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "rgba(79, 70, 229, 0.03)", padding: "12px 16px", borderRadius: 10, border: "1px solid var(--border-glass)" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ 
+                        width: 8, height: 8, borderRadius: "50%", 
+                        background: userProvider === 'system' ? "#10b981" : (userApiKey ? "#10b981" : (userProvider === 'gemini' ? "#10b981" : "#f59e0b")),
+                        display: "inline-block"
+                      }} />
+                      <span style={{ fontSize: 13, fontWeight: 500, color: "var(--text-primary)" }}>
+                        Trạng thái: {userProvider === 'system' ? "Đồng bộ hệ thống (Mặc định)" : `Đang dùng ${userProvider.toUpperCase()}`}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Provider Select */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <label style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 600 }}>Nhà cung cấp AI:</label>
+                    <select
+                      value={tempProvider}
+                      onChange={e => setTempProvider(e.target.value)}
+                      style={{ 
+                        width: "100%", padding: "10px 12px", borderRadius: 8, 
+                        border: "1px solid var(--border-color)", background: "var(--bg-body)", 
+                        color: "var(--text-primary)", fontSize: 14, outline: "none" 
+                      }}
+                    >
+                      <option value="system">Dùng cấu hình hệ thống (Mặc định)</option>
+                      <option value="gemini">Google Gemini</option>
+                      <option value="openai">OpenAI (GPT)</option>
+                      <option value="grok">xAI Grok</option>
+                      <option value="claude">Anthropic Claude</option>
+                      <option value="deepseek">DeepSeek</option>
+                      <option value="custom">Custom (OpenAI-compatible)</option>
+                    </select>
+                  </div>
+
+                  {tempProvider === 'system' ? (
+                    <div style={{ fontSize: 13, color: "var(--text-secondary)", background: "rgba(79, 70, 229, 0.05)", border: "1px dashed rgba(79, 70, 229, 0.2)", padding: "14px", borderRadius: 8, lineHeight: "1.5" }}>
+                      💡 <strong>Đồng bộ hóa tự động:</strong> Tự động đồng bộ với Nhà cung cấp AI &amp; API Key cá nhân bạn đã thiết lập trong hộp thoại <strong>API Key Settings</strong> chung của hệ thống (ở góc trên bên phải màn hình). Bạn không cần cấu hình gì thêm ở đây!
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                      {/* API Key */}
+                      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                        <label style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 600 }}>
+                          {tempProvider === 'gemini' && !tempKey ? "API Key (Để trống nếu dùng chung của hệ thống):" : "API Key cá nhân:"}
+                        </label>
+                        <input 
+                          type="password"
+                          placeholder={userApiKey && tempProvider === userProvider ? "••••••••••••••••" : "Nhập API Key riêng của bạn..."}
+                          value={tempKey}
+                          onChange={e => setTempKey(e.target.value)}
+                          style={{ 
+                            width: "100%", padding: "10px 12px", borderRadius: 8, 
+                            border: "1px solid var(--border-color)", background: "var(--bg-body)", 
+                            color: "var(--text-primary)", fontSize: 14, outline: "none" 
+                          }} 
+                        />
+                      </div>
+
+                      {/* Custom Model */}
+                      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                        <label style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 600 }}>
+                          Model AI (Không bắt buộc):
+                        </label>
+                        <input 
+                          type="text"
+                          placeholder={
+                            tempProvider === 'gemini' ? "gemini-3.5-flash (Mặc định)" :
+                            tempProvider === 'openai' ? "gpt-4o-mini (Mặc định)" :
+                            tempProvider === 'grok' ? "grok-2-latest (Mặc định)" :
+                            tempProvider === 'claude' ? "claude-3-5-sonnet-latest" :
+                            tempProvider === 'deepseek' ? "deepseek-chat" : "Nhập tên Model cụ thể..."
+                          }
+                          value={tempModel}
+                          onChange={e => setTempModel(e.target.value)}
+                          style={{ 
+                            width: "100%", padding: "10px 12px", borderRadius: 8, 
+                            border: "1px solid var(--border-color)", background: "var(--bg-body)", 
+                            color: "var(--text-primary)", fontSize: 14, outline: "none" 
+                          }} 
+                        />
+                      </div>
+
+                      {/* Custom Endpoint (OpenAI compatible or Custom) */}
+                      {(tempProvider === 'custom' || tempProvider === 'deepseek') && (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                          <label style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 600 }}>
+                            Base URL / Endpoint:
+                          </label>
+                          <input 
+                            type="text"
+                            placeholder={tempProvider === 'deepseek' ? "https://api.deepseek.com" : "https://api.yourprovider.com/v1"}
+                            value={tempEndpoint}
+                            onChange={e => setTempEndpoint(e.target.value)}
+                            style={{ 
+                              width: "100%", padding: "10px 12px", borderRadius: 8, 
+                              border: "1px solid var(--border-color)", background: "var(--bg-body)", 
+                              color: "var(--text-primary)", fontSize: 14, outline: "none" 
+                            }} 
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 }}>
+                    {(userApiKey || userProvider !== 'system' || userModel || userCustomEndpoint) && (
+                      <button 
+                        onClick={() => {
+                          handleClearApiSettings();
+                        }}
+                        style={{ padding: "10px 16px", background: "transparent", color: "var(--error)", border: "1px solid var(--border-glass)", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+                      >
+                        Đặt lại mặc định
+                      </button>
+                    )}
+                    <button 
+                      onClick={() => {
+                        handleSaveApiSettings(tempProvider, tempKey, tempModel, tempEndpoint);
+                        setIsAiSettingsOpen(false);
+                      }}
+                      style={{ padding: "10px 20px", background: "#4f46e5", color: "white", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+                    >
+                      Lưu cấu hình API
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                  <div>
+                    <p style={{ margin: "0 0 12px 0", fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.5 }}>
+                      Tùy chỉnh các hướng dẫn và góc nhìn mà AI sẽ sử dụng khi phân tích JD, email, ghi chú cuộc họp. Các thay đổi được lưu vào Firestore và áp dụng toàn hệ thống.
+                    </p>
+                  </div>
+
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", display: "flex", justifyContent: "space-between" }}>
+                      <span>NỘI DUNG PROMPT TEMPLATE</span>
+                      <span style={{ color: "var(--text-secondary)" }}>Biến khả dụng: <code>{"${currentClientName}"}</code>, <code>{"${input}"}</code></span>
+                    </div>
+                    <textarea
+                      value={customPrompt}
+                      onChange={e => setCustomPrompt(e.target.value)}
+                      style={{ 
+                        width: "100%", height: 280, borderRadius: 8, border: "1px solid var(--border-glass)", 
+                        padding: 12, fontSize: 13, background: "var(--bg-body)", color: "var(--text-primary)", 
+                        resize: "vertical", outline: "none", fontFamily: "monospace", lineHeight: 1.5
+                      }}
+                      placeholder="Nhập nội dung prompt tuyển dụng tại đây..."
+                    />
+                  </div>
+
+                  <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 }}>
+                    <button 
+                      onClick={() => { setCustomPrompt(DEFAULT_SYSTEM_PROMPT); toast("Đã đặt lại prompt tuyển dụng mẫu chuẩn", "success"); }}
+                      style={{ padding: "10px 16px", background: "transparent", color: "var(--text-primary)", borderRadius: 8, border: "1.5px solid var(--border-glass)", cursor: "pointer", fontWeight: 600, fontSize: 13 }}
+                    >
+                      Reset Prompt mẫu
+                    </button>
+                    <button 
+                      onClick={() => {
+                        handleSavePrompt();
+                        setIsAiSettingsOpen(false);
+                      }}
+                      style={{ padding: "10px 20px", background: "#4f46e5", color: "white", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 600, fontSize: 13 }}
+                    >
+                      Lưu System Prompt
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* DRAFT REVIEW MODAL (VẤN ĐỀ 3) */}
+      {isReviewingDraft && draftResult && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          width: "100vw",
+          height: "100vh",
+          backgroundColor: "rgba(0, 0, 0, 0.4)",
+          backdropFilter: "blur(12px)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 9998,
+          padding: "20px"
+        }}>
+          <div style={{
+            background: "var(--bg-glass)",
+            borderRadius: 16,
+            border: "1.5px solid var(--border-glass)",
+            boxShadow: "var(--shadow-glass)",
+            width: "100%",
+            maxWidth: 800,
+            height: "85vh",
+            display: "flex",
+            flexDirection: "column",
+            overflow: "hidden"
+          }}>
+            {/* Modal Header */}
+            <div style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              padding: "20px 24px",
+              borderBottom: "1px solid var(--border-color)",
+              background: "rgba(79, 70, 229, 0.03)"
+            }}>
+              <div>
+                <h3 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: "var(--text-primary)" }}>Review AI Analysis Draft</h3>
+                <p style={{ margin: "4px 0 0 0", fontSize: 13, color: "var(--text-secondary)" }}>Verify, refine, and modify the AI-parsed information before saving it to the database.</p>
+              </div>
+              <button 
+                onClick={() => { setDraftResult(null); setIsReviewingDraft(false); }}
+                style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+              >
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              </button>
+            </div>
+
+            {/* Modal Navigation Tabs */}
+            <div style={{
+              display: "flex",
+              borderBottom: "1px solid var(--border-color)",
+              background: "rgba(0,0,0,0.01)",
+              padding: "0 16px"
+            }}>
+              <button
+                onClick={() => setActiveReviewTab('client')}
+                style={{
+                  padding: "14px 16px",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  border: "none",
+                  background: "none",
+                  cursor: "pointer",
+                  color: activeReviewTab === 'client' ? "#4f46e5" : "var(--text-muted)",
+                  borderBottom: activeReviewTab === 'client' ? "2px solid #4f46e5" : "2px solid transparent",
+                  transition: "all 0.2s"
+                }}
+              >
+                Client Profile
+              </button>
+              {draftResult.hasNewJob && (
+                <>
+                  <button
+                    onClick={() => setActiveReviewTab('job')}
+                    style={{
+                      padding: "14px 16px",
+                      fontSize: 13,
+                      fontWeight: 600,
+                      border: "none",
+                      background: "none",
+                      cursor: "pointer",
+                      color: activeReviewTab === 'job' ? "#4f46e5" : "var(--text-muted)",
+                      borderBottom: activeReviewTab === 'job' ? "2px solid #4f46e5" : "2px solid transparent",
+                      transition: "all 0.2s"
+                    }}
+                  >
+                    Job Specification
+                  </button>
+                  <button
+                    onClick={() => setActiveReviewTab('marketing')}
+                    style={{
+                      padding: "14px 16px",
+                      fontSize: 13,
+                      fontWeight: 600,
+                      border: "none",
+                      background: "none",
+                      cursor: "pointer",
+                      color: activeReviewTab === 'marketing' ? "#4f46e5" : "var(--text-muted)",
+                      borderBottom: activeReviewTab === 'marketing' ? "2px solid #4f46e5" : "2px solid transparent",
+                      transition: "all 0.2s"
+                    }}
+                  >
+                    Marketing &amp; Tech
+                  </button>
+                </>
+              )}
+            </div>
+
+            {/* Modal Content Scroll Area */}
+            <div style={{ padding: "24px", overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: 20 }}>
+              
+              {/* Timeline summary always visible at the top of review */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 6, background: "rgba(79, 70, 229, 0.02)", padding: 16, borderRadius: 10, border: "1px dashed rgba(79, 70, 229, 0.2)" }}>
+                <label style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 700, textTransform: "uppercase" }}>Timeline Entry Summary</label>
+                <input 
+                  type="text" 
+                  value={draftResult.timelineSummary || ""} 
+                  onChange={e => handleDraftFieldChange('', 'timelineSummary', e.target.value)}
+                  style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 14, outline: "none" }}
+                />
+              </div>
+
+              {activeReviewTab === 'client' && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <label style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 600 }}>Client Overview</label>
+                    <textarea 
+                      value={draftResult.clientUpdates?.overview || ""} 
+                      onChange={e => handleDraftFieldChange('clientUpdates', 'overview', e.target.value)}
+                      style={{ width: "100%", height: 100, padding: "10px 12px", borderRadius: 8, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 14, outline: "none", resize: "vertical" }}
+                    />
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                      <label style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 600 }}>Industry</label>
+                      <input 
+                        type="text" 
+                        value={draftResult.clientUpdates?.industry || ""} 
+                        onChange={e => handleDraftFieldChange('clientUpdates', 'industry', e.target.value)}
+                        style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 14, outline: "none" }}
+                      />
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                      <label style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 600 }}>Culture &amp; Atmosphere</label>
+                      <input 
+                        type="text" 
+                        value={draftResult.clientUpdates?.culture || ""} 
+                        onChange={e => handleDraftFieldChange('clientUpdates', 'culture', e.target.value)}
+                        style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 14, outline: "none" }}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <label style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 600 }}>Key Information / Fun Facts (One per line)</label>
+                    <textarea 
+                      value={draftResult.clientUpdates?.keyInfo?.join("\n") || ""} 
+                      onChange={e => handleDraftFieldChange('clientUpdates', 'keyInfo', e.target.value.split("\n"))}
+                      style={{ width: "100%", height: 80, padding: "10px 12px", borderRadius: 8, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 14, outline: "none", resize: "vertical", fontFamily: "monospace" }}
+                      placeholder="Enter each point on a new line"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {activeReviewTab === 'job' && draftResult.jobData && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <label style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 600 }}>Job Title</label>
+                    <input 
+                      type="text" 
+                      value={draftResult.jobData.title || ""} 
+                      onChange={e => handleDraftFieldChange('jobData', 'title', e.target.value)}
+                      style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 14, outline: "none", fontWeight: "bold" }}
+                    />
+                  </div>
+
+                  {/* Role Overview specs */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                      <label style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 600 }}>Department</label>
+                      <input 
+                        type="text" 
+                        value={draftResult.jobData.roleOverview?.dept || ""} 
+                        onChange={e => handleDraftFieldChange('jobData', 'roleOverview', { ...draftResult.jobData.roleOverview, dept: e.target.value })}
+                        style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 14, outline: "none" }}
+                      />
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                      <label style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 600 }}>Reporting Line</label>
+                      <input 
+                        type="text" 
+                        value={draftResult.jobData.roleOverview?.reportingLine || ""} 
+                        onChange={e => handleDraftFieldChange('jobData', 'roleOverview', { ...draftResult.jobData.roleOverview, reportingLine: e.target.value })}
+                        style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 14, outline: "none" }}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                      <label style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 600 }}>Salary Range</label>
+                      <input 
+                        type="text" 
+                        value={draftResult.jobData.roleOverview?.salaryRange || ""} 
+                        onChange={e => handleDraftFieldChange('jobData', 'roleOverview', { ...draftResult.jobData.roleOverview, salaryRange: e.target.value })}
+                        style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 14, outline: "none" }}
+                      />
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                      <label style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 600 }}>Location</label>
+                      <input 
+                        type="text" 
+                        value={draftResult.jobData.roleOverview?.location || ""} 
+                        onChange={e => handleDraftFieldChange('jobData', 'roleOverview', { ...draftResult.jobData.roleOverview, location: e.target.value })}
+                        style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 14, outline: "none" }}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                      <label style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 600 }}>Company Context (One per line)</label>
+                      <textarea 
+                        value={draftResult.jobData.companyContext?.join("\n") || ""} 
+                        onChange={e => handleDraftFieldChange('jobData', 'companyContext', e.target.value.split("\n"))}
+                        style={{ width: "100%", height: 80, padding: "10px 12px", borderRadius: 8, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 14, outline: "none", resize: "vertical", fontFamily: "monospace" }}
+                      />
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                      <label style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 600 }}>Ideal Persona (One per line)</label>
+                      <textarea 
+                        value={draftResult.jobData.idealPersona?.join("\n") || ""} 
+                        onChange={e => handleDraftFieldChange('jobData', 'idealPersona', e.target.value.split("\n"))}
+                        style={{ width: "100%", height: 80, padding: "10px 12px", borderRadius: 8, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 14, outline: "none", resize: "vertical", fontFamily: "monospace" }}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                      <label style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 600 }}>Must Have Requirements (One per line)</label>
+                      <textarea 
+                        value={draftResult.jobData.mustHave?.join("\n") || ""} 
+                        onChange={e => handleDraftFieldChange('jobData', 'mustHave', e.target.value.split("\n"))}
+                        style={{ width: "100%", height: 80, padding: "10px 12px", borderRadius: 8, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 14, outline: "none", resize: "vertical", fontFamily: "monospace" }}
+                      />
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                      <label style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 600 }}>Nice to Have Requirements (One per line)</label>
+                      <textarea 
+                        value={draftResult.jobData.niceToHave?.join("\n") || ""} 
+                        onChange={e => handleDraftFieldChange('jobData', 'niceToHave', e.target.value.split("\n"))}
+                        style={{ width: "100%", height: 80, padding: "10px 12px", borderRadius: 8, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 14, outline: "none", resize: "vertical", fontFamily: "monospace" }}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <label style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 600 }}>Questions for Client / Recruiting Strategy (One per line)</label>
+                    <textarea 
+                      value={draftResult.jobData.questionsForClient?.join("\n") || ""} 
+                      onChange={e => handleDraftFieldChange('jobData', 'questionsForClient', e.target.value.split("\n"))}
+                      style={{ width: "100%", height: 80, padding: "10px 12px", borderRadius: 8, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 14, outline: "none", resize: "vertical", fontFamily: "monospace" }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {activeReviewTab === 'marketing' && draftResult.jobData && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <label style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 600 }}>Social Recruiting Post (LinkedIn / Facebook)</label>
+                    <textarea 
+                      value={draftResult.jobData.socialPost || ""} 
+                      onChange={e => handleDraftFieldChange('jobData', 'socialPost', e.target.value)}
+                      style={{ width: "100%", height: 120, padding: "10px 12px", borderRadius: 8, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 13, outline: "none", resize: "vertical", fontFamily: "monospace", lineHeight: "1.5" }}
+                    />
+                  </div>
+
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <label style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 600 }}>Boolean Search Query string</label>
+                    <input 
+                      type="text" 
+                      value={draftResult.jobData.booleanSearch || ""} 
+                      onChange={e => handleDraftFieldChange('jobData', 'booleanSearch', e.target.value)}
+                      style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 13, outline: "none", fontFamily: "monospace" }}
+                    />
+                  </div>
+
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <label style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 600 }}>Recommended Interview Questions (One per line)</label>
+                    <textarea 
+                      value={draftResult.jobData.interviewQuestions?.join("\n") || ""} 
+                      onChange={e => handleDraftFieldChange('jobData', 'interviewQuestions', e.target.value.split("\n"))}
+                      style={{ width: "100%", height: 120, padding: "10px 12px", borderRadius: 8, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 13, outline: "none", resize: "vertical", fontFamily: "monospace", lineHeight: "1.5" }}
+                    />
+                  </div>
+                </div>
+              )}
+
+            </div>
+
+            {/* Modal Footer */}
+            <div style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              padding: "16px 24px",
+              borderTop: "1px solid var(--border-color)",
+              background: "rgba(0,0,0,0.02)"
+            }}>
+              <div>
+                {draftResult.hasNewJob ? (
+                  <span style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 500 }}>
+                    {draftResult.matchedJobId ? (
+                      <span style={{ color: "#d97706", fontWeight: 600 }}>⚠️ Updating existing job (ID: {draftResult.matchedJobId})</span>
+                    ) : (
+                      <span style={{ color: "#16a34a", fontWeight: 600 }}>✨ Creating brand new job opening</span>
+                    )}
+                  </span>
+                ) : (
+                  <span style={{ fontSize: 13, color: "var(--text-muted)" }}>Only updating client knowledge base (No job detected)</span>
+                )}
+              </div>
+              <div style={{ display: "flex", gap: 12 }}>
+                <button 
+                  onClick={() => { setDraftResult(null); setIsReviewingDraft(false); }}
+                  style={{ padding: "10px 20px", background: "transparent", color: "var(--text-primary)", borderRadius: 8, border: "1.5px solid var(--border-glass)", cursor: "pointer", fontWeight: 600, fontSize: 14 }}
+                >
+                  Discard Draft
+                </button>
+                <button 
+                  onClick={handleConfirmDraft}
+                  style={{ padding: "10px 24px", background: "#4f46e5", color: "white", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 700, fontSize: 14 }}
+                >
+                  Confirm &amp; Save to Database
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
 
     </div>
   );

@@ -19,10 +19,12 @@ export function Header({ onMenu }: any) {
   const [groqKey, setGroqKey] = useState("");
   const [cerebrasKey, setCerebrasKey] = useState("");
   const [qwenKey, setQwenKey] = useState("");
+  const [githubKey, setGithubKey] = useState("");
   const [groqModel, setGroqModel] = useState("llama-3.3-70b-versatile");
   const [cerebrasModel, setCerebrasModel] = useState("qwen-3-235b-a22b-instruct-2507");
   const [openaiModel, setOpenaiModel] = useState("gpt-4o-mini");
   const [qwenModel, setQwenModel] = useState("qwen-plus");
+  const [githubModel, setGithubModel] = useState("openai/gpt-4o-mini");
   
   const [isTesting, setIsTesting] = useState(false);
   const [testStatus, setTestStatus] = useState<'idle' | 'success' | 'error'>('idle');
@@ -50,6 +52,9 @@ export function Header({ onMenu }: any) {
       
       const savedQwenModel = localStorage.getItem("qwen_model") || "qwen-plus";
       setQwenModel(savedQwenModel);
+
+      const savedGithubModel = localStorage.getItem("custom_github_model") || "openai/gpt-4o-mini";
+      setGithubModel(savedGithubModel);
       
       const savedGemini = localStorage.getItem("custom_gemini_api_key") || "";
       const savedOpenai = localStorage.getItem("custom_openai_api_key") || "";
@@ -57,6 +62,7 @@ export function Header({ onMenu }: any) {
       const savedGroq = localStorage.getItem("custom_groq_api_key") || "";
       const savedCerebras = localStorage.getItem("custom_cerebras_api_key") || "";
       const savedQwen = localStorage.getItem("custom_qwen_api_key") || "";
+      const savedGithub = localStorage.getItem("custom_github_pat") || "";
       
       setGeminiKey(savedGemini);
       setOpenaiKey(savedOpenai);
@@ -64,14 +70,15 @@ export function Header({ onMenu }: any) {
       setGroqKey(savedGroq);
       setCerebrasKey(savedCerebras);
       setQwenKey(savedQwen);
+      setGithubKey(savedGithub);
       
-      const currentKey = savedProvider === 'gemini' ? savedGemini : savedProvider === 'openai' ? savedOpenai : savedProvider === 'grok' ? savedGrok : savedProvider === 'groq' ? savedGroq : savedProvider === 'cerebras' ? savedCerebras : savedQwen;
+      const currentKey = savedProvider === 'gemini' ? savedGemini : savedProvider === 'openai' ? savedOpenai : savedProvider === 'grok' ? savedGrok : savedProvider === 'groq' ? savedGroq : savedProvider === 'cerebras' ? savedCerebras : savedProvider === 'qwen' ? savedQwen : savedProvider === 'github' ? savedGithub : "";
       setTestStatus(currentKey ? 'success' : 'idle');
       setErrorMessage("");
     }
   }, [showSettings]);
 
-  const currentKey = provider === 'gemini' ? geminiKey : provider === 'openai' ? openaiKey : provider === 'grok' ? grokKey : provider === 'groq' ? groqKey : provider === 'cerebras' ? cerebrasKey : qwenKey;
+  const currentKey = provider === 'gemini' ? geminiKey : provider === 'openai' ? openaiKey : provider === 'grok' ? grokKey : provider === 'groq' ? groqKey : provider === 'cerebras' ? cerebrasKey : provider === 'qwen' ? qwenKey : provider === 'github' ? githubKey : "";
 
   const handleTestKey = async () => {
     if (!currentKey.trim()) return;
@@ -82,7 +89,7 @@ export function Header({ onMenu }: any) {
       provider, 
       currentKey.trim(), 
       provider === 'gemini' ? geminiProxyUrl : undefined,
-      provider === 'gemini' ? geminiModel : provider === 'openai' ? openaiModel : provider === 'groq' ? groqModel : provider === 'cerebras' ? cerebrasModel : provider === 'qwen' ? qwenModel : undefined
+      provider === 'gemini' ? geminiModel : provider === 'openai' ? openaiModel : provider === 'groq' ? groqModel : provider === 'cerebras' ? cerebrasModel : provider === 'qwen' ? qwenModel : provider === 'github' ? githubModel : undefined
     );
     if (result.success) {
       setTestStatus('success');
@@ -93,6 +100,7 @@ export function Header({ onMenu }: any) {
       localStorage.setItem("cerebras_model", cerebrasModel);
       localStorage.setItem("openai_model", openaiModel);
       localStorage.setItem("qwen_model", qwenModel);
+      localStorage.setItem("custom_github_model", githubModel);
       localStorage.setItem("gemini_proxy_url", geminiProxyUrl.trim());
       
       if (provider === 'gemini') localStorage.setItem("custom_gemini_api_key", currentKey.trim());
@@ -100,7 +108,8 @@ export function Header({ onMenu }: any) {
       else if (provider === 'grok') localStorage.setItem("custom_grok_api_key", currentKey.trim());
       else if (provider === 'groq') localStorage.setItem("custom_groq_api_key", currentKey.trim());
       else if (provider === 'cerebras') localStorage.setItem("custom_cerebras_api_key", currentKey.trim());
-      else localStorage.setItem("custom_qwen_api_key", currentKey.trim());
+      else if (provider === 'qwen') localStorage.setItem("custom_qwen_api_key", currentKey.trim());
+      else if (provider === 'github') localStorage.setItem("custom_github_pat", currentKey.trim());
     } else {
       setTestStatus('error');
       let displayError = result.error || "Invalid API Key. Please check and try again.";
@@ -136,6 +145,7 @@ export function Header({ onMenu }: any) {
     localStorage.setItem("cerebras_model", cerebrasModel);
     localStorage.setItem("openai_model", openaiModel);
     localStorage.setItem("qwen_model", qwenModel);
+    localStorage.setItem("custom_github_model", githubModel);
     
     if (geminiKey.trim()) {
       localStorage.setItem("custom_gemini_api_key", geminiKey.trim());
@@ -172,6 +182,12 @@ export function Header({ onMenu }: any) {
       localStorage.setItem("custom_qwen_api_key", qwenKey.trim());
     } else {
       localStorage.removeItem("custom_qwen_api_key");
+    }
+
+    if (githubKey.trim()) {
+      localStorage.setItem("custom_github_pat", githubKey.trim());
+    } else {
+      localStorage.removeItem("custom_github_pat");
     }
     
     setShowSettings(false);
@@ -242,10 +258,11 @@ export function Header({ onMenu }: any) {
               <option value="groq">Groq (Ultra-Fast Llama 3)</option>
               <option value="cerebras">Cerebras (Ultra-Fast AI)</option>
               <option value="qwen">Qwen (Alibaba DashScope)</option>
+              <option value="github">GitHub Models (Free)</option>
             </select>
 
             <label style={{ fontSize: 14, fontWeight: 600, color: "var(--text-secondary)", display: "block", marginBottom: 8 }}>
-              {provider === 'gemini' ? 'Personal Gemini API Key' : provider === 'openai' ? 'Personal OpenAI API Key' : provider === 'grok' ? 'Personal Grok API Key' : provider === 'groq' ? 'Personal Groq API Key' : provider === 'cerebras' ? 'Personal Cerebras API Key' : 'Personal Qwen API Key'}
+              {provider === 'gemini' ? 'Personal Gemini API Key' : provider === 'openai' ? 'Personal OpenAI API Key' : provider === 'grok' ? 'Personal Grok API Key' : provider === 'groq' ? 'Personal Groq API Key' : provider === 'cerebras' ? 'Personal Cerebras API Key' : provider === 'qwen' ? 'Personal Qwen API Key' : 'Personal GitHub Token'}
             </label>
             <div style={{ display: "flex", gap: 8, marginBottom: provider === 'gemini' ? 16 : 8 }}>
               <input 
@@ -257,10 +274,11 @@ export function Header({ onMenu }: any) {
                   else if (provider === 'grok') setGrokKey(e.target.value);
                   else if (provider === 'groq') setGroqKey(e.target.value);
                   else if (provider === 'cerebras') setCerebrasKey(e.target.value);
-                  else setQwenKey(e.target.value);
+                  else if (provider === 'qwen') setQwenKey(e.target.value);
+                  else if (provider === 'github') setGithubKey(e.target.value);
                   setTestStatus('idle');
                 }} 
-                placeholder={`Paste your ${provider === 'gemini' ? 'Gemini' : provider === 'openai' ? 'OpenAI' : provider === 'grok' ? 'Grok' : provider === 'groq' ? 'Groq' : provider === 'cerebras' ? 'Cerebras' : 'Qwen'} API Key here...`}
+                placeholder={provider === 'github' ? "Paste your GitHub Personal Access Token here (cần quyền models:read)..." : `Paste your ${provider === 'gemini' ? 'Gemini' : provider === 'openai' ? 'OpenAI' : provider === 'grok' ? 'Grok' : provider === 'groq' ? 'Groq' : provider === 'cerebras' ? 'Cerebras' : 'Qwen'} API Key here...`}
                 style={{ flex: 1, border: "1.5px solid var(--border-color)", borderRadius: 8, padding: "10px 14px", fontSize: 14, outline: "none", transition: "border-color 0.2s" }}
                 onFocus={(e: any) => e.target.style.borderColor = "var(--border-focus)"} 
                 onBlur={(e: any) => e.target.style.borderColor = "var(--border-color)"}
@@ -284,6 +302,12 @@ export function Header({ onMenu }: any) {
                 {isTesting ? "Testing..." : "Test Key"}
               </button>
             </div>
+
+            {provider === 'github' && (
+              <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4, marginBottom: 12 }}>
+                Lấy token tại: <a href="https://github.com/settings/tokens" target="_blank" rel="noreferrer" style={{ color: "var(--border-focus)", textDecoration: "none" }}>github.com/settings/tokens</a> (Fine-grained token, chọn quyền Models: Read-only). Model có sẵn xem tại <a href="https://github.com/marketplace/models" target="_blank" rel="noreferrer" style={{ color: "var(--border-focus)", textDecoration: "none" }}>github.com/marketplace/models</a>
+              </div>
+            )}
 
             {provider === 'gemini' && (
               <>
@@ -411,6 +435,25 @@ export function Header({ onMenu }: any) {
               </>
             )}
 
+            {provider === 'github' && (
+              <>
+                <label style={{ fontSize: 14, fontWeight: 600, color: "var(--text-secondary)", display: "block", marginBottom: 8 }}>GitHub Model</label>
+                <select 
+                  value={githubModel} 
+                  onChange={(e) => {
+                    setGithubModel(e.target.value);
+                    setTestStatus('idle');
+                  }}
+                  style={{ width: "100%", border: "1.5px solid var(--border-color)", borderRadius: 8, padding: "10px 14px", fontSize: 14, outline: "none", marginBottom: 8, background: "var(--bg-card)" }}
+                >
+                  <option value="openai/gpt-4o-mini">GPT-4o-mini (Fast, Free tier)</option>
+                  <option value="microsoft/Phi-4">Phi-4 (Reasoning, Free tier)</option>
+                  <option value="microsoft/Phi-4-mini-instruct">Phi-4-mini (Lightweight)</option>
+                  <option value="deepseek/DeepSeek-R1">DeepSeek-R1 (Deep Reasoning)</option>
+                </select>
+              </>
+            )}
+
             {testStatus === 'success' && (
               <div style={{ fontSize: 13, color: "var(--success)", fontWeight: 500, marginBottom: 12, display: "flex", alignItems: "center", gap: 4 }}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
@@ -444,6 +487,10 @@ export function Header({ onMenu }: any) {
               ) : provider === 'cerebras' ? (
                 <div style={{ marginBottom: 8 }}>
                   <strong>Don't have a Cerebras Key?</strong> Get it from the <a href="https://cloud.cerebras.ai/" target="_blank" rel="noreferrer" style={{ color: "var(--border-focus)", textDecoration: "none", fontWeight: 500 }}>Cerebras Cloud</a>.
+                </div>
+              ) : provider === 'github' ? (
+                <div style={{ marginBottom: 8 }}>
+                  <strong>Cần GitHub Token?</strong> Lấy fine-grained token có quyền Models: Read-only tại <a href="https://github.com/settings/tokens" target="_blank" rel="noreferrer" style={{ color: "var(--border-focus)", textDecoration: "none", fontWeight: 500 }}>GitHub Settings</a>.
                 </div>
               ) : (
                 <div style={{ marginBottom: 8 }}>
