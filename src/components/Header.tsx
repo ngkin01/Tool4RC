@@ -24,7 +24,7 @@ export function Header({ onMenu }: any) {
   const [cerebrasModel, setCerebrasModel] = useState("qwen-3-235b-a22b-instruct-2507");
   const [openaiModel, setOpenaiModel] = useState("gpt-4o-mini");
   const [qwenModel, setQwenModel] = useState("qwen-plus");
-  const [githubModel, setGithubModel] = useState("openai/gpt-4o-mini");
+  const [githubModel, setGithubModel] = useState("openai/gpt-4o");
   
   const [isTesting, setIsTesting] = useState(false);
   const [testStatus, setTestStatus] = useState<'idle' | 'success' | 'error'>('idle');
@@ -67,7 +67,7 @@ export function Header({ onMenu }: any) {
       const savedQwenModel = localStorage.getItem("qwen_model") || "qwen-plus";
       setQwenModel(savedQwenModel);
 
-      const savedGithubModel = localStorage.getItem("custom_github_model") || "openai/gpt-4o-mini";
+      const savedGithubModel = localStorage.getItem("custom_github_model") || "openai/gpt-4o";
       setGithubModel(savedGithubModel);
       
       const savedGemini = localStorage.getItem("custom_gemini_api_key") || "";
@@ -460,10 +460,16 @@ export function Header({ onMenu }: any) {
                   }}
                   style={{ width: "100%", border: "1.5px solid var(--border-color)", borderRadius: 8, padding: "10px 14px", fontSize: 14, outline: "none", marginBottom: 8, background: "var(--bg-card)" }}
                 >
+                  <option value="openai/gpt-4o">GPT-4o (Most Capable)</option>
                   <option value="openai/gpt-4o-mini">GPT-4o-mini (Fast, Free tier)</option>
-                  <option value="microsoft/Phi-4">Phi-4 (Reasoning, Free tier)</option>
-                  <option value="microsoft/Phi-4-mini-instruct">Phi-4-mini (Lightweight)</option>
+                  <option value="openai/o1-preview">o1-preview (Reasoning)</option>
+                  <option value="openai/o1-mini">o1-mini (Fast Reasoning)</option>
+                  <option value="deepseek/DeepSeek-V3">DeepSeek-V3 (State-of-the-art)</option>
                   <option value="deepseek/DeepSeek-R1">DeepSeek-R1 (Deep Reasoning)</option>
+                  <option value="meta/Llama-3.3-70B-Instruct">Llama 3.3 70B (Powerful)</option>
+                  <option value="meta/Llama-3.1-405B-Instruct">Llama 3.1 405B (Premium)</option>
+                  <option value="microsoft/Phi-4">Phi-4 (Reasoning)</option>
+                  <option value="microsoft/Phi-4-mini-instruct">Phi-4-mini (Lightweight)</option>
                 </select>
               </>
             )}

@@ -504,7 +504,7 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
         effectiveModel = localStorage.getItem("qwen_model") || "qwen-plus";
       } else if (effectiveProvider === 'github') {
         effectiveKey = localStorage.getItem("custom_github_pat") || "";
-        effectiveModel = localStorage.getItem("custom_github_model") || "openai/gpt-4o-mini";
+        effectiveModel = localStorage.getItem("custom_github_model") || "openai/gpt-4o";
       }
     } else {
       // If they chose a specific provider, but left the key blank, also fallback to the global key of that specific provider
@@ -530,7 +530,7 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
           if (!effectiveModel) effectiveModel = localStorage.getItem("qwen_model") || "qwen-plus";
         } else if (effectiveProvider === 'github') {
           effectiveKey = localStorage.getItem("custom_github_pat") || "";
-          if (!effectiveModel) effectiveModel = localStorage.getItem("custom_github_model") || "openai/gpt-4o-mini";
+          if (!effectiveModel) effectiveModel = localStorage.getItem("custom_github_model") || "openai/gpt-4o";
         }
       }
     }
@@ -653,7 +653,7 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
   const [draftResult, setDraftResult] = useState<any | null>(null);
   const [isReviewingDraft, setIsReviewingDraft] = useState(false);
   const [rawInputUsed, setRawInputUsed] = useState("");
-  const [activeReviewTab, setActiveReviewTab] = useState<'client' | 'job' | 'marketing' | 'headhunt' | 'markdown'>('client');
+  const [activeReviewTab, setActiveReviewTab] = useState<'client' | 'markdown'>('client');
 
   // Job active tab and selected version index
   const [activeJobTab, setActiveJobTab] = useState<'report' | 'history'>('report');
@@ -1017,7 +1017,7 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
 
       setDraftResult(mockDraftResult);
       setIsReviewingDraft(true);
-      setActiveReviewTab('job'); // Default to job/report tab
+      setActiveReviewTab('markdown'); // Default to the final report tab
     } catch (err: any) {
       console.error(err);
       toast(`Error processing: ${err.message || err}`, "error");
@@ -1283,17 +1283,16 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
   };
 
   const handleSavePrompt = async () => {
-    if (!customPrompt.trim()) {
-      toast("Prompt cannot be empty", "error");
-      return;
-    }
     try {
-      await setDoc(doc(db, 'settings', 'systemPrompt'), { prompt: customPrompt });
-      toast("AI Prompt saved successfully", "success");
+      await Promise.all([
+        setDoc(doc(db, 'settings', 'companyResearchPrompt'), { prompt: companyResearchPrompt }),
+        setDoc(doc(db, 'settings', 'recruitmentIntelligencePrompt'), { prompt: recruitmentIntelligencePrompt })
+      ]);
+      toast("Đã lưu các System Prompts thành công!", "success");
       setIsEditingPrompt(false);
     } catch (err) {
-      handleFirestoreError(err, OperationType.WRITE, 'settings/systemPrompt');
-      toast("Failed to save AI Prompt", "error");
+      handleFirestoreError(err, OperationType.WRITE, 'settings/prompts');
+      toast("Lỗi khi lưu System Prompts", "error");
     }
   };
 
@@ -2207,11 +2206,13 @@ ${r.booleanSearch || "Not generated yet."}
                     {processingStep === 1 && "Step 1: Researching Company..."}
                     {processingStep === 2 && "Step 2: Analyzing Job Description..."}
                     {processingStep === 3 && "Step 3: Generating Recruitment Intelligence Report..."}
+                    {processingStep === 4 && "Step 4: Finalizing Data Insights..."}
                   </h4>
                   <p style={{ fontSize: 13, margin: 0, color: "var(--text-muted)" }}>
                     {processingStep === 1 && "Thu thập và phân tích dữ liệu ngành nghề, văn hóa và bối cảnh của đối tác..."}
                     {processingStep === 2 && "Bóc tách yêu cầu công việc, phân tích chân dung ứng viên lý tưởng..."}
                     {processingStep === 3 && `Đang soạn thảo báo cáo trí tuệ tuyển dụng toàn diện... (${processingProgress} kí tự)`}
+                    {processingStep === 4 && "Bóc tách và cấu trúc hóa dữ liệu báo cáo để lưu trữ vào hệ thống..."}
                   </p>
                 </div>
                 {/* Visual Step Dots */}
@@ -2219,6 +2220,7 @@ ${r.booleanSearch || "Not generated yet."}
                   <div style={{ width: 8, height: 8, borderRadius: "50%", background: processingStep >= 1 ? "#4f46e5" : "var(--border-color)", transition: "all 0.3s" }}></div>
                   <div style={{ width: 8, height: 8, borderRadius: "50%", background: processingStep >= 2 ? "#4f46e5" : "var(--border-color)", transition: "all 0.3s" }}></div>
                   <div style={{ width: 8, height: 8, borderRadius: "50%", background: processingStep >= 3 ? "#4f46e5" : "var(--border-color)", transition: "all 0.3s" }}></div>
+                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: processingStep >= 4 ? "#4f46e5" : "var(--border-color)", transition: "all 0.3s" }}></div>
                 </div>
               </div>
             )}
@@ -2544,7 +2546,7 @@ ${r.booleanSearch || "Not generated yet."}
                             tempProvider === 'groq' ? "llama-3.3-70b-versatile" :
                             tempProvider === 'cerebras' ? "qwen-3-235b-a22b-instruct-2507" :
                             tempProvider === 'qwen' ? "qwen-plus" :
-                            tempProvider === 'github' ? "openai/gpt-4o-mini" : "Nhập tên Model cụ thể..."
+                            tempProvider === 'github' ? "openai/gpt-4o (Mặc định)" : "Nhập tên Model cụ thể..."
                           }
                           value={tempModel}
                           onChange={e => setTempModel(e.target.value)}
@@ -2785,72 +2787,22 @@ ${r.booleanSearch || "Not generated yet."}
                 Client Profile
               </button>
               {draftResult.hasNewJob && (
-                <>
-                  <button
-                    onClick={() => setActiveReviewTab('job')}
-                    style={{
-                      padding: "14px 16px",
-                      fontSize: 13,
-                      fontWeight: 600,
-                      border: "none",
-                      background: "none",
-                      cursor: "pointer",
-                      color: activeReviewTab === 'job' ? "#4f46e5" : "var(--text-muted)",
-                      borderBottom: activeReviewTab === 'job' ? "2px solid #4f46e5" : "2px solid transparent",
-                      transition: "all 0.2s"
-                    }}
-                  >
-                    Job Specification
-                  </button>
-                  <button
-                    onClick={() => setActiveReviewTab('headhunt')}
-                    style={{
-                      padding: "14px 16px",
-                      fontSize: 13,
-                      fontWeight: 600,
-                      border: "none",
-                      background: "none",
-                      cursor: "pointer",
-                      color: activeReviewTab === 'headhunt' ? "#4f46e5" : "var(--text-muted)",
-                      borderBottom: activeReviewTab === 'headhunt' ? "2px solid #4f46e5" : "2px solid transparent",
-                      transition: "all 0.2s"
-                    }}
-                  >
-                    Headhunt Intelligence (Mới)
-                  </button>
-                  <button
-                    onClick={() => setActiveReviewTab('marketing')}
-                    style={{
-                      padding: "14px 16px",
-                      fontSize: 13,
-                      fontWeight: 600,
-                      border: "none",
-                      background: "none",
-                      cursor: "pointer",
-                      color: activeReviewTab === 'marketing' ? "#4f46e5" : "var(--text-muted)",
-                      borderBottom: activeReviewTab === 'marketing' ? "2px solid #4f46e5" : "2px solid transparent",
-                      transition: "all 0.2s"
-                    }}
-                  >
-                    Marketing &amp; Tech
-                  </button>
-                  <button
-                    onClick={() => setActiveReviewTab('markdown')}
-                    style={{
-                      padding: "14px 16px",
-                      fontSize: 13,
-                      fontWeight: 600,
-                      border: "none",
-                      background: "none",
-                      cursor: "pointer",
-                      color: activeReviewTab === 'markdown' ? "#4f46e5" : "var(--text-muted)",
-                      borderBottom: activeReviewTab === 'markdown' ? "2px solid #4f46e5" : "2px solid transparent",
-                      transition: "all 0.2s"
-                    }}
-                  >
-                    Báo cáo đầy đủ (Markdown)
-                  </button>
-                </>
+                <button
+                  onClick={() => setActiveReviewTab('markdown')}
+                  style={{
+                    padding: "14px 16px",
+                    fontSize: 13,
+                    fontWeight: 600,
+                    border: "none",
+                    background: "none",
+                    cursor: "pointer",
+                    color: activeReviewTab === 'markdown' ? "#4f46e5" : "var(--text-muted)",
+                    borderBottom: activeReviewTab === 'markdown' ? "2px solid #4f46e5" : "2px solid transparent",
+                    transition: "all 0.2s"
+                  }}
+                >
+                  Báo cáo Trí tuệ Tuyển dụng
+                </button>
               )}
             </div>
 
@@ -2867,6 +2819,18 @@ ${r.booleanSearch || "Not generated yet."}
                   style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 14, outline: "none" }}
                 />
               </div>
+
+              {draftResult.hasNewJob && draftResult.jobData && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <label style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 600 }}>Job Title</label>
+                  <input 
+                    type="text" 
+                    value={draftResult.jobData.title || ""} 
+                    onChange={e => handleDraftFieldChange('jobData', 'title', e.target.value)}
+                    style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 14, fontWeight: 700, outline: "none" }}
+                  />
+                </div>
+              )}
 
               {activeReviewTab === 'client' && (
                 <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -2912,440 +2876,14 @@ ${r.booleanSearch || "Not generated yet."}
                 </div>
               )}
 
-              {activeReviewTab === 'job' && draftResult.jobData && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                    <label style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 600 }}>Job Title</label>
-                    <input 
-                      type="text" 
-                      value={draftResult.jobData.title || ""} 
-                      onChange={e => handleDraftFieldChange('jobData', 'title', e.target.value)}
-                      style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 14, outline: "none", fontWeight: "bold" }}
-                    />
-                  </div>
-
-                  {/* Role Overview specs */}
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                      <label style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 600 }}>Department</label>
-                      <input 
-                        type="text" 
-                        value={draftResult.jobData.roleOverview?.dept || ""} 
-                        onChange={e => handleDraftFieldChange('jobData', 'roleOverview', { ...draftResult.jobData.roleOverview, dept: e.target.value })}
-                        style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 14, outline: "none" }}
-                      />
-                    </div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                      <label style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 600 }}>Reporting Line</label>
-                      <input 
-                        type="text" 
-                        value={draftResult.jobData.roleOverview?.reportingLine || ""} 
-                        onChange={e => handleDraftFieldChange('jobData', 'roleOverview', { ...draftResult.jobData.roleOverview, reportingLine: e.target.value })}
-                        style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 14, outline: "none" }}
-                      />
-                    </div>
-                  </div>
-
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                      <label style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 600 }}>Salary Range</label>
-                      <input 
-                        type="text" 
-                        value={draftResult.jobData.roleOverview?.salaryRange || ""} 
-                        onChange={e => handleDraftFieldChange('jobData', 'roleOverview', { ...draftResult.jobData.roleOverview, salaryRange: e.target.value })}
-                        style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 14, outline: "none" }}
-                      />
-                    </div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                      <label style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 600 }}>Location</label>
-                      <input 
-                        type="text" 
-                        value={draftResult.jobData.roleOverview?.location || ""} 
-                        onChange={e => handleDraftFieldChange('jobData', 'roleOverview', { ...draftResult.jobData.roleOverview, location: e.target.value })}
-                        style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 14, outline: "none" }}
-                      />
-                    </div>
-                  </div>
-
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                      <label style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 600 }}>Company Context (One per line)</label>
-                      <textarea 
-                        value={draftResult.jobData.companyContext?.join("\n") || ""} 
-                        onChange={e => handleDraftFieldChange('jobData', 'companyContext', e.target.value.split("\n"))}
-                        style={{ width: "100%", height: 80, padding: "10px 12px", borderRadius: 8, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 14, outline: "none", resize: "vertical", fontFamily: "monospace" }}
-                      />
-                    </div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                      <label style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 600 }}>Ideal Persona (One per line)</label>
-                      <textarea 
-                        value={draftResult.jobData.idealPersona?.join("\n") || ""} 
-                        onChange={e => handleDraftFieldChange('jobData', 'idealPersona', e.target.value.split("\n"))}
-                        style={{ width: "100%", height: 80, padding: "10px 12px", borderRadius: 8, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 14, outline: "none", resize: "vertical", fontFamily: "monospace" }}
-                      />
-                    </div>
-                  </div>
-
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                      <label style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 600 }}>Must Have Requirements (One per line)</label>
-                      <textarea 
-                        value={draftResult.jobData.mustHave?.join("\n") || ""} 
-                        onChange={e => handleDraftFieldChange('jobData', 'mustHave', e.target.value.split("\n"))}
-                        style={{ width: "100%", height: 80, padding: "10px 12px", borderRadius: 8, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 14, outline: "none", resize: "vertical", fontFamily: "monospace" }}
-                      />
-                    </div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                      <label style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 600 }}>Nice to Have Requirements (One per line)</label>
-                      <textarea 
-                        value={draftResult.jobData.niceToHave?.join("\n") || ""} 
-                        onChange={e => handleDraftFieldChange('jobData', 'niceToHave', e.target.value.split("\n"))}
-                        style={{ width: "100%", height: 80, padding: "10px 12px", borderRadius: 8, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 14, outline: "none", resize: "vertical", fontFamily: "monospace" }}
-                      />
-                    </div>
-                  </div>
-
-                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                    <label style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 600 }}>Questions for Client / Recruiting Strategy (One per line)</label>
-                    <textarea 
-                      value={draftResult.jobData.questionsForClient?.join("\n") || ""} 
-                      onChange={e => handleDraftFieldChange('jobData', 'questionsForClient', e.target.value.split("\n"))}
-                      style={{ width: "100%", height: 80, padding: "10px 12px", borderRadius: 8, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 14, outline: "none", resize: "vertical", fontFamily: "monospace" }}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {activeReviewTab === 'headhunt' && draftResult.jobData && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-                  
-                  {/* Section 1: Candidate Persona */}
-                  <div style={{ border: "1px solid var(--border-color)", borderRadius: 10, padding: 16, background: "rgba(255,255,255,0.02)" }}>
-                    <h4 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 12px 0", color: "#4f46e5", textTransform: "uppercase" }}>🕵️ 1. Candidate Persona</h4>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                        <label style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 600 }}>Years of Experience</label>
-                        <input 
-                          type="text"
-                          value={draftResult.jobData.candidatePersonaObj?.yearsOfExperience || ""}
-                          onChange={e => handleDraftFieldChange('jobData', 'candidatePersonaObj', { ...(draftResult.jobData.candidatePersonaObj || {}), yearsOfExperience: e.target.value })}
-                          style={{ padding: "8px 10px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 13 }}
-                        />
-                      </div>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                        <label style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 600 }}>Language Requirements</label>
-                        <input 
-                          type="text"
-                          value={draftResult.jobData.candidatePersonaObj?.languageRequirements || ""}
-                          onChange={e => handleDraftFieldChange('jobData', 'candidatePersonaObj', { ...(draftResult.jobData.candidatePersonaObj || {}), languageRequirements: e.target.value })}
-                          style={{ padding: "8px 10px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 13 }}
-                        />
-                      </div>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                        <label style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 600 }}>Industry Background</label>
-                        <input 
-                          type="text"
-                          value={draftResult.jobData.candidatePersonaObj?.industryBackground || ""}
-                          onChange={e => handleDraftFieldChange('jobData', 'candidatePersonaObj', { ...(draftResult.jobData.candidatePersonaObj || {}), industryBackground: e.target.value })}
-                          style={{ padding: "8px 10px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 13 }}
-                        />
-                      </div>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                        <label style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 600 }}>Functional Background</label>
-                        <input 
-                          type="text"
-                          value={draftResult.jobData.candidatePersonaObj?.functionalBackground || ""}
-                          onChange={e => handleDraftFieldChange('jobData', 'candidatePersonaObj', { ...(draftResult.jobData.candidatePersonaObj || {}), functionalBackground: e.target.value })}
-                          style={{ padding: "8px 10px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 13 }}
-                        />
-                      </div>
-                    </div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 12 }}>
-                      <label style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 600 }}>Personality Traits (One per line)</label>
-                      <textarea 
-                        value={draftResult.jobData.candidatePersonaObj?.personalityTraits?.join("\n") || ""}
-                        onChange={e => handleDraftFieldChange('jobData', 'candidatePersonaObj', { ...(draftResult.jobData.candidatePersonaObj || {}), personalityTraits: e.target.value.split("\n") })}
-                        style={{ width: "100%", height: 60, padding: "8px 10px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 13, resize: "vertical", fontFamily: "monospace" }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Section 2: Competitor Companies */}
-                  <div style={{ border: "1px solid var(--border-color)", borderRadius: 10, padding: 16, background: "rgba(255,255,255,0.02)" }}>
-                    <h4 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 12px 0", color: "#d97706", textTransform: "uppercase" }}>🏢 2. Competitor &amp; Target Companies</h4>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                        <label style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 600 }}>Direct Competitors (One per line)</label>
-                        <textarea 
-                          value={draftResult.jobData.competitorCompanies?.directCompetitors?.join("\n") || ""}
-                          onChange={e => handleDraftFieldChange('jobData', 'competitorCompanies', { ...(draftResult.jobData.competitorCompanies || {}), directCompetitors: e.target.value.split("\n") })}
-                          style={{ width: "100%", height: 60, padding: "8px 10px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 13, resize: "vertical", fontFamily: "monospace" }}
-                        />
-                      </div>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                        <label style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 600 }}>Similar Business Models (One per line)</label>
-                        <textarea 
-                          value={draftResult.jobData.competitorCompanies?.similarBusinessModels?.join("\n") || ""}
-                          onChange={e => handleDraftFieldChange('jobData', 'competitorCompanies', { ...(draftResult.jobData.competitorCompanies || {}), similarBusinessModels: e.target.value.split("\n") })}
-                          style={{ width: "100%", height: 60, padding: "8px 10px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 13, resize: "vertical", fontFamily: "monospace" }}
-                        />
-                      </div>
-                    </div>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 12 }}>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                        <label style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 600 }}>Transferable Talent (One per line)</label>
-                        <textarea 
-                          value={draftResult.jobData.competitorCompanies?.transferableTalent?.join("\n") || ""}
-                          onChange={e => handleDraftFieldChange('jobData', 'competitorCompanies', { ...(draftResult.jobData.competitorCompanies || {}), transferableTalent: e.target.value.split("\n") })}
-                          style={{ width: "100%", height: 60, padding: "8px 10px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 13, resize: "vertical", fontFamily: "monospace" }}
-                        />
-                      </div>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                        <label style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 600 }}>Why These Companies?</label>
-                        <textarea 
-                          value={draftResult.jobData.competitorCompanies?.whyTheseCompanies || ""}
-                          onChange={e => handleDraftFieldChange('jobData', 'competitorCompanies', { ...(draftResult.jobData.competitorCompanies || {}), whyTheseCompanies: e.target.value })}
-                          style={{ width: "100%", height: 60, padding: "8px 10px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 13, resize: "vertical" }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Section 3: Position Intelligence */}
-                  <div style={{ border: "1px solid var(--border-color)", borderRadius: 10, padding: 16, background: "rgba(255,255,255,0.02)" }}>
-                    <h4 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 12px 0", color: "#2563eb", textTransform: "uppercase" }}>💡 3. Position Intelligence</h4>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 12 }}>
-                      <label style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 600 }}>Nature of Role</label>
-                      <input 
-                        type="text"
-                        value={draftResult.jobData.positionIntelligence?.natureOfRole || ""}
-                        onChange={e => handleDraftFieldChange('jobData', 'positionIntelligence', { ...(draftResult.jobData.positionIntelligence || {}), natureOfRole: e.target.value })}
-                        style={{ padding: "8px 10px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 13 }}
-                      />
-                    </div>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                        <label style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 600 }}>Day-to-day Challenges (One per line)</label>
-                        <textarea 
-                          value={draftResult.jobData.positionIntelligence?.dayToDayChallenges?.join("\n") || ""}
-                          onChange={e => handleDraftFieldChange('jobData', 'positionIntelligence', { ...(draftResult.jobData.positionIntelligence || {}), dayToDayChallenges: e.target.value.split("\n") })}
-                          style={{ width: "100%", height: 60, padding: "8px 10px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 13, resize: "vertical", fontFamily: "monospace" }}
-                        />
-                      </div>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                        <label style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 600 }}>Hidden Expectations (One per line)</label>
-                        <textarea 
-                          value={draftResult.jobData.positionIntelligence?.hiddenExpectations?.join("\n") || ""}
-                          onChange={e => handleDraftFieldChange('jobData', 'positionIntelligence', { ...(draftResult.jobData.positionIntelligence || {}), hiddenExpectations: e.target.value.split("\n") })}
-                          style={{ width: "100%", height: 60, padding: "8px 10px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 13, resize: "vertical", fontFamily: "monospace" }}
-                        />
-                      </div>
-                    </div>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 12 }}>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                        <label style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 600 }}>Key Success Factors (One per line)</label>
-                        <textarea 
-                          value={draftResult.jobData.positionIntelligence?.keySuccessFactors?.join("\n") || ""}
-                          onChange={e => handleDraftFieldChange('jobData', 'positionIntelligence', { ...(draftResult.jobData.positionIntelligence || {}), keySuccessFactors: e.target.value.split("\n") })}
-                          style={{ width: "100%", height: 60, padding: "8px 10px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 13, resize: "vertical", fontFamily: "monospace" }}
-                        />
-                      </div>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                        <label style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 600 }}>Reasons Candidates Fail (One per line)</label>
-                        <textarea 
-                          value={draftResult.jobData.positionIntelligence?.commonReasonsCandidatesFail?.join("\n") || ""}
-                          onChange={e => handleDraftFieldChange('jobData', 'positionIntelligence', { ...(draftResult.jobData.positionIntelligence || {}), commonReasonsCandidatesFail: e.target.value.split("\n") })}
-                          style={{ width: "100%", height: 60, padding: "8px 10px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 13, resize: "vertical", fontFamily: "monospace" }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Section 4: Talent Market Insight */}
-                  <div style={{ border: "1px solid var(--border-color)", borderRadius: 10, padding: 16, background: "rgba(255,255,255,0.02)" }}>
-                    <h4 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 12px 0", color: "#059669", textTransform: "uppercase" }}>📈 4. Talent Market Insight</h4>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                        <label style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 600 }}>Talent Pool Difficulty</label>
-                        <input 
-                          type="text"
-                          value={draftResult.jobData.talentMarketInsight?.talentPoolDifficulty || ""}
-                          onChange={e => handleDraftFieldChange('jobData', 'talentMarketInsight', { ...(draftResult.jobData.talentMarketInsight || {}), talentPoolDifficulty: e.target.value })}
-                          style={{ padding: "8px 10px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 13 }}
-                        />
-                      </div>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                        <label style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 600 }}>Counter Offer Risk</label>
-                        <input 
-                          type="text"
-                          value={draftResult.jobData.talentMarketInsight?.counterOfferRisk || ""}
-                          onChange={e => handleDraftFieldChange('jobData', 'talentMarketInsight', { ...(draftResult.jobData.talentMarketInsight || {}), counterOfferRisk: e.target.value })}
-                          style={{ padding: "8px 10px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 13 }}
-                        />
-                      </div>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                        <label style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 600 }}>Salary Competitiveness</label>
-                        <input 
-                          type="text"
-                          value={draftResult.jobData.talentMarketInsight?.salaryCompetitiveness || ""}
-                          onChange={e => handleDraftFieldChange('jobData', 'talentMarketInsight', { ...(draftResult.jobData.talentMarketInsight || {}), salaryCompetitiveness: e.target.value })}
-                          style={{ padding: "8px 10px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 13 }}
-                        />
-                      </div>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                        <label style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 600 }}>Notice Period Risk</label>
-                        <input 
-                          type="text"
-                          value={draftResult.jobData.talentMarketInsight?.noticePeriodRisk || ""}
-                          onChange={e => handleDraftFieldChange('jobData', 'talentMarketInsight', { ...(draftResult.jobData.talentMarketInsight || {}), noticePeriodRisk: e.target.value })}
-                          style={{ padding: "8px 10px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 13 }}
-                        />
-                      </div>
-                    </div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 12 }}>
-                      <label style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 600 }}>Hiring Challenges (One per line)</label>
-                      <textarea 
-                        value={draftResult.jobData.talentMarketInsight?.hiringChallenges?.join("\n") || ""}
-                        onChange={e => handleDraftFieldChange('jobData', 'talentMarketInsight', { ...(draftResult.jobData.talentMarketInsight || {}), hiringChallenges: e.target.value.split("\n") })}
-                        style={{ width: "100%", height: 60, padding: "8px 10px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 13, resize: "vertical", fontFamily: "monospace" }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Section 5: Selling Points & Recruitment Strategy */}
-                  <div style={{ border: "1px solid var(--border-color)", borderRadius: 10, padding: 16, background: "rgba(255,255,255,0.02)" }}>
-                    <h4 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 12px 0", color: "#10b981", textTransform: "uppercase" }}>🚀 5. Sourcing &amp; Selling Points</h4>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                        <label style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 600 }}>Candidate Selling Points (EVP / Key Attractions) (One per line)</label>
-                        <textarea 
-                          value={draftResult.jobData.candidateSellingPoints?.join("\n") || ""}
-                          onChange={e => handleDraftFieldChange('jobData', 'candidateSellingPoints', e.target.value.split("\n"))}
-                          style={{ width: "100%", height: 65, padding: "8px 10px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 13, resize: "vertical", fontFamily: "monospace" }}
-                        />
-                      </div>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                        <label style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 600 }}>Where to Source / Channels (One per line)</label>
-                        <textarea 
-                          value={draftResult.jobData.recruitmentStrategy?.whereToSource?.join("\n") || ""}
-                          onChange={e => handleDraftFieldChange('jobData', 'recruitmentStrategy', { ...(draftResult.jobData.recruitmentStrategy || {}), whereToSource: e.target.value.split("\n") })}
-                          style={{ width: "100%", height: 60, padding: "8px 10px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 13, resize: "vertical", fontFamily: "monospace" }}
-                        />
-                      </div>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                        <label style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 600 }}>Companies to Target First (One per line)</label>
-                        <textarea 
-                          value={draftResult.jobData.recruitmentStrategy?.companiesToTargetFirst?.join("\n") || ""}
-                          onChange={e => handleDraftFieldChange('jobData', 'recruitmentStrategy', { ...(draftResult.jobData.recruitmentStrategy || {}), companiesToTargetFirst: e.target.value.split("\n") })}
-                          style={{ width: "100%", height: 60, padding: "8px 10px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 13, resize: "vertical", fontFamily: "monospace" }}
-                        />
-                      </div>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                        <label style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 600 }}>Hiring Challenges &amp; Mitigations (One per line)</label>
-                        <textarea 
-                          value={draftResult.jobData.recruitmentStrategy?.challengesAndMitigations?.join("\n") || ""}
-                          onChange={e => handleDraftFieldChange('jobData', 'recruitmentStrategy', { ...(draftResult.jobData.recruitmentStrategy || {}), challengesAndMitigations: e.target.value.split("\n") })}
-                          style={{ width: "100%", height: 60, padding: "8px 10px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 13, resize: "vertical", fontFamily: "monospace" }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Section 6: Boolean Search Channels */}
-                  <div style={{ border: "1px solid var(--border-color)", borderRadius: 10, padding: 16, background: "rgba(255,255,255,0.02)" }}>
-                    <h4 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 12px 0", color: "#6366f1", textTransform: "uppercase" }}>🔍 6. Specific Boolean Search Queries</h4>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                        <label style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 600 }}>LinkedIn Recruiter Query</label>
-                        <input 
-                          type="text"
-                          value={draftResult.jobData.booleanSearchQueries?.linkedin || ""}
-                          onChange={e => handleDraftFieldChange('jobData', 'booleanSearchQueries', { ...(draftResult.jobData.booleanSearchQueries || {}), linkedin: e.target.value })}
-                          style={{ padding: "8px 10px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 13, fontFamily: "monospace" }}
-                        />
-                      </div>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                        <label style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 600 }}>CV Database / Job Board Query</label>
-                        <input 
-                          type="text"
-                          value={draftResult.jobData.booleanSearchQueries?.cvDb || ""}
-                          onChange={e => handleDraftFieldChange('jobData', 'booleanSearchQueries', { ...(draftResult.jobData.booleanSearchQueries || {}), cvDb: e.target.value })}
-                          style={{ padding: "8px 10px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 13, fontFamily: "monospace" }}
-                        />
-                      </div>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                        <label style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 600 }}>Google X-Ray Search Query</label>
-                        <input 
-                          type="text"
-                          value={draftResult.jobData.booleanSearchQueries?.xray || ""}
-                          onChange={e => handleDraftFieldChange('jobData', 'booleanSearchQueries', { ...(draftResult.jobData.booleanSearchQueries || {}), xray: e.target.value })}
-                          style={{ padding: "8px 10px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 13, fontFamily: "monospace" }}
-                        />
-                      </div>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                        <label style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 600 }}>Industry-Specific Term Query</label>
-                        <input 
-                          type="text"
-                          value={draftResult.jobData.booleanSearchQueries?.industry || ""}
-                          onChange={e => handleDraftFieldChange('jobData', 'booleanSearchQueries', { ...(draftResult.jobData.booleanSearchQueries || {}), industry: e.target.value })}
-                          style={{ padding: "8px 10px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 13, fontFamily: "monospace" }}
-                        />
-                      </div>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                        <label style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 600 }}>Japanese / Foreign Lang Term Query (optional)</label>
-                        <input 
-                          type="text"
-                          value={draftResult.jobData.booleanSearchQueries?.japanese || ""}
-                          onChange={e => handleDraftFieldChange('jobData', 'booleanSearchQueries', { ...(draftResult.jobData.booleanSearchQueries || {}), japanese: e.target.value })}
-                          style={{ padding: "8px 10px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 13, fontFamily: "monospace" }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                </div>
-              )}
-
-              {activeReviewTab === 'marketing' && draftResult.jobData && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                    <label style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 600 }}>Social Recruiting Post (LinkedIn / Facebook)</label>
-                    <textarea 
-                      value={draftResult.jobData.socialPost || ""} 
-                      onChange={e => handleDraftFieldChange('jobData', 'socialPost', e.target.value)}
-                      style={{ width: "100%", height: 120, padding: "10px 12px", borderRadius: 8, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 13, outline: "none", resize: "vertical", fontFamily: "monospace", lineHeight: "1.5" }}
-                    />
-                  </div>
-
-                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                    <label style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 600 }}>Boolean Search Query string</label>
-                    <input 
-                      type="text" 
-                      value={draftResult.jobData.booleanSearch || ""} 
-                      onChange={e => handleDraftFieldChange('jobData', 'booleanSearch', e.target.value)}
-                      style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 13, outline: "none", fontFamily: "monospace" }}
-                    />
-                  </div>
-
-                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                    <label style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 600 }}>Recommended Interview Questions (One per line)</label>
-                    <textarea 
-                      value={draftResult.jobData.interviewQuestions?.join("\n") || ""} 
-                      onChange={e => handleDraftFieldChange('jobData', 'interviewQuestions', e.target.value.split("\n"))}
-                      style={{ width: "100%", height: 120, padding: "10px 12px", borderRadius: 8, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 13, outline: "none", resize: "vertical", fontFamily: "monospace", lineHeight: "1.5" }}
-                    />
-                  </div>
-                </div>
-              )}
-
               {activeReviewTab === 'markdown' && draftResult.jobData && (
                 <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                   <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                    <label style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 600 }}>Nội dung báo cáo (Markdown) - Bạn có thể chỉnh sửa trực tiếp bên dưới</label>
+                    <label style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 600 }}>Báo cáo Trí tuệ Tuyển dụng - Bạn có thể đọc, chỉnh sửa hoặc xóa bớt nội dung trực tiếp bên dưới trước khi lưu</label>
                     <textarea 
                       value={draftResult.jobData.markdownReport || ""} 
                       onChange={e => handleDraftMarkdownChange(e.target.value)}
-                      style={{ width: "100%", height: 350, padding: "12px 16px", borderRadius: 8, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 14, outline: "none", resize: "vertical", fontFamily: "monospace", lineHeight: 1.6 }}
+                      style={{ width: "100%", height: 500, padding: "12px 16px", borderRadius: 8, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 14, outline: "none", resize: "vertical", fontFamily: "monospace", lineHeight: 1.6 }}
                       placeholder="Nội dung báo cáo dạng Markdown..."
                     />
                   </div>

@@ -151,7 +151,7 @@ export async function testApiKey(provider: AIProvider, key: string, customProxyU
       return { success: !!response.choices[0].message.content };
     } else if (provider === 'github') {
       const github = new OpenAI({ apiKey: key, baseURL: "https://models.github.ai/inference", dangerouslyAllowBrowser: true });
-      const model = currentModel || localStorage.getItem("custom_github_model") || "openai/gpt-4o-mini";
+      const model = currentModel || localStorage.getItem("custom_github_model") || "openai/gpt-4o";
       const response = await github.chat.completions.create({
         model: model,
         messages: [{ role: "user", content: "Say 'OK'" }],
@@ -235,7 +235,7 @@ export async function gemini(system: string, user: string, maxTokens=1200) {
     return response.choices[0].message.content || "";
   } else if (provider === 'github') {
     const github = getGithubModelsClient();
-    const model = localStorage.getItem("custom_github_model") || "openai/gpt-4o-mini";
+    const model = localStorage.getItem("custom_github_model") || "openai/gpt-4o";
     const response = await github.chat.completions.create({
       model: model,
       messages: [
@@ -360,7 +360,7 @@ export async function geminiWithDoc(system: string, userText: string, pdfBase64:
       return response.choices[0].message.content || "";
     } else {
       const github = getGithubModelsClient();
-      const model = localStorage.getItem("custom_github_model") || "openai/gpt-4o-mini";
+      const model = localStorage.getItem("custom_github_model") || "openai/gpt-4o";
       const response = await github.chat.completions.create({
         model: model,
         messages: [

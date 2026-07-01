@@ -1,7 +1,7 @@
 import express from "express";
 import path from "path";
 import { Type } from "@google/genai";
-import { callLLM, callLLMStream, safeParseJson } from "./api/_lib/ai.js";
+import { callLLM, callLLMStream } from "./api/_lib/ai.js";
 
 export const app = express();
 const PORT = Number(process.env.PORT) || 3000;
@@ -489,10 +489,13 @@ Tên công ty khách hàng: \${currentClientName}
 Hãy thu thập, phân tích và tổng hợp các thông tin cốt lõi sau dưới dạng Markdown trôi chảy, chuyên nghiệp bằng tiếng Việt:
 1. Tổng quan về mô hình kinh doanh, sản phẩm/dịch vụ cốt lõi, và vị thế trong ngành.
 2. Văn hóa doanh nghiệp, phong cách làm việc và môi trường công sở dự kiến.
-3. Các tin tức nổi bật, công nghệ sử dụng, cấu trúc tổ chức chính (nếu có).
-4. Các từ khóa thông tin quan trọng nhất cần ghi nhớ khi làm việc với đối tác này.
+3. Địa điểm hoạt động: trụ sở chính, và nếu công ty có nhà máy/chi nhánh sản xuất thì liệt kê rõ địa chỉ/khu vực của từng nhà máy (nếu tìm được thông tin).
+4. Ngành nghề kinh doanh và các đặc thù riêng của ngành/công ty này (nếu có, mục này optional - chỉ nêu khi thực sự có thông tin đáng chú ý).
+5. Các công ty đối thủ cạnh tranh trực tiếp hoặc cùng ngành nghề - liệt kê rõ tên để recruiter dùng làm nguồn tìm kiếm ứng viên (sourcing target companies).
+6. Các tin tức nổi bật, công nghệ sử dụng, cấu trúc tổ chức chính (nếu có).
+7. Các từ khóa thông tin quan trọng nhất cần ghi nhớ khi làm việc với đối tác này.
 
-Chú ý: Hãy đưa ra các phân tích có giá trị thực chiến cho tuyển dụng. Tránh bịa đặt số liệu không có thật. Viết rõ ràng bằng Markdown.`;
+Chú ý: Hãy đưa ra các phân tích có giá trị thực chiến cho tuyển dụng. Tránh bịa đặt số liệu không có thật, nếu không tìm được thông tin cụ thể (ví dụ không có nhà máy) thì bỏ qua mục đó thay vì bịa. Viết rõ ràng bằng Markdown.`;
 
     const finalPrompt = promptTemplate.replace(/\$\{currentClientName\}/g, clientName);
 
