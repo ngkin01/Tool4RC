@@ -683,6 +683,7 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
   const [newClientTagline, setNewClientTagline] = useState("");
   
   const [universalInput, setUniversalInput] = useState("");
+  const [manualJobTitle, setManualJobTitle] = useState("");
   const [isProcessingInput, setIsProcessingInput] = useState(false);
   const [processingProgress, setProcessingProgress] = useState(0);
   
@@ -993,9 +994,10 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
       }
 
       // Extract a clean title from the generated Markdown
-      const extractedTitle = extractJobTitle(rawResult, universalInput);
+      const extractedTitle = manualJobTitle.trim() || extractJobTitle(rawResult, universalInput);
 
       setRawInputUsed(universalInput);
+      setManualJobTitle(""); // Reset for next use
 
       // Construct a compatible draftResult structure
       const mockDraftResult = {
@@ -2168,17 +2170,36 @@ ${r.booleanSearch || "Not generated yet."}
             {/* Universal Input Area */}
             <div style={{ background: "var(--bg-glass)", backdropFilter: "blur(16px)", borderRadius: 16, border: "1.5px solid var(--border-glass)", padding: 24, boxShadow: "var(--shadow-glass)" }}>
               
-              <div style={{ position: "relative" }}>
-                <textarea 
-                  value={universalInput}
-                  onChange={e => setUniversalInput(e.target.value)}
-                  placeholder="Type or paste anything about this client here (JD, Meeting notes, Emails, Feedback)..."
-                  style={{ 
-                    width: "100%", height: 120, borderRadius: 8, border: "1px solid var(--border-glass)", 
-                    padding: 16, fontSize: 14, background: "var(--bg-body)", color: "var(--text-primary)", 
-                    resize: "none", outline: "none", marginBottom: 16, fontFamily: "inherit"
-                  }}
-                />
+              <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 16 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <label style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 600 }}>Tên vị trí (Không bắt buộc)</label>
+                  <input 
+                    type="text"
+                    value={manualJobTitle}
+                    onChange={e => setManualJobTitle(e.target.value)}
+                    placeholder="Ví dụ: Lead Auditor - CSR & Sustainability"
+                    style={{ 
+                      width: "100%", padding: "10px 14px", borderRadius: 8, border: "1px solid var(--border-glass)", 
+                      fontSize: 14, background: "var(--bg-body)", color: "var(--text-primary)", outline: "none"
+                    }}
+                  />
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <label style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 600 }}>Nội dung mô tả công việc (JD)</label>
+                  <div style={{ position: "relative" }}>
+                    <textarea 
+                      value={universalInput}
+                      onChange={e => setUniversalInput(e.target.value)}
+                      placeholder="Dán hoặc nhập bất kỳ thông tin nào về vị trí này (JD, Meeting notes, Emails, Feedback)..."
+                      style={{ 
+                        width: "100%", height: 120, borderRadius: 8, border: "1px solid var(--border-glass)", 
+                        padding: 16, fontSize: 14, background: "var(--bg-body)", color: "var(--text-primary)", 
+                        resize: "none", outline: "none", fontFamily: "inherit"
+                      }}
+                    />
+                  </div>
+                </div>
               </div>
               
               <div style={{ display: "flex", justifyContent: "flex-end" }}>
