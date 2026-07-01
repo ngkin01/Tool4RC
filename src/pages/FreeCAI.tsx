@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { Btn } from '../components/ui';
 import { db, auth, handleFirestoreError, OperationType } from '../lib/firebase';
 import { signInAnonymously } from 'firebase/auth';
@@ -29,6 +30,7 @@ type Job = {
 };
 
 type JobReport = {
+  markdownReport?: string;
   roleOverview: { title: string; dept: string; reportTo: string; salary: string; location: string; teamSize: string; };
   companyContext: string[];
   idealPersona: string[];
@@ -151,6 +153,69 @@ const mockClients: Client[] = [
     jobs: []
   }
 ];
+
+const DEFAULT_COMPANY_RESEARCH_PROMPT = `Bạn là một chuyên gia nghiên cứu thị trường và Chuyên viên Tư vấn Tuyển dụng Cấp cao.
+Nhiệm vụ của bạn là nghiên cứu và xây dựng một Báo cáo Trí tuệ Công ty (Company Intelligence Report) chi tiết cho khách hàng sau:
+
+Tên công ty khách hàng: \${currentClientName}
+
+Hãy thu thập, phân tích và tổng hợp các thông tin cốt lõi sau dưới dạng Markdown trôi chảy, chuyên nghiệp bằng tiếng Việt:
+1. Tổng quan về mô hình kinh doanh, sản phẩm/dịch vụ cốt lõi, và vị thế trong ngành.
+2. Văn hóa doanh nghiệp, phong cách làm việc và môi trường công sở dự kiến.
+3. Các tin tức nổi bật, công nghệ sử dụng, cấu trúc tổ chức chính (nếu có).
+4. Các từ khóa thông tin quan trọng nhất cần ghi nhớ khi làm việc với đối tác này.
+
+Chú ý: Hãy đưa ra các phân tích có giá trị thực chiến cho tuyển dụng. Tránh bịa đặt số liệu không có thật. Viết rõ ràng bằng Markdown.`;
+
+const DEFAULT_RECRUITMENT_INTELLIGENCE_PROMPT = `Bạn là một Senior Headhunter và Recruitment Consultant với hơn 15 năm kinh nghiệm tại Việt Nam và APAC.
+Nhiệm vụ của bạn là phân tích Bản mô tả công việc (Job Description) kết hợp với Báo cáo Trí tuệ Công ty (Company Intelligence Report) để tạo ra một Báo cáo Trí tuệ Tuyển dụng (Recruitment Intelligence Report) toàn diện, sắc bén và thực chiến bằng tiếng Việt.
+
+Thông tin Công ty (Company Intelligence Report):
+"""
+\${companyReport}
+"""
+
+Bản mô tả công việc (Job Description):
+"""
+\${jobDescription}
+"""
+
+Hãy tạo một báo cáo tuyển dụng toàn diện dưới dạng Markdown, cấu trúc chuyên nghiệp, phân tích sâu sắc các khái niệm sau:
+1. Tổng quan vị trí (Role Overview): Tên vị trí, Phòng ban, Cấp trên trực tiếp, Khoảng lương dự kiến, Địa điểm làm việc.
+2. Bối cảnh Công ty (Company Context) & Văn hóa phù hợp.
+3. Chân dung ứng viên lý tưởng (Ideal Persona): Kinh nghiệm, ngành nghề, kỹ năng cứng bắt buộc (Must-have), kỹ năng ưu tiên (Nice-to-have), đặc điểm tính cách.
+4. Trí tuệ Vị trí (Position Intelligence): Bản chất công việc, thách thức thực tế hàng ngày, kỳ vọng ẩn giấu từ nhà tuyển dụng, các yếu tố quyết định thành công của ứng viên.
+5. Thấu hiểu Thị trường Tài năng (Talent Market Insight): Độ khó của nguồn cung, rủi ro counter-offer, tính cạnh tranh của mức lương, rủi ro notice period.
+6. Chiến lược tuyển dụng & Sourcing (Recruitment Strategy): Sourcing channels, các công ty mục tiêu để target ứng viên trước tiên, phương án xử lý thách thức.
+7. Công cụ tìm kiếm (Boolean Search Queries): Viết sẵn các mẫu câu lệnh tìm kiếm thực chiến ngắn gọn cho LinkedIn Recruiter, CV Database, X-Ray Search, và các bộ lọc theo ngành.
+8. Gợi ý bài đăng tuyển dụng thu hút (Social Post / JD tóm tắt) & Bộ câu hỏi phỏng vấn gợi ý cho Consultant (Interview Questions / Questions for Client).
+
+LƯU Ý QUAN TRỌNG:
+- Trình bày toàn bộ báo cáo bằng định dạng Markdown đẹp mắt, có tiêu đề (Headings), danh sách (Bullet points), bảng biểu hoặc định dạng đậm nhạt rõ ràng.
+- KHÔNG trả về định dạng JSON hay bất cứ thông tin thừa nào khác ngoài nội dung Markdown.
+- Sử dụng ngôn phong tự nhiên, sắc bén, mang tính tư vấn cao của một Senior Consultant thực thụ.`;
+
+function extractJobTitle(markdown: string, rawInput: string): string {
+  const lines = markdown.split("\n");
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith("#") || trimmed.startsWith("##")) {
+      const match = trimmed.replace(/^#+\s*/, "").trim();
+      if (match && !/Report|Intelligence|Báo cáo|Tổng quan/i.test(match)) {
+        return match;
+      }
+    }
+  }
+  const positionMatch = markdown.match(/(?:Vị trí|Position|Role|Job Title)\s*:\s*([^\n]+)/i);
+  if (positionMatch && positionMatch[1]) {
+    return positionMatch[1].trim();
+  }
+  const inputWords = rawInput.split(/\s+/).filter(Boolean);
+  if (inputWords.length > 0) {
+    return inputWords.slice(0, 4).join(" ") + "...";
+  }
+  return "Báo cáo Tuyển dụng mới";
+}
 
 const DEFAULT_SYSTEM_PROMPT = `Bạn là một Senior Headhunter và Recruitment Consultant với hơn 15 năm kinh nghiệm tại Việt Nam và APAC.
 
@@ -365,6 +430,10 @@ const cleanUndefined = (obj: any): any => {
 export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error') => void }) {
   const [clients, setClients] = useState<Client[]>([]);
   const [customPrompt, setCustomPrompt] = useState<string>("");
+  const [companyResearchPrompt, setCompanyResearchPrompt] = useState<string>("");
+  const [recruitmentIntelligencePrompt, setRecruitmentIntelligencePrompt] = useState<string>("");
+  const [activePromptSubTab, setActivePromptSubTab] = useState<'company' | 'recruitment'>('company');
+  const [processingStep, setProcessingStep] = useState<number>(0);
   const [isEditingPrompt, setIsEditingPrompt] = useState(false);
   const [isAiSettingsOpen, setIsAiSettingsOpen] = useState(false);
   const [activeConfigTab, setActiveConfigTab] = useState<'api' | 'prompt'>('api');
@@ -545,20 +614,32 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
       handleFirestoreError(err, OperationType.LIST, 'clients');
     });
 
-    const unsubscribePrompt = onSnapshot(doc(db, 'settings', 'systemPrompt'), (docSnap) => {
+    const unsubscribeCompanyPrompt = onSnapshot(doc(db, 'settings', 'companyResearchPrompt'), (docSnap) => {
       if (docSnap.exists()) {
         const val = docSnap.data().prompt || "";
-        setCustomPrompt(val || DEFAULT_SYSTEM_PROMPT);
+        setCompanyResearchPrompt(val || DEFAULT_COMPANY_RESEARCH_PROMPT);
       } else {
-        setCustomPrompt(DEFAULT_SYSTEM_PROMPT);
+        setCompanyResearchPrompt(DEFAULT_COMPANY_RESEARCH_PROMPT);
       }
     }, (err) => {
-      console.error("Error fetching prompt:", err);
+      console.error("Error fetching company research prompt:", err);
+    });
+
+    const unsubscribeRecruitmentPrompt = onSnapshot(doc(db, 'settings', 'recruitmentIntelligencePrompt'), (docSnap) => {
+      if (docSnap.exists()) {
+        const val = docSnap.data().prompt || "";
+        setRecruitmentIntelligencePrompt(val || DEFAULT_RECRUITMENT_INTELLIGENCE_PROMPT);
+      } else {
+        setRecruitmentIntelligencePrompt(DEFAULT_RECRUITMENT_INTELLIGENCE_PROMPT);
+      }
+    }, (err) => {
+      console.error("Error fetching recruitment intelligence prompt:", err);
     });
 
     return () => {
       unsubscribeClients();
-      unsubscribePrompt();
+      unsubscribeCompanyPrompt();
+      unsubscribeRecruitmentPrompt();
     };
   }, []);
 
@@ -572,7 +653,7 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
   const [draftResult, setDraftResult] = useState<any | null>(null);
   const [isReviewingDraft, setIsReviewingDraft] = useState(false);
   const [rawInputUsed, setRawInputUsed] = useState("");
-  const [activeReviewTab, setActiveReviewTab] = useState<'client' | 'job' | 'marketing' | 'headhunt'>('client');
+  const [activeReviewTab, setActiveReviewTab] = useState<'client' | 'job' | 'marketing' | 'headhunt' | 'markdown'>('client');
 
   // Job active tab and selected version index
   const [activeJobTab, setActiveJobTab] = useState<'report' | 'history'>('report');
@@ -595,6 +676,9 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
   
   const [editingClientId, setEditingClientId] = useState<string | null>(null);
   const [editingNameVal, setEditingNameVal] = useState("");
+
+  const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
+  const [jobToDelete, setJobToDelete] = useState<Job | null>(null);
 
   // Reset active job tab and selected version index when switching jobs
   useEffect(() => {
@@ -743,11 +827,14 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
     }
   };
 
-  const handleDeleteClient = async (e: React.MouseEvent, id: string) => {
+  const handleDeleteClient = (e: React.MouseEvent, client: Client) => {
     e.stopPropagation();
-    if (!window.confirm("Bạn có chắc chắn muốn xóa đối tác (Client) này cùng toàn bộ các Job và lịch sử hoạt động liên quan không? Hành động này không thể khôi phục.")) {
-      return;
-    }
+    setClientToDelete(client);
+  };
+
+  const executeDeleteClient = async () => {
+    if (!clientToDelete) return;
+    const id = clientToDelete.id;
     try {
       // 1. Delete all jobs under the client's jobs subcollection
       const jobsRef = collection(db, 'clients', id, 'jobs');
@@ -779,15 +866,19 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
     } catch (err) {
       handleFirestoreError(err, OperationType.DELETE, 'clients');
       toast("Không thể xóa client", "error");
+    } finally {
+      setClientToDelete(null);
     }
   };
 
-  const handleDeleteJob = async (e: React.MouseEvent, jobId: string) => {
+  const handleDeleteJob = (e: React.MouseEvent, job: Job) => {
     e.stopPropagation();
-    if (!selectedClientId) return;
-    if (!window.confirm("Bạn có chắc chắn muốn xóa vị trí (Job) này không? Toàn bộ báo cáo và lịch sử các phiên bản sẽ bị xóa bỏ.")) {
-      return;
-    }
+    setJobToDelete(job);
+  };
+
+  const executeDeleteJob = async () => {
+    if (!jobToDelete || !selectedClientId) return;
+    const jobId = jobToDelete.id;
     try {
       await deleteDoc(doc(db, 'clients', selectedClientId, 'jobs', jobId));
       toast("Đã xóa job thành công!", "success");
@@ -797,44 +888,74 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
     } catch (err) {
       handleFirestoreError(err, OperationType.DELETE, 'clients'); // using 'clients' as the collection prefix for subcollection err
       toast("Không thể xóa job", "error");
+    } finally {
+      setJobToDelete(null);
     }
+  };
+
+  const handleDraftMarkdownChange = (val: string) => {
+    if (!draftResult) return;
+    setDraftResult((prev: any) => {
+      if (!prev) return null;
+      return {
+        ...prev,
+        jobData: {
+          ...prev.jobData,
+          markdownReport: val
+        }
+      };
+    });
   };
 
   const handleUniversalInputSubmit = async () => {
     if (!universalInput.trim() || !selectedClient) return;
     setIsProcessingInput(true);
     setProcessingProgress(0);
+    setProcessingStep(1); // Step 1: Researching Company...
     
     try {
-      const response = await fetch('/api/freecai/process', {
+      // Step 1: Company Research AI Call
+      console.log("Step 1: Starting Company Research...");
+      const step1Response = await fetch('/api/freecai/step1-company-research', {
         method: 'POST',
         headers: getAiHeaders(),
         body: JSON.stringify({
-          input: universalInput,
-          currentClientName: selectedClient.name,
-          existingJobs: selectedClientJobs.map(j => ({ id: j.id, title: j.title })),
-          customPrompt: customPrompt || DEFAULT_SYSTEM_PROMPT
+          clientName: selectedClient.name,
+          customPrompt: companyResearchPrompt || DEFAULT_COMPANY_RESEARCH_PROMPT
         })
       });
 
-      if (!response.ok) {
-        let errMsg = "";
-        try {
-          const errText = await response.text();
-          try {
-            const errJson = JSON.parse(errText);
-            errMsg = errJson.error || errJson.message || errText;
-          } catch {
-            errMsg = errText || `HTTP Error ${response.status}`;
-          }
-        } catch {
-          errMsg = "Network error or server unreachable";
-        }
-        throw new Error(errMsg || "Failed to process input");
+      if (!step1Response.ok) {
+        throw new Error(`Step 1 (Company Research) failed: ${step1Response.statusText}`);
+      }
+
+      const step1Data = await step1Response.json();
+      const companyReport = step1Data.companyReport || "";
+
+      // Step 2: Transition to Analyzing Job Description...
+      setProcessingStep(2);
+      await new Promise(resolve => setTimeout(resolve, 1500)); // Smooth transition buffer
+
+      // Step 3: Transition to Generating Recruitment Intelligence Report...
+      setProcessingStep(3);
+
+      console.log("Step 2: Starting Recruitment Intelligence...");
+      const step2Response = await fetch('/api/freecai/step2-recruitment-intelligence', {
+        method: 'POST',
+        headers: getAiHeaders(),
+        body: JSON.stringify({
+          companyReport: companyReport,
+          jobDescription: universalInput,
+          customPrompt: recruitmentIntelligencePrompt || DEFAULT_RECRUITMENT_INTELLIGENCE_PROMPT
+        })
+      });
+
+      if (!step2Response.ok) {
+        throw new Error(`Step 2 (Recruitment Intelligence) failed: ${step2Response.statusText}`);
       }
 
       let rawResult = "";
-      const reader = response.body?.getReader();
+      const reader = step2Response.body?.getReader();
       if (reader) {
         const decoder = new TextDecoder();
         while (true) {
@@ -845,99 +966,64 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
           setProcessingProgress(prev => prev + chunk.length);
         }
       } else {
-        rawResult = await response.text();
+        rawResult = await step2Response.text();
         setProcessingProgress(rawResult.length);
       }
 
       if (rawResult.includes("ERROR_STREAMING:")) {
         const parts = rawResult.split("ERROR_STREAMING:");
-        throw new Error(parts[parts.length - 1].trim() || "Failed to process input during stream");
+        throw new Error(parts[parts.length - 1].trim() || "Failed to generate report during stream");
       }
 
-      let cleaned = rawResult.trim();
-      if (cleaned.startsWith("```json")) {
-        cleaned = cleaned.substring(7);
-      } else if (cleaned.startsWith("```")) {
-        cleaned = cleaned.substring(3);
-      }
-      if (cleaned.endsWith("```")) {
-        cleaned = cleaned.substring(0, cleaned.length - 3);
-      }
-      cleaned = cleaned.trim();
-      
-      // Attempt to extract just the JSON object if there's conversational text
-      const firstBrace = cleaned.indexOf("{");
-      const lastBrace = cleaned.lastIndexOf("}");
-      if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-        cleaned = cleaned.substring(firstBrace, lastBrace + 1);
-      }
+      // Extract a clean title from the generated Markdown
+      const extractedTitle = extractJobTitle(rawResult, universalInput);
 
-      let data;
-      try {
-        data = JSON.parse(cleaned);
-      } catch (parseErr) {
-        console.error("Failed to parse JSON:", cleaned);
-        throw new Error("Lỗi đọc dữ liệu từ AI. Có thể AI trả về định dạng không đúng. Vui lòng thử lại.");
-      }
-      
       setRawInputUsed(universalInput);
 
-      const clientUpdates = {
-        culture: data.clientUpdates?.culture || "",
-        overview: data.clientUpdates?.overview || "",
-        industry: data.clientUpdates?.industry || "",
-        keyInfo: data.clientUpdates?.keyInfo || []
+      // Construct a compatible draftResult structure
+      const mockDraftResult = {
+        hasNewJob: true,
+        matchedJobId: "null",
+        timelineSummary: `Đã tạo Báo cáo Trí tuệ Tuyển dụng cho vị trí ${extractedTitle}.`,
+        clientUpdates: {
+          culture: "Chưa xác minh",
+          overview: selectedClient.summary?.overview || "N/A",
+          industry: selectedClient.summary?.industry || "N/A",
+          keyInfo: selectedClient.summary?.keyInfo || []
+        },
+        jobData: {
+          title: extractedTitle,
+          roleOverview: {
+            title: extractedTitle,
+            dept: "TBD",
+            reportingLine: "TBD",
+            salaryRange: "TBD",
+            location: "TBD",
+            teamSize: "TBD"
+          },
+          companyContext: [],
+          idealPersona: [],
+          mustHave: [],
+          niceToHave: [],
+          questionsForClient: [],
+          challenges: [],
+          targetCompanies: [],
+          booleanSearch: "",
+          interviewQuestions: [],
+          socialPost: "",
+          markdownReport: rawResult
+        }
       };
 
-      let jobData = undefined;
-      if (data.hasNewJob && data.jobData) {
-        jobData = {
-          title: data.jobData.title || "New Role (Auto-detected)",
-          roleOverview: {
-            dept: data.jobData.roleOverview?.dept || "",
-            reportingLine: data.jobData.roleOverview?.reportingLine || "",
-            salaryRange: data.jobData.roleOverview?.salaryRange || "",
-            location: data.jobData.roleOverview?.location || ""
-          },
-          companyContext: data.jobData.companyContext || [],
-          idealPersona: data.jobData.idealPersona || [],
-          mustHave: data.jobData.mustHave || [],
-          niceToHave: data.jobData.niceToHave || [],
-          questionsForClient: data.jobData.questionsForClient || [],
-          booleanSearch: data.jobData.booleanSearch || "",
-          socialPost: data.jobData.socialPost || "",
-          interviewQuestions: data.jobData.interviewQuestions || [],
-          competitorCompanies: data.jobData.competitorCompanies || null,
-          positionIntelligence: data.jobData.positionIntelligence || null,
-          candidatePersonaObj: data.jobData.candidatePersonaObj || null,
-          talentMarketInsight: data.jobData.talentMarketInsight || null,
-          candidateSellingPoints: data.jobData.candidateSellingPoints || [],
-          recruitmentStrategy: data.jobData.recruitmentStrategy || null,
-          booleanSearchQueries: data.jobData.booleanSearchQueries || null
-        };
-      }
-
-      const rawMatchedJobId = data.matchedJobId;
-      const matchedJobId = (rawMatchedJobId && selectedClientJobs.some(j => j.id === rawMatchedJobId)) ? rawMatchedJobId : null;
-
-      setDraftResult({
-        hasNewJob: !!data.hasNewJob,
-        matchedJobId,
-        timelineSummary: data.timelineSummary || "Processed new input",
-        clientUpdates,
-        jobData
-      });
+      setDraftResult(mockDraftResult);
       setIsReviewingDraft(true);
-
-    } catch (err) {
-      console.error("Universal Input Submit Error:", err);
-      if (err instanceof Error) {
-        toast(`Error: ${err.message}`, "error");
-      } else {
-        toast("Failed to process and update client", "error");
-      }
+      setActiveReviewTab('job'); // Default to job/report tab
+    } catch (err: any) {
+      console.error(err);
+      toast(`Error processing: ${err.message || err}`, "error");
     } finally {
       setIsProcessingInput(false);
+      setProcessingStep(0);
     }
   };
 
@@ -1068,6 +1154,7 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
         const previousReport = existingJob?.report;
 
         const mergedReport: JobReport = {
+          markdownReport: jd.markdownReport || previousReport?.markdownReport || "",
           roleOverview: {
             title: jd.title || previousReport?.roleOverview?.title || "",
             dept: jd.roleOverview?.dept || previousReport?.roleOverview?.dept || "TBD",
@@ -1213,8 +1300,13 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
   const handleCopyFullReport = () => {
     if (!selectedJob) return;
     const r = selectedJob.report;
-    const o = r.roleOverview;
-    const text = `JOB INTELLIGENCE REPORT: ${selectedJob.title}
+    
+    let text = "";
+    if (r.markdownReport) {
+      text = r.markdownReport;
+    } else {
+      const o = r.roleOverview;
+      text = `JOB INTELLIGENCE REPORT: ${selectedJob.title}
 Client: ${selectedClient?.name || "N/A"}
 
 1. Role Overview
@@ -1300,6 +1392,7 @@ ${Object.entries(r.booleanSearchQueries).map(([key, query]) => query ? `${key.to
 ${r.booleanSearch || "Not generated yet."}
 `}
 `.trim();
+    }
 
     navigator.clipboard.writeText(text)
       .then(() => {
@@ -1387,7 +1480,7 @@ ${r.booleanSearch || "Not generated yet."}
                 {/* Delete button (visible on hover) */}
                 <button 
                   className="delete-btn"
-                  onClick={(e) => handleDeleteClient(e, client.id)}
+                  onClick={(e) => handleDeleteClient(e, client)}
                   style={{ position: 'absolute', right: 12, top: 16, background: 'none', border: 'none', color: 'var(--error)', cursor: 'pointer', padding: 4, opacity: 0, transition: 'opacity 0.2s' }}
                   title="Delete Client"
                 >
@@ -1410,39 +1503,102 @@ ${r.booleanSearch || "Not generated yet."}
                 AI Prompt Configuration
               </h2>
               <p style={{ margin: 0, fontSize: 14, color: "var(--text-secondary)", lineHeight: 1.6 }}>
-                Tùy chỉnh các hướng dẫn và góc nhìn mà AI Gemini sẽ sử dụng khi phân tích JD, email, ghi chú cuộc họp. Các thay đổi của bạn sẽ được lưu vào Firestore và áp dụng toàn hệ thống.
+                Tùy chỉnh các hướng dẫn và góc nhìn mà AI Gemini sẽ sử dụng khi phân tích. Quy trình gồm hai bước tuần tự. Các thay đổi của bạn sẽ được lưu vào Firestore và áp dụng toàn hệ thống.
               </p>
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-muted)", display: "flex", justifyContent: "space-between" }}>
-                <span>NỘI DUNG PROMPT TEMPLATE</span>
-                <span style={{ color: "var(--text-secondary)" }}>Biến khả dụng: <code>{"${currentClientName}"}</code>, <code>{"${input}"}</code></span>
-              </div>
-              <textarea
-                value={customPrompt}
-                onChange={e => setCustomPrompt(e.target.value)}
-                style={{ 
-                  width: "100%", height: 350, borderRadius: 8, border: "1px solid var(--border-glass)", 
-                  padding: 16, fontSize: 14, background: "var(--bg-body)", color: "var(--text-primary)", 
-                  resize: "vertical", outline: "none", fontFamily: "monospace", lineHeight: 1.6
+            {/* Sub-tabs for step 1 and step 2 prompts */}
+            <div style={{ display: "flex", gap: 12, borderBottom: "1px solid var(--border-color)", paddingBottom: 8 }}>
+              <button
+                onClick={() => setActivePromptSubTab('company')}
+                style={{
+                  padding: "8px 16px",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  borderRadius: 6,
+                  border: "none",
+                  background: activePromptSubTab === 'company' ? "#4f46e5" : "transparent",
+                  color: activePromptSubTab === 'company' ? "white" : "var(--text-muted)",
+                  cursor: "pointer",
+                  transition: "all 0.2s"
                 }}
-                placeholder="Nhập nội dung prompt của bạn ở đây..."
-              />
+              >
+                Bước 1: Company Research Prompt
+              </button>
+              <button
+                onClick={() => setActivePromptSubTab('recruitment')}
+                style={{
+                  padding: "8px 16px",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  borderRadius: 6,
+                  border: "none",
+                  background: activePromptSubTab === 'recruitment' ? "#4f46e5" : "transparent",
+                  color: activePromptSubTab === 'recruitment' ? "white" : "var(--text-muted)",
+                  cursor: "pointer",
+                  transition: "all 0.2s"
+                }}
+              >
+                Bước 2: Recruitment Intelligence Prompt
+              </button>
             </div>
+
+            {activePromptSubTab === 'company' ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-muted)", display: "flex", justifyContent: "space-between" }}>
+                  <span>NỘI DUNG COMPANY RESEARCH PROMPT</span>
+                  <span style={{ color: "var(--text-secondary)" }}>Biến khả dụng: <code>{"${currentClientName}"}</code></span>
+                </div>
+                <textarea
+                  value={companyResearchPrompt}
+                  onChange={e => setCompanyResearchPrompt(e.target.value)}
+                  style={{ 
+                    width: "100%", height: 280, borderRadius: 8, border: "1px solid var(--border-glass)", 
+                    padding: 16, fontSize: 14, background: "var(--bg-body)", color: "var(--text-primary)", 
+                    resize: "vertical", outline: "none", fontFamily: "monospace", lineHeight: 1.6
+                  }}
+                  placeholder="Nhập nội dung prompt nghiên cứu đối tác tại đây..."
+                />
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-muted)", display: "flex", justifyContent: "space-between" }}>
+                  <span>NỘI DUNG RECRUITMENT INTELLIGENCE PROMPT</span>
+                  <span style={{ color: "var(--text-secondary)" }}>Biến khả dụng: <code>{"${companyReport}"}</code>, <code>{"${jobDescription}"}</code></span>
+                </div>
+                <textarea
+                  value={recruitmentIntelligencePrompt}
+                  onChange={e => setRecruitmentIntelligencePrompt(e.target.value)}
+                  style={{ 
+                    width: "100%", height: 280, borderRadius: 8, border: "1px solid var(--border-glass)", 
+                    padding: 16, fontSize: 14, background: "var(--bg-body)", color: "var(--text-primary)", 
+                    resize: "vertical", outline: "none", fontFamily: "monospace", lineHeight: 1.6
+                  }}
+                  placeholder="Nhập nội dung prompt bóc tách JD và lập báo cáo tuyển dụng tại đây..."
+                />
+              </div>
+            )}
 
             <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
               <button 
-                onClick={() => { setCustomPrompt(DEFAULT_SYSTEM_PROMPT); toast("Đã đặt lại prompt tuyển dụng tiếng Việt mẫu chuẩn", "success"); }}
+                onClick={() => {
+                  if (activePromptSubTab === 'company') {
+                    setCompanyResearchPrompt(DEFAULT_COMPANY_RESEARCH_PROMPT);
+                    toast("Đã đặt lại prompt Nghiên cứu Công ty mẫu", "success");
+                  } else {
+                    setRecruitmentIntelligencePrompt(DEFAULT_RECRUITMENT_INTELLIGENCE_PROMPT);
+                    toast("Đã đặt lại prompt Trí tuệ Tuyển dụng mẫu", "success");
+                  }
+                }}
                 style={{ padding: "10px 20px", background: "transparent", color: "var(--text-primary)", borderRadius: 8, border: "1.5px solid var(--border-glass)", cursor: "pointer", fontWeight: 600 }}
               >
-                Reset to Default
+                Reset Prompt mẫu
               </button>
               <button 
                 onClick={handleSavePrompt}
                 style={{ padding: "10px 24px", background: "#4f46e5", color: "white", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 600 }}
               >
-                Save Prompt
+                Save System Prompts
               </button>
             </div>
           </div>
@@ -1641,6 +1797,22 @@ ${r.booleanSearch || "Not generated yet."}
                         </div>
                       </>
                     )}
+                  </div>
+                </div>
+              ) : selectedJob.report.markdownReport ? (
+                /* Beautiful Markdown Report View */
+                <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 24, paddingRight: 8 }}>
+                  <div style={{
+                    background: "var(--bg-glass-strong)",
+                    backdropFilter: "blur(16px)",
+                    padding: "32px",
+                    borderRadius: 16,
+                    border: "1.5px solid var(--border-glass-strong)",
+                    boxShadow: "var(--shadow-glass)",
+                    color: "var(--text-primary)",
+                    lineHeight: "1.75",
+                  }} className="markdown-body">
+                    <ReactMarkdown>{selectedJob.report.markdownReport}</ReactMarkdown>
                   </div>
                 </div>
               ) : (
@@ -2004,6 +2176,53 @@ ${r.booleanSearch || "Not generated yet."}
               </div>
             </div>
 
+            {isProcessingInput && (
+              <div style={{
+                background: "var(--bg-glass-strong)",
+                backdropFilter: "blur(12px)",
+                borderRadius: 16,
+                border: "1.5px solid var(--border-glass-strong)",
+                padding: "24px 32px",
+                boxShadow: "var(--shadow-glass)",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 16,
+                textAlign: "center"
+              }}>
+                <div style={{ position: "relative", width: 48, height: 48, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <div className="animate-spin" style={{
+                    width: 48,
+                    height: 48,
+                    border: "4px solid var(--border-color)",
+                    borderTop: "4px solid #4f46e5",
+                    borderRadius: "50%",
+                    position: "absolute"
+                  }}></div>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: "#4f46e5", zIndex: 1 }}>{processingStep}</span>
+                </div>
+                <div>
+                  <h4 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 6px 0", color: "var(--text-primary)" }}>
+                    {processingStep === 1 && "Step 1: Researching Company..."}
+                    {processingStep === 2 && "Step 2: Analyzing Job Description..."}
+                    {processingStep === 3 && "Step 3: Generating Recruitment Intelligence Report..."}
+                  </h4>
+                  <p style={{ fontSize: 13, margin: 0, color: "var(--text-muted)" }}>
+                    {processingStep === 1 && "Thu thập và phân tích dữ liệu ngành nghề, văn hóa và bối cảnh của đối tác..."}
+                    {processingStep === 2 && "Bóc tách yêu cầu công việc, phân tích chân dung ứng viên lý tưởng..."}
+                    {processingStep === 3 && `Đang soạn thảo báo cáo trí tuệ tuyển dụng toàn diện... (${processingProgress} kí tự)`}
+                  </p>
+                </div>
+                {/* Visual Step Dots */}
+                <div style={{ display: "flex", gap: 12, marginTop: 8 }}>
+                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: processingStep >= 1 ? "#4f46e5" : "var(--border-color)", transition: "all 0.3s" }}></div>
+                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: processingStep >= 2 ? "#4f46e5" : "var(--border-color)", transition: "all 0.3s" }}></div>
+                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: processingStep >= 3 ? "#4f46e5" : "var(--border-color)", transition: "all 0.3s" }}></div>
+                </div>
+              </div>
+            )}
+
             {/* Jobs Section */}
             <div>
               <h2 style={{ fontSize: 20, fontWeight: 800, margin: "0 0 16px 0", color: "var(--text-primary)" }}>Jobs</h2>
@@ -2048,7 +2267,7 @@ ${r.booleanSearch || "Not generated yet."}
                     {/* Delete job button (visible on hover) */}
                     <button 
                       className="job-delete-btn"
-                      onClick={(e) => handleDeleteJob(e, job.id)}
+                      onClick={(e) => handleDeleteJob(e, job)}
                       style={{ 
                         background: 'none', 
                         border: 'none', 
@@ -2385,30 +2604,93 @@ ${r.booleanSearch || "Not generated yet."}
                 <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                   <div>
                     <p style={{ margin: "0 0 12px 0", fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.5 }}>
-                      Tùy chỉnh các hướng dẫn và góc nhìn mà AI sẽ sử dụng khi phân tích JD, email, ghi chú cuộc họp. Các thay đổi được lưu vào Firestore và áp dụng toàn hệ thống.
+                      Tùy chỉnh các hướng dẫn và góc nhìn mà AI sẽ sử dụng cho từng bước trong quy trình phân tích hai bước (Sequential Two-Step). Các thay đổi được lưu vào Firestore và áp dụng toàn hệ thống.
                     </p>
                   </div>
 
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", display: "flex", justifyContent: "space-between" }}>
-                      <span>NỘI DUNG PROMPT TEMPLATE</span>
-                      <span style={{ color: "var(--text-secondary)" }}>Biến khả dụng: <code>{"${currentClientName}"}</code>, <code>{"${input}"}</code></span>
-                    </div>
-                    <textarea
-                      value={customPrompt}
-                      onChange={e => setCustomPrompt(e.target.value)}
-                      style={{ 
-                        width: "100%", height: 280, borderRadius: 8, border: "1px solid var(--border-glass)", 
-                        padding: 12, fontSize: 13, background: "var(--bg-body)", color: "var(--text-primary)", 
-                        resize: "vertical", outline: "none", fontFamily: "monospace", lineHeight: 1.5
+                  {/* Sub-tabs for step 1 and step 2 prompts */}
+                  <div style={{ display: "flex", gap: 8, borderBottom: "1px solid var(--border-color)", paddingBottom: 8 }}>
+                    <button
+                      onClick={() => setActivePromptSubTab('company')}
+                      style={{
+                        padding: "6px 12px",
+                        fontSize: 12,
+                        fontWeight: 600,
+                        borderRadius: 6,
+                        border: "none",
+                        background: activePromptSubTab === 'company' ? "#4f46e5" : "transparent",
+                        color: activePromptSubTab === 'company' ? "white" : "var(--text-muted)",
+                        cursor: "pointer",
+                        transition: "all 0.2s"
                       }}
-                      placeholder="Nhập nội dung prompt tuyển dụng tại đây..."
-                    />
+                    >
+                      Bước 1: Company Research Prompt
+                    </button>
+                    <button
+                      onClick={() => setActivePromptSubTab('recruitment')}
+                      style={{
+                        padding: "6px 12px",
+                        fontSize: 12,
+                        fontWeight: 600,
+                        borderRadius: 6,
+                        border: "none",
+                        background: activePromptSubTab === 'recruitment' ? "#4f46e5" : "transparent",
+                        color: activePromptSubTab === 'recruitment' ? "white" : "var(--text-muted)",
+                        cursor: "pointer",
+                        transition: "all 0.2s"
+                      }}
+                    >
+                      Bước 2: Recruitment Intelligence Prompt
+                    </button>
                   </div>
+
+                  {activePromptSubTab === 'company' ? (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", display: "flex", justifyContent: "space-between" }}>
+                        <span>NỘI DUNG COMPANY RESEARCH PROMPT</span>
+                        <span style={{ color: "var(--text-secondary)" }}>Biến khả dụng: <code>{"${currentClientName}"}</code></span>
+                      </div>
+                      <textarea
+                        value={companyResearchPrompt}
+                        onChange={e => setCompanyResearchPrompt(e.target.value)}
+                        style={{ 
+                          width: "100%", height: 220, borderRadius: 8, border: "1px solid var(--border-glass)", 
+                          padding: 12, fontSize: 13, background: "var(--bg-body)", color: "var(--text-primary)", 
+                          resize: "vertical", outline: "none", fontFamily: "monospace", lineHeight: 1.5
+                        }}
+                        placeholder="Nhập nội dung prompt nghiên cứu đối tác tại đây..."
+                      />
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", display: "flex", justifyContent: "space-between" }}>
+                        <span>NỘI DUNG RECRUITMENT INTELLIGENCE PROMPT</span>
+                        <span style={{ color: "var(--text-secondary)" }}>Biến khả dụng: <code>{"${companyReport}"}</code>, <code>{"${jobDescription}"}</code></span>
+                      </div>
+                      <textarea
+                        value={recruitmentIntelligencePrompt}
+                        onChange={e => setRecruitmentIntelligencePrompt(e.target.value)}
+                        style={{ 
+                          width: "100%", height: 220, borderRadius: 8, border: "1px solid var(--border-glass)", 
+                          padding: 12, fontSize: 13, background: "var(--bg-body)", color: "var(--text-primary)", 
+                          resize: "vertical", outline: "none", fontFamily: "monospace", lineHeight: 1.5
+                        }}
+                        placeholder="Nhập nội dung prompt bóc tách JD và lập báo cáo tuyển dụng tại đây..."
+                      />
+                    </div>
+                  )}
 
                   <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 }}>
                     <button 
-                      onClick={() => { setCustomPrompt(DEFAULT_SYSTEM_PROMPT); toast("Đã đặt lại prompt tuyển dụng mẫu chuẩn", "success"); }}
+                      onClick={() => {
+                        if (activePromptSubTab === 'company') {
+                          setCompanyResearchPrompt(DEFAULT_COMPANY_RESEARCH_PROMPT);
+                          toast("Đã đặt lại prompt Nghiên cứu Công ty mẫu", "success");
+                        } else {
+                          setRecruitmentIntelligencePrompt(DEFAULT_RECRUITMENT_INTELLIGENCE_PROMPT);
+                          toast("Đã đặt lại prompt Trí tuệ Tuyển dụng mẫu", "success");
+                        }
+                      }}
                       style={{ padding: "10px 16px", background: "transparent", color: "var(--text-primary)", borderRadius: 8, border: "1.5px solid var(--border-glass)", cursor: "pointer", fontWeight: 600, fontSize: 13 }}
                     >
                       Reset Prompt mẫu
@@ -2420,7 +2702,7 @@ ${r.booleanSearch || "Not generated yet."}
                       }}
                       style={{ padding: "10px 20px", background: "#4f46e5", color: "white", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 600, fontSize: 13 }}
                     >
-                      Lưu System Prompt
+                      Lưu System Prompts
                     </button>
                   </div>
                 </div>
@@ -2551,6 +2833,22 @@ ${r.booleanSearch || "Not generated yet."}
                     }}
                   >
                     Marketing &amp; Tech
+                  </button>
+                  <button
+                    onClick={() => setActiveReviewTab('markdown')}
+                    style={{
+                      padding: "14px 16px",
+                      fontSize: 13,
+                      fontWeight: 600,
+                      border: "none",
+                      background: "none",
+                      cursor: "pointer",
+                      color: activeReviewTab === 'markdown' ? "#4f46e5" : "var(--text-muted)",
+                      borderBottom: activeReviewTab === 'markdown' ? "2px solid #4f46e5" : "2px solid transparent",
+                      transition: "all 0.2s"
+                    }}
+                  >
+                    Báo cáo đầy đủ (Markdown)
                   </button>
                 </>
               )}
@@ -3040,6 +3338,20 @@ ${r.booleanSearch || "Not generated yet."}
                 </div>
               )}
 
+              {activeReviewTab === 'markdown' && draftResult.jobData && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <label style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 600 }}>Nội dung báo cáo (Markdown) - Bạn có thể chỉnh sửa trực tiếp bên dưới</label>
+                    <textarea 
+                      value={draftResult.jobData.markdownReport || ""} 
+                      onChange={e => handleDraftMarkdownChange(e.target.value)}
+                      style={{ width: "100%", height: 350, padding: "12px 16px", borderRadius: 8, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 14, outline: "none", resize: "vertical", fontFamily: "monospace", lineHeight: 1.6 }}
+                      placeholder="Nội dung báo cáo dạng Markdown..."
+                    />
+                  </div>
+                </div>
+              )}
+
             </div>
 
             {/* Modal Footer */}
@@ -3080,6 +3392,94 @@ ${r.booleanSearch || "Not generated yet."}
               </div>
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* Client Deletion Confirmation Modal */}
+      {clientToDelete && (
+        <div style={{
+          position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+          background: "rgba(15, 23, 42, 0.5)", backdropFilter: "blur(10px)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          zIndex: 10000, padding: 24
+        }}>
+          <div style={{
+            background: "var(--bg-card)", padding: "40px", borderRadius: "28px",
+            maxWidth: 420, width: "100%", boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+            border: "1px solid var(--border-color)", textAlign: "center",
+            position: "relative", overflow: "hidden"
+          }}>
+            <div style={{ 
+              width: 72, height: 72, background: "rgba(239, 68, 68, 0.08)", 
+              borderRadius: "22px", display: "flex", alignItems: "center", 
+              justifyContent: "center", margin: "0 auto 28px auto", color: "#ef4444"
+            }}>
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            </div>
+            <h3 style={{ fontSize: 24, fontWeight: 800, margin: "0 0 14px 0", color: "var(--text-primary)", letterSpacing: "-0.03em" }}>Xác nhận xóa Đối tác</h3>
+            <p style={{ fontSize: 16, color: "var(--text-primary)", lineHeight: 1.6, marginBottom: 36, opacity: 0.9 }}>
+              Bạn có chắc chắn muốn xóa <span style={{ fontWeight: 700 }}>{clientToDelete.name}</span>? <br />
+              <span style={{ fontSize: 14, color: "#ef4444", marginTop: 10, display: "block", fontWeight: 600 }}>Hành động này không thể hoàn tác.</span>
+            </p>
+            <div style={{ display: "flex", gap: 16 }}>
+              <button 
+                onClick={() => setClientToDelete(null)}
+                style={{ flex: 1, padding: "16px", background: "var(--bg-hover)", border: "none", borderRadius: "14px", fontWeight: 700, cursor: "pointer", color: "var(--text-primary)", transition: "all 0.2s" }}
+              >
+                Hủy bỏ
+              </button>
+              <button 
+                onClick={executeDeleteClient}
+                style={{ flex: 1, padding: "16px", background: "#ef4444", color: "white", border: "none", borderRadius: "14px", fontWeight: 800, cursor: "pointer", boxShadow: "0 8px 20px rgba(239, 68, 68, 0.3)" }}
+              >
+                Xóa vĩnh viễn
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Job Deletion Confirmation Modal */}
+      {jobToDelete && (
+        <div style={{
+          position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+          background: "rgba(15, 23, 42, 0.5)", backdropFilter: "blur(10px)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          zIndex: 10000, padding: 24
+        }}>
+          <div style={{
+            background: "var(--bg-card)", padding: "40px", borderRadius: "28px",
+            maxWidth: 420, width: "100%", boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+            border: "1px solid var(--border-color)", textAlign: "center",
+            position: "relative", overflow: "hidden"
+          }}>
+            <div style={{ 
+              width: 72, height: 72, background: "rgba(239, 68, 68, 0.08)", 
+              borderRadius: "22px", display: "flex", alignItems: "center", 
+              justifyContent: "center", margin: "0 auto 28px auto", color: "#ef4444"
+            }}>
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            </div>
+            <h3 style={{ fontSize: 24, fontWeight: 800, margin: "0 0 14px 0", color: "var(--text-primary)", letterSpacing: "-0.03em" }}>Xác nhận xóa Vị trí</h3>
+            <p style={{ fontSize: 16, color: "var(--text-primary)", lineHeight: 1.6, marginBottom: 36, opacity: 0.9 }}>
+              Xóa Job: <span style={{ fontWeight: 700 }}>{jobToDelete.title}</span>? <br />
+              <span style={{ fontSize: 14, color: "#ef4444", marginTop: 10, display: "block", fontWeight: 600 }}>Toàn bộ báo cáo sẽ bị mất.</span>
+            </p>
+            <div style={{ display: "flex", gap: 16 }}>
+              <button 
+                onClick={() => setJobToDelete(null)}
+                style={{ flex: 1, padding: "16px", background: "var(--bg-hover)", border: "none", borderRadius: "14px", fontWeight: 700, cursor: "pointer", color: "var(--text-primary)", transition: "all 0.2s" }}
+              >
+                Hủy bỏ
+              </button>
+              <button 
+                onClick={executeDeleteJob}
+                style={{ flex: 1, padding: "16px", background: "#ef4444", color: "white", border: "none", borderRadius: "14px", fontWeight: 800, cursor: "pointer", boxShadow: "0 8px 20px rgba(239, 68, 68, 0.3)" }}
+              >
+                Xác nhận xóa
+              </button>
+            </div>
           </div>
         </div>
       )}
