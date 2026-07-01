@@ -181,8 +181,8 @@ Bản mô tả công việc (Job Description):
 """
 
 Hãy tạo một báo cáo tuyển dụng toàn diện dưới dạng Markdown, cấu trúc chuyên nghiệp, phân tích sâu sắc các khái niệm sau:
-1. Tổng quan vị trí (Role Overview): Tên vị trí, Phòng ban, Cấp trên trực tiếp, Khoảng lương dự kiến, Địa điểm làm việc.
-2. Bối cảnh Công ty (Company Context) & Văn hóa phù hợp.
+1. Thông tin Công ty & Bối cảnh (Company Intelligence): Tích hợp các thông tin quan trọng nhất từ bản nghiên cứu công ty phía trên vào đây để tạo bối cảnh vững chắc.
+2. Tổng quan vị trí (Role Overview): Tên vị trí, Phòng ban, Cấp trên trực tiếp, Khoảng lương dự kiến, Địa điểm làm việc. (Trình bày dạng danh sách bullet points rõ ràng)
 3. Chân dung ứng viên lý tưởng (Ideal Persona): Kinh nghiệm, ngành nghề, kỹ năng cứng bắt buộc (Must-have), kỹ năng ưu tiên (Nice-to-have), đặc điểm tính cách.
 4. Trí tuệ Vị trí (Position Intelligence): Bản chất công việc, thách thức thực tế hàng ngày, kỳ vọng ẩn giấu từ nhà tuyển dụng, các yếu tố quyết định thành công của ứng viên.
 5. Thấu hiểu Thị trường Tài năng (Talent Market Insight): Độ khó của nguồn cung, rủi ro counter-offer, tính cạnh tranh của mức lương, rủi ro notice period.
@@ -190,42 +190,62 @@ Hãy tạo một báo cáo tuyển dụng toàn diện dưới dạng Markdown, 
 7. Công cụ tìm kiếm (Boolean Search Queries): Viết sẵn các mẫu câu lệnh tìm kiếm thực chiến ngắn gọn cho LinkedIn Recruiter, CV Database, X-Ray Search, và các bộ lọc theo ngành.
 8. Gợi ý bài đăng tuyển dụng thu hút (Social Post / JD tóm tắt) & Bộ câu hỏi phỏng vấn gợi ý cho Consultant (Interview Questions / Questions for Client).
 
-LƯU Ý QUAN TRỌNG:
-- Trình bày toàn bộ báo cáo bằng định dạng Markdown đẹp mắt, có tiêu đề (Headings), danh sách (Bullet points), bảng biểu hoặc định dạng đậm nhạt rõ ràng.
+LƯU Ý QUAN TRỌNG VỀ ĐỊNH DẠNG:
+- Trình bày toàn bộ báo cáo bằng định dạng Markdown chuyên nghiệp, thẩm mỹ cao.
+- Sử dụng Tiêu đề (H1, H2, H3) để phân cấp thông tin rõ ràng.
+- Sử dụng **In đậm** cho các từ khóa then chốt để giúp người dùng nắm bắt nhanh thông tin (Scannability).
+- Sử dụng Bảng (Tables) cho các thông tin cần so sánh hoặc dữ liệu số nếu phù hợp.
+- Sử dụng Danh sách (Bullet points) có phân cấp rõ ràng.
+- Đảm bảo báo cáo bắt đầu bằng một phần giới thiệu chuyên nghiệp về công ty khách hàng dựa trên dữ liệu research.
 - KHÔNG trả về định dạng JSON hay bất cứ thông tin thừa nào khác ngoài nội dung Markdown.
 - Sử dụng ngôn phong tự nhiên, sắc bén, mang tính tư vấn cao của một Senior Consultant thực thụ.`;
 
 function extractJobTitle(markdown: string, rawInput: string): string {
   const lines = markdown.split("\n");
   
-  // 1. Try to find the main title header, which often has the format: # Báo cáo ... - Title
+  // 1. Try to find specific key-value pairs in the markdown first as they are most reliable
+  const positionMatch = markdown.match(/(?:\*\*|)?(?:Vị trí|Position|Role|Job Title)(?:\*\*|)?\s*:\s*([^\n]+)/i);
+  if (positionMatch && positionMatch[1]) {
+    const extracted = positionMatch[1].replace(/\*\*$/, "").trim();
+    if (extracted && !/^(TBD|Chưa xác định|N\/A)$/i.test(extracted)) {
+      return extracted;
+    }
+  }
+
+  // 2. Try to find the main title header, which often has the format: # Báo cáo ... - Title
   for (const line of lines) {
     const trimmed = line.trim();
     if (trimmed.startsWith("# ")) {
       const parts = trimmed.split("-");
       if (parts.length > 1) {
-        return parts[parts.length - 1].trim();
+        const potentialTitle = parts[parts.length - 1].trim();
+        if (!/(Báo cáo|Trí tuệ|Tuyển dụng|Intelligence|Report|Phân tích|là gì)/i.test(potentialTitle)) {
+          return potentialTitle;
+        }
       }
-      // If no hyphen, but it's a header and doesn't look like a generic title
+      // If no hyphen, check if it's a generic title
       const title = trimmed.replace(/^#+\s*/, "").trim();
-      if (title && !/^(Report|Intelligence|Báo cáo|Tổng quan|Trí tuệ Tuyển dụng)$/i.test(title)) {
+      if (title && !/(Report|Intelligence|Báo cáo|Tổng quan|Trí tuệ|Tuyển dụng|là gì|Phân tích)/i.test(title)) {
         return title;
       }
     }
   }
 
-  // 2. Try looking for specific key-value pairs in the markdown
-  const positionMatch = markdown.match(/(?:\*\*|)?(?:Vị trí|Position|Role|Job Title)(?:\*\*|)?\s*:\s*([^\n]+)/i);
-  if (positionMatch && positionMatch[1]) {
-    return positionMatch[1].replace(/\*\*$/, "").trim();
-  }
-
-  // 3. Fallback to raw input extraction
+  // 3. Fallback to raw input extraction - very reliable for pasted JDs
   const inputTitleMatch = rawInput.match(/^(?:Job|Vị trí|Title|Position|Job Title):\s*([^\n\r]+)/im);
   if (inputTitleMatch) return inputTitleMatch[1].trim();
 
-  const firstLine = rawInput.split("\n")[0].trim();
-  if (firstLine && firstLine.length > 5 && firstLine.length < 100) return firstLine;
+  // 4. Check first few lines of raw input for common title patterns
+  const firstLines = rawInput.split("\n").slice(0, 3);
+  for (const line of firstLines) {
+    const trimmed = line.trim();
+    if (trimmed && trimmed.length > 5 && trimmed.length < 100 && !/^(JD|Job Description|Mô tả công việc)$/i.test(trimmed)) {
+      // If the line looks like a title (not too long, no verbs, etc.)
+      if (!/(chào|hello|dear|vui lòng|please|tôi|bạn|là gì)/i.test(trimmed)) {
+        return trimmed;
+      }
+    }
+  }
 
   const inputWords = rawInput.split(/\s+/).filter(Boolean);
   if (inputWords.length > 0) {
@@ -671,6 +691,7 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
   const [isReviewingDraft, setIsReviewingDraft] = useState(false);
   const [rawInputUsed, setRawInputUsed] = useState("");
   const [activeReviewTab, setActiveReviewTab] = useState<'client' | 'markdown'>('client');
+  const [activeMarkdownReviewMode, setActiveMarkdownReviewMode] = useState<'edit' | 'preview'>('preview');
 
   // Job active tab and selected version index
   const [activeJobTab, setActiveJobTab] = useState<'report' | 'history'>('report');
@@ -1030,7 +1051,9 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
           booleanSearch: "",
           interviewQuestions: [],
           socialPost: "",
-          markdownReport: rawResult
+          markdownReport: companyReport 
+            ? `## 🏢 BÁO CÁO NGHIÊN CỨU CÔNG TY (COMPANY INTELLIGENCE)\n\n${companyReport}\n\n---\n\n${rawResult}` 
+            : rawResult
         }
       };
 
@@ -2839,15 +2862,15 @@ ${r.booleanSearch || "Not generated yet."}
                     transition: "all 0.2s"
                   }}
                 >
-                  Báo cáo Trí tuệ Tuyển dụng
+                  Báo cáo Tổng hợp (Intelligence Report)
                 </button>
               )}
             </div>
-
+ 
             {/* Modal Content Scroll Area */}
             <div style={{ padding: "24px", overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: 20 }}>
-              
-              {/* Timeline summary always visible at the top of review */}
+               
+               {/* Timeline summary always visible at the top of review */}
               <div style={{ display: "flex", flexDirection: "column", gap: 6, background: "rgba(79, 70, 229, 0.02)", padding: 16, borderRadius: 10, border: "1px dashed rgba(79, 70, 229, 0.2)" }}>
                 <label style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 700, textTransform: "uppercase" }}>Timeline Entry Summary</label>
                 <input 
@@ -2916,15 +2939,44 @@ ${r.booleanSearch || "Not generated yet."}
 
               {activeReviewTab === 'markdown' && draftResult.jobData && (
                 <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                    <label style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 600 }}>Báo cáo Trí tuệ Tuyển dụng - Bạn có thể đọc, chỉnh sửa hoặc xóa bớt nội dung trực tiếp bên dưới trước khi lưu</label>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <label style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 600 }}>Báo cáo Trí tuệ Tuyển dụng</label>
+                    <div style={{ display: "flex", background: "var(--bg-body)", padding: 4, borderRadius: 8, border: "1px solid var(--border-color)" }}>
+                      <button 
+                        onClick={() => setActiveMarkdownReviewMode('preview')}
+                        style={{ padding: "4px 12px", borderRadius: 6, fontSize: 12, border: "none", background: activeMarkdownReviewMode === 'preview' ? "var(--primary)" : "transparent", color: activeMarkdownReviewMode === 'preview' ? "#fff" : "var(--text-muted)", cursor: "pointer", fontWeight: 600 }}
+                      >
+                        Preview
+                      </button>
+                      <button 
+                        onClick={() => setActiveMarkdownReviewMode('edit')}
+                        style={{ padding: "4px 12px", borderRadius: 6, fontSize: 12, border: "none", background: activeMarkdownReviewMode === 'edit' ? "var(--primary)" : "transparent", color: activeMarkdownReviewMode === 'edit' ? "#fff" : "var(--text-muted)", cursor: "pointer", fontWeight: 600 }}
+                      >
+                        Edit
+                      </button>
+                    </div>
+                  </div>
+
+                  {activeMarkdownReviewMode === 'edit' ? (
                     <textarea 
                       value={draftResult.jobData.markdownReport || ""} 
                       onChange={e => handleDraftMarkdownChange(e.target.value)}
                       style={{ width: "100%", height: 500, padding: "12px 16px", borderRadius: 8, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 14, outline: "none", resize: "vertical", fontFamily: "monospace", lineHeight: 1.6 }}
                       placeholder="Nội dung báo cáo dạng Markdown..."
                     />
-                  </div>
+                  ) : (
+                    <div style={{ 
+                      width: "100%", 
+                      height: 500, 
+                      padding: "24px", 
+                      borderRadius: 8, 
+                      border: "1px solid var(--border-color)", 
+                      background: "var(--bg-body)", 
+                      overflowY: "auto" 
+                    }} className="markdown-body">
+                      <ReactMarkdown>{draftResult.jobData.markdownReport || ""}</ReactMarkdown>
+                    </div>
+                  )}
                 </div>
               )}
 
