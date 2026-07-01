@@ -197,22 +197,39 @@ LƯU Ý QUAN TRỌNG:
 
 function extractJobTitle(markdown: string, rawInput: string): string {
   const lines = markdown.split("\n");
+  
+  // 1. Try to find the main title header, which often has the format: # Báo cáo ... - Title
   for (const line of lines) {
     const trimmed = line.trim();
-    if (trimmed.startsWith("#") || trimmed.startsWith("##")) {
-      const match = trimmed.replace(/^#+\s*/, "").trim();
-      if (match && !/Report|Intelligence|Báo cáo|Tổng quan/i.test(match)) {
-        return match;
+    if (trimmed.startsWith("# ")) {
+      const parts = trimmed.split("-");
+      if (parts.length > 1) {
+        return parts[parts.length - 1].trim();
+      }
+      // If no hyphen, but it's a header and doesn't look like a generic title
+      const title = trimmed.replace(/^#+\s*/, "").trim();
+      if (title && !/^(Report|Intelligence|Báo cáo|Tổng quan|Trí tuệ Tuyển dụng)$/i.test(title)) {
+        return title;
       }
     }
   }
-  const positionMatch = markdown.match(/(?:Vị trí|Position|Role|Job Title)\s*:\s*([^\n]+)/i);
+
+  // 2. Try looking for specific key-value pairs in the markdown
+  const positionMatch = markdown.match(/(?:\*\*|)?(?:Vị trí|Position|Role|Job Title)(?:\*\*|)?\s*:\s*([^\n]+)/i);
   if (positionMatch && positionMatch[1]) {
-    return positionMatch[1].trim();
+    return positionMatch[1].replace(/\*\*$/, "").trim();
   }
+
+  // 3. Fallback to raw input extraction
+  const inputTitleMatch = rawInput.match(/^(?:Job|Vị trí|Title|Position|Job Title):\s*([^\n\r]+)/im);
+  if (inputTitleMatch) return inputTitleMatch[1].trim();
+
+  const firstLine = rawInput.split("\n")[0].trim();
+  if (firstLine && firstLine.length > 5 && firstLine.length < 100) return firstLine;
+
   const inputWords = rawInput.split(/\s+/).filter(Boolean);
   if (inputWords.length > 0) {
-    return inputWords.slice(0, 4).join(" ") + "...";
+    return inputWords.slice(0, 5).join(" ") + "...";
   }
   return "Báo cáo Tuyển dụng mới";
 }
@@ -987,7 +1004,7 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
         timelineSummary: `Đã tạo Báo cáo Trí tuệ Tuyển dụng cho vị trí ${extractedTitle}.`,
         clientUpdates: {
           culture: "Chưa xác minh",
-          overview: selectedClient.summary?.overview || "N/A",
+          overview: companyReport || selectedClient.summary?.overview || "Đang cập nhật thông tin...",
           industry: selectedClient.summary?.industry || "N/A",
           keyInfo: selectedClient.summary?.keyInfo || []
         },
@@ -997,7 +1014,7 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
             title: extractedTitle,
             dept: "TBD",
             reportingLine: "TBD",
-            salaryRange: "TBD",
+            salaryRange: "Thỏa thuận",
             location: "TBD",
             teamSize: "TBD"
           },
