@@ -1538,19 +1538,28 @@ ${r.booleanSearch || "Not generated yet."}
       });
   };
 
+  const isMobile = windowWidth < 1024;
+  const isDetailViewOpen = !!(selectedClientId || isCreatingClient || isEditingPrompt || isAiSettingsOpen);
+
   return (
     <div style={{ 
-      padding: selectedJob ? "24px 16px" : "32px 40px", 
+      padding: isMobile ? "16px" : (selectedJob ? "24px 16px" : "32px 40px"), 
       maxWidth: selectedJob ? 1200 : 1600, 
       margin: "0 auto", 
       height: "100%", 
       display: "flex", 
-      gap: 32 
+      gap: isMobile ? 0 : 32 
     }}>
       
       {/* LEFT PANE: Client List */}
-      {!selectedJob && (
-        <div style={{ width: 260, display: "flex", flexDirection: "column", gap: 16, flexShrink: 0 }}>
+      {!selectedJob && (!isMobile || !isDetailViewOpen) && (
+        <div style={{ 
+          width: isMobile ? "100%" : 260, 
+          display: "flex", 
+          flexDirection: "column", 
+          gap: 16, 
+          flexShrink: 0 
+        }}>
           
           {/* Search */}
           <div style={{ position: "relative" }}>
@@ -1717,9 +1726,40 @@ ${r.booleanSearch || "Not generated yet."}
       )}
 
       {/* RIGHT PANE: Main Workspace */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, position: "relative" }}>
-        
-        {isEditingPrompt ? (
+      {(!isMobile || isDetailViewOpen) && (
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, position: "relative" }}>
+          
+          {isMobile && isDetailViewOpen && !selectedJob && (
+            <button
+              onClick={() => {
+                setSelectedClientId(null);
+                setIsCreatingClient(false);
+                setIsEditingPrompt(false);
+                setIsAiSettingsOpen(false);
+              }}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                background: "var(--bg-glass)",
+                backdropFilter: "blur(8px)",
+                border: "1px solid var(--border-glass)",
+                padding: "8px 16px",
+                borderRadius: 12,
+                color: "var(--text-primary)",
+                fontSize: 14,
+                fontWeight: 600,
+                marginBottom: 16,
+                alignSelf: "flex-start",
+                cursor: "pointer"
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+              Quay lại danh sách
+            </button>
+          )}
+
+          {isEditingPrompt ? (
           <div style={{ padding: 40, background: "var(--bg-glass)", backdropFilter: "blur(16px)", borderRadius: 16, border: "1.5px solid var(--border-glass)", boxShadow: "var(--shadow-glass)", display: "flex", flexDirection: "column", gap: 24, maxWidth: 900 }}>
             <div>
               <h2 style={{ fontSize: 24, fontWeight: 800, margin: "0 0 8px 0", color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 12 }}>
@@ -1972,15 +2012,15 @@ ${r.booleanSearch || "Not generated yet."}
                 zIndex: 10,
                 background: "transparent",
                 borderBottom: "none",
-                padding: "24px 0 16px 0",
-                display: "flex", flexDirection: "column", gap: 20
+                padding: isMobile ? "16px 0" : "24px 0 16px 0",
+                display: "flex", flexDirection: "column", gap: isMobile ? 12 : 20
               }}>
-                <div style={{ maxWidth: 1200, margin: "0 auto", width: "100%", padding: "0 32px" }}>
+                <div style={{ maxWidth: 1200, margin: "0 auto", width: "100%", padding: isMobile ? "0 16px" : "0 32px" }}>
                   <button
                     onClick={() => setSelectedJobId(null)}
                     style={{
                       display: "flex", alignItems: "center", gap: 6,
-                      background: "none", border: "none", padding: "4px 0 16px 0",
+                      background: "none", border: "none", padding: isMobile ? "0 0 12px 0" : "0 0 16px 0",
                       cursor: "pointer", color: "var(--text-secondary)", fontSize: 13, fontWeight: 500
                     }}
                     onMouseEnter={e => e.currentTarget.style.color = "var(--text-primary)"}
@@ -1989,9 +2029,21 @@ ${r.booleanSearch || "Not generated yet."}
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
                     Quay lại danh sách công việc
                   </button>
-                  <div style={{ display: "flex", gap: 20, alignItems: "flex-start" }}>
+                  <div style={{ 
+                    display: "flex", 
+                    gap: isMobile ? 16 : 20, 
+                    alignItems: isMobile ? "stretch" : "flex-start",
+                    flexDirection: isMobile ? "column" : "row"
+                  }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <h1 style={{ fontSize: 34, fontWeight: 800, margin: "0 0 12px 0", color: "var(--text-primary)", letterSpacing: "-0.02em", lineHeight: 1.2 }}>{selectedJob.title}</h1>
+                      <h1 style={{ 
+                        fontSize: isMobile ? 26 : 34, 
+                        fontWeight: 800, 
+                        margin: "0 0 12px 0", 
+                        color: "var(--text-primary)", 
+                        letterSpacing: "-0.02em", 
+                        lineHeight: 1.2 
+                      }}>{selectedJob.title}</h1>
                       <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
                         <span style={{ 
                           background: "rgba(99, 102, 241, 0.08)", 
@@ -1999,7 +2051,7 @@ ${r.booleanSearch || "Not generated yet."}
                           border: "1px solid rgba(99, 102, 241, 0.15)", 
                           padding: "4px 12px", 
                           borderRadius: "100px", 
-                          fontSize: 12, 
+                          fontSize: 11, 
                           fontWeight: 600 
                         }}>{selectedClient.name}</span>
                         <span style={{ 
@@ -2008,7 +2060,7 @@ ${r.booleanSearch || "Not generated yet."}
                           border: "1px solid rgba(139, 92, 246, 0.15)", 
                           padding: "4px 12px", 
                           borderRadius: "100px", 
-                          fontSize: 12, 
+                          fontSize: 11, 
                           fontWeight: 600 
                         }}>Job Intelligence Report</span>
                         <span style={{ 
@@ -2017,18 +2069,24 @@ ${r.booleanSearch || "Not generated yet."}
                           border: "1px solid rgba(34, 197, 94, 0.15)", 
                           padding: "4px 12px", 
                           borderRadius: "100px", 
-                          fontSize: 12, 
+                          fontSize: 11, 
                           fontWeight: 600,
                           display: "inline-flex",
                           alignItems: "center",
                           gap: 6
                         }}>
                           <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#22c55e", display: "inline-block" }}></span>
-                          Updated {selectedJob.updatedAt}
+                          {isMobile ? "Updated Just now" : `Updated ${selectedJob.updatedAt}`}
                         </span>
                       </div>
                     </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, position: "relative" }}>
+                    <div style={{ 
+                      display: "flex", 
+                      alignItems: "center", 
+                      gap: 8, 
+                      position: "relative",
+                      justifyContent: isMobile ? "flex-start" : "flex-end"
+                    }}>
                       <Btn
                         onClick={handleCopyFullReport}
                         style={{
@@ -2039,13 +2097,15 @@ ${r.booleanSearch || "Not generated yet."}
                           color: "white",
                           border: "none", 
                           borderRadius: 12, 
-                          padding: "10px 20px",
+                          padding: isMobile ? "10px 16px" : "10px 20px",
                           height: "auto",
                           fontWeight: 700, 
-                          fontSize: 13.5,
+                          fontSize: 13,
                           boxShadow: "0 4px 14px rgba(99, 102, 241, 0.25)",
                           cursor: "pointer",
-                          transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)"
+                          transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
+                          flex: isMobile ? 1 : "initial",
+                          justifyContent: "center"
                         }}
                         onMouseEnter={e => {
                           e.currentTarget.style.transform = "translateY(-1.5px)";
@@ -2117,7 +2177,7 @@ ${r.booleanSearch || "Not generated yet."}
                 </div>
 
                 {/* Tabs */}
-                <div style={{ maxWidth: 1200, margin: "0 auto", width: "100%", padding: "0 32px" }}>
+                <div style={{ maxWidth: 1200, margin: "0 auto", width: "100%", padding: isMobile ? "0 16px" : "0 32px" }}>
                   <div style={{ 
                     display: "inline-flex", 
                     gap: 4, 
@@ -2346,8 +2406,8 @@ ${r.booleanSearch || "Not generated yet."}
                     </div>
                     ) : (
                     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-                      <h3 style={{ fontSize: 30, fontWeight: 700, margin: 0, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>Ideal Persona</h3>
-                      <ul style={{ margin: 0, paddingLeft: 24, fontSize: 17, lineHeight: 1.8, color: "var(--text-primary)" }}>
+                      <h3 style={{ fontSize: isMobile ? 22 : 30, fontWeight: 700, margin: 0, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>Ideal Persona</h3>
+                      <ul style={{ margin: 0, paddingLeft: 24, fontSize: isMobile ? 15 : 17, lineHeight: 1.8, color: "var(--text-primary)" }}>
                         {selectedJob.report.idealPersona.length > 0 ? selectedJob.report.idealPersona.map((item, i) => <li key={i} style={{ marginBottom: 12 }}>{item}</li>) : <li>Not available</li>}
                       </ul>
                     </div>
@@ -2357,11 +2417,11 @@ ${r.booleanSearch || "Not generated yet."}
                   {/* Competitor Companies */}
                   {selectedJob.report.competitorCompanies && (
                   <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-                    <h3 style={{ fontSize: 30, fontWeight: 700, margin: 0, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>Competitor Companies</h3>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 32 }}>
+                    <h3 style={{ fontSize: isMobile ? 22 : 30, fontWeight: 700, margin: 0, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>Competitor Companies</h3>
+                    <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: isMobile ? 24 : 32 }}>
                       <div>
-                        <div style={{ fontSize: 24, fontWeight: 600, color: "var(--text-primary)", letterSpacing: "-0.01em", marginBottom: 16 }}>Direct Competitors</div>
-                        <ul style={{ margin: 0, paddingLeft: 24, fontSize: 17, lineHeight: 1.8, color: "var(--text-primary)" }}>
+                        <div style={{ fontSize: isMobile ? 18 : 24, fontWeight: 600, color: "var(--text-primary)", letterSpacing: "-0.01em", marginBottom: 16 }}>Direct Competitors</div>
+                        <ul style={{ margin: 0, paddingLeft: 24, fontSize: isMobile ? 15 : 17, lineHeight: 1.8, color: "var(--text-primary)" }}>
                           {selectedJob.report.competitorCompanies.directCompetitors?.map((c,i)=><li key={i} style={{ marginBottom: 12 }}>{c}</li>)}
                         </ul>
                       </div>
@@ -2388,27 +2448,27 @@ ${r.booleanSearch || "Not generated yet."}
                   {/* Position Intelligence */}
                   {selectedJob.report.positionIntelligence && (
                   <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-                    <h3 style={{ fontSize: 30, fontWeight: 700, margin: 0, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>Position Intelligence</h3>
+                    <h3 style={{ fontSize: isMobile ? 22 : 30, fontWeight: 700, margin: 0, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>Position Intelligence</h3>
                     <div style={{ marginBottom: 8 }}>
-                      <span style={{ fontSize: 17, fontWeight: 600, color: "var(--text-secondary)" }}>Nature of Role: </span>
-                      <span style={{ fontSize: 17, color: "var(--text-primary)", lineHeight: 1.8 }}>{selectedJob.report.positionIntelligence.natureOfRole}</span>
+                      <span style={{ fontSize: isMobile ? 15 : 17, fontWeight: 600, color: "var(--text-secondary)" }}>Nature of Role: </span>
+                      <span style={{ fontSize: isMobile ? 15 : 17, color: "var(--text-primary)", lineHeight: 1.8 }}>{selectedJob.report.positionIntelligence.natureOfRole}</span>
                     </div>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 32 }}>
+                    <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: isMobile ? 24 : 32 }}>
                       <div>
-                        <div style={{ fontSize: 24, fontWeight: 600, color: "var(--text-primary)", letterSpacing: "-0.01em", marginBottom: 16 }}>Day-to-day Challenges</div>
-                        <ul style={{ margin: 0, paddingLeft: 24, fontSize: 17, lineHeight: 1.8, color: "var(--text-primary)" }}>{selectedJob.report.positionIntelligence.dayToDayChallenges?.map((c,i)=><li key={i} style={{ marginBottom: 12 }}>{c}</li>)}</ul>
+                        <div style={{ fontSize: isMobile ? 18 : 24, fontWeight: 600, color: "var(--text-primary)", letterSpacing: "-0.01em", marginBottom: 16 }}>Day-to-day Challenges</div>
+                        <ul style={{ margin: 0, paddingLeft: 24, fontSize: isMobile ? 15 : 17, lineHeight: 1.8, color: "var(--text-primary)" }}>{selectedJob.report.positionIntelligence.dayToDayChallenges?.map((c,i)=><li key={i} style={{ marginBottom: 12 }}>{c}</li>)}</ul>
                       </div>
                       <div>
-                        <div style={{ fontSize: 24, fontWeight: 600, color: "var(--text-primary)", letterSpacing: "-0.01em", marginBottom: 16 }}>Hidden Expectations</div>
-                        <ul style={{ margin: 0, paddingLeft: 24, fontSize: 17, lineHeight: 1.8, color: "var(--text-primary)" }}>{selectedJob.report.positionIntelligence.hiddenExpectations?.map((c,i)=><li key={i} style={{ marginBottom: 12 }}>{c}</li>)}</ul>
+                        <div style={{ fontSize: isMobile ? 18 : 24, fontWeight: 600, color: "var(--text-primary)", letterSpacing: "-0.01em", marginBottom: 16 }}>Hidden Expectations</div>
+                        <ul style={{ margin: 0, paddingLeft: 24, fontSize: isMobile ? 15 : 17, lineHeight: 1.8, color: "var(--text-primary)" }}>{selectedJob.report.positionIntelligence.hiddenExpectations?.map((c,i)=><li key={i} style={{ marginBottom: 12 }}>{c}</li>)}</ul>
                       </div>
                       <div>
-                        <div style={{ fontSize: 24, fontWeight: 600, color: "var(--text-primary)", letterSpacing: "-0.01em", marginBottom: 16 }}>Key Success Factors</div>
-                        <ul style={{ margin: 0, paddingLeft: 24, fontSize: 17, lineHeight: 1.8, color: "var(--text-primary)" }}>{selectedJob.report.positionIntelligence.keySuccessFactors?.map((c,i)=><li key={i} style={{ marginBottom: 12 }}>{c}</li>)}</ul>
+                        <div style={{ fontSize: isMobile ? 18 : 24, fontWeight: 600, color: "var(--text-primary)", letterSpacing: "-0.01em", marginBottom: 16 }}>Key Success Factors</div>
+                        <ul style={{ margin: 0, paddingLeft: 24, fontSize: isMobile ? 15 : 17, lineHeight: 1.8, color: "var(--text-primary)" }}>{selectedJob.report.positionIntelligence.keySuccessFactors?.map((c,i)=><li key={i} style={{ marginBottom: 12 }}>{c}</li>)}</ul>
                       </div>
                       <div>
-                        <div style={{ fontSize: 24, fontWeight: 600, color: "var(--text-primary)", letterSpacing: "-0.01em", marginBottom: 16 }}>Reasons Candidates Fail</div>
-                        <ul style={{ margin: 0, paddingLeft: 24, fontSize: 17, lineHeight: 1.8, color: "var(--text-primary)" }}>{selectedJob.report.positionIntelligence.commonReasonsCandidatesFail?.map((c,i)=><li key={i} style={{ marginBottom: 12 }}>{c}</li>)}</ul>
+                        <div style={{ fontSize: isMobile ? 18 : 24, fontWeight: 600, color: "var(--text-primary)", letterSpacing: "-0.01em", marginBottom: 16 }}>Reasons Candidates Fail</div>
+                        <ul style={{ margin: 0, paddingLeft: 24, fontSize: isMobile ? 15 : 17, lineHeight: 1.8, color: "var(--text-primary)" }}>{selectedJob.report.positionIntelligence.commonReasonsCandidatesFail?.map((c,i)=><li key={i} style={{ marginBottom: 12 }}>{c}</li>)}</ul>
                       </div>
                     </div>
                   </div>
@@ -2419,8 +2479,8 @@ ${r.booleanSearch || "Not generated yet."}
                   <>
                     {selectedJob.report.talentMarketInsight && (
                     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-                      <h3 style={{ fontSize: 30, fontWeight: 700, margin: 0, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>Talent Market Insight</h3>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 16, fontSize: 17, lineHeight: 1.8, color: "var(--text-primary)" }}>
+                      <h3 style={{ fontSize: isMobile ? 22 : 30, fontWeight: 700, margin: 0, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>Talent Market Insight</h3>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 16, fontSize: isMobile ? 15 : 17, lineHeight: 1.8, color: "var(--text-primary)" }}>
                         <div><strong style={{ color: "var(--text-secondary)" }}>Talent Pool Difficulty:</strong> {selectedJob.report.talentMarketInsight.talentPoolDifficulty}</div>
                         <div><strong style={{ color: "var(--text-secondary)" }}>Counter Offer Risk:</strong> {selectedJob.report.talentMarketInsight.counterOfferRisk}</div>
                         <div><strong style={{ color: "var(--text-secondary)" }}>Salary Competitiveness:</strong> {selectedJob.report.talentMarketInsight.salaryCompetitiveness}</div>
@@ -2434,8 +2494,8 @@ ${r.booleanSearch || "Not generated yet."}
                     )}
                     {selectedJob.report.recruitmentStrategy && (
                     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-                      <h3 style={{ fontSize: 30, fontWeight: 700, margin: 0, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>Recruitment Strategy</h3>
-                      <div style={{ fontSize: 17, lineHeight: 1.8, color: "var(--text-primary)" }}>
+                      <h3 style={{ fontSize: isMobile ? 22 : 30, fontWeight: 700, margin: 0, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>Recruitment Strategy</h3>
+                      <div style={{ fontSize: isMobile ? 15 : 17, lineHeight: 1.8, color: "var(--text-primary)" }}>
                         <div style={{ marginBottom: 12 }}><strong style={{ color: "var(--text-secondary)" }}>Where to Source:</strong> {selectedJob.report.recruitmentStrategy.whereToSource?.join(", ")}</div>
                         <div style={{ marginBottom: 12 }}><strong style={{ color: "var(--text-secondary)" }}>Target First:</strong> {selectedJob.report.recruitmentStrategy.companiesToTargetFirst?.join(", ")}</div>
                         <div style={{ marginBottom: 12 }}><strong style={{ color: "var(--text-secondary)" }}>Challenges/Mitigations:</strong></div>
@@ -2445,8 +2505,8 @@ ${r.booleanSearch || "Not generated yet."}
                     )}
                     {selectedJob.report.candidateSellingPoints && (
                     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-                      <h3 style={{ fontSize: 30, fontWeight: 700, margin: 0, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>Selling Points</h3>
-                      <ul style={{ margin: 0, paddingLeft: 24, fontSize: 17, lineHeight: 1.8, color: "var(--text-primary)" }}>
+                      <h3 style={{ fontSize: isMobile ? 22 : 30, fontWeight: 700, margin: 0, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>Selling Points</h3>
+                      <ul style={{ margin: 0, paddingLeft: 24, fontSize: isMobile ? 15 : 17, lineHeight: 1.8, color: "var(--text-primary)" }}>
                         {selectedJob.report.candidateSellingPoints.map((c,i) => <li key={i} style={{ marginBottom: 12 }}>{c}</li>)}
                       </ul>
                     </div>
@@ -2455,16 +2515,16 @@ ${r.booleanSearch || "Not generated yet."}
                   )}
 
                   {/* 4 & 5: Must have / Nice to have */}
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 56 }}>
+                  <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: isMobile ? 32 : 56 }}>
                     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-                      <h3 style={{ fontSize: 30, fontWeight: 700, margin: 0, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>Must Have</h3>
-                      <ul style={{ margin: 0, paddingLeft: 24, fontSize: 17, lineHeight: 1.8, color: "var(--text-primary)" }}>
+                      <h3 style={{ fontSize: isMobile ? 22 : 30, fontWeight: 700, margin: 0, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>Must Have</h3>
+                      <ul style={{ margin: 0, paddingLeft: 24, fontSize: isMobile ? 15 : 17, lineHeight: 1.8, color: "var(--text-primary)" }}>
                         {selectedJob.report.mustHave.length > 0 ? selectedJob.report.mustHave.map((item, i) => <li key={i} style={{ marginBottom: 12 }}>{item}</li>) : <li>Not available</li>}
                       </ul>
                     </div>
                     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-                      <h3 style={{ fontSize: 30, fontWeight: 700, margin: 0, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>Nice to Have</h3>
-                      <ul style={{ margin: 0, paddingLeft: 24, fontSize: 17, lineHeight: 1.8, color: "var(--text-primary)" }}>
+                      <h3 style={{ fontSize: isMobile ? 22 : 30, fontWeight: 700, margin: 0, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>Nice to Have</h3>
+                      <ul style={{ margin: 0, paddingLeft: 24, fontSize: isMobile ? 15 : 17, lineHeight: 1.8, color: "var(--text-primary)" }}>
                         {selectedJob.report.niceToHave.length > 0 ? selectedJob.report.niceToHave.map((item, i) => <li key={i} style={{ marginBottom: 12 }}>{item}</li>) : <li>Not available</li>}
                       </ul>
                     </div>
@@ -2473,7 +2533,7 @@ ${r.booleanSearch || "Not generated yet."}
                   {/* 7. Social Post */}
                   <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <h3 style={{ fontSize: 30, fontWeight: 700, margin: 0, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>Social Post</h3>
+                      <h3 style={{ fontSize: isMobile ? 22 : 30, fontWeight: 700, margin: 0, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>Social Post</h3>
                       <button 
                         onClick={() => handleCopySection(selectedJob.report.socialPost || "", "Social Post")}
                         style={{ 
@@ -2929,8 +2989,15 @@ ${r.booleanSearch || "Not generated yet."}
 
             {/* Jobs Section */}
             <div>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-                <h2 style={{ fontSize: 20, fontWeight: 800, margin: 0, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ 
+                display: "flex", 
+                alignItems: isMobile ? 'flex-start' : 'center', 
+                justifyContent: "space-between", 
+                flexDirection: isMobile ? "column" : "row",
+                gap: isMobile ? 8 : 16,
+                marginBottom: 16 
+              }}>
+                <h2 style={{ fontSize: isMobile ? 18 : 20, fontWeight: 800, margin: 0, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 10 }}>
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth="2.5"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
                   Danh sách công việc (Jobs)
                 </h2>
@@ -2972,10 +3039,10 @@ ${r.booleanSearch || "Not generated yet."}
                       if (icon) icon.style.transform = "scale(1)";
                     }}
                     style={{ 
-                      padding: "18px 24px", 
+                      padding: isMobile ? "14px 16px" : "18px 24px", 
                       display: "flex", 
                       alignItems: "center", 
-                      gap: 18,
+                      gap: isMobile ? 12 : 18,
                       borderRadius: 16,
                       cursor: "pointer",
                       position: "relative"
@@ -2988,25 +3055,35 @@ ${r.booleanSearch || "Not generated yet."}
                         display: "flex", 
                         alignItems: "center", 
                         justifyContent: "center", 
-                        width: 44, 
-                        height: 44, 
+                        width: isMobile ? 40 : 44, 
+                        height: isMobile ? 40 : 44, 
                         borderRadius: 12, 
                         background: "linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.15))",
                         transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-                        border: "1px solid rgba(99, 102, 241, 0.15)"
+                        border: "1px solid rgba(99, 102, 241, 0.15)",
+                        flexShrink: 0
                       }}
                     >
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)", marginBottom: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      <div style={{ 
+                        fontSize: isMobile ? 15 : 16, 
+                        fontWeight: 700, 
+                        color: "var(--text-primary)", 
+                        marginBottom: 4, 
+                        display: "-webkit-box",
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: "vertical",
+                        overflow: "hidden"
+                      }}>
                         {job.title}
                       </div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                         <span style={{ fontSize: 12, color: "var(--text-muted)" }}>
-                          Cập nhật: {job.updatedAt}
+                          {isMobile ? "Cập nhật:" : "Cập nhật:"} {job.updatedAt}
                         </span>
-                        <span style={{ width: 4, height: 4, borderRadius: "50%", background: "#10B981" }}></span>
+                        <span style={{ width: 4, height: 4, borderRadius: "50%", background: "#10B981", display: isMobile ? "none" : "block" }}></span>
                         <span style={{ fontSize: 11, background: "rgba(16, 185, 129, 0.1)", color: "#10B981", padding: "2px 8px", borderRadius: 12, fontWeight: 600 }}>
                           Sẵn sàng
                         </span>
@@ -3072,6 +3149,7 @@ ${r.booleanSearch || "Not generated yet."}
         )}
 
       </div>
+      )}
 
       {/* FLOATING ASK AI SECTION & TRIGGER BUTTON */}
       <div
