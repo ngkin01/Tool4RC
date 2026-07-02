@@ -158,7 +158,7 @@ const mockClients: Client[] = [
 ];
 
 const DEFAULT_COMPANY_RESEARCH_PROMPT = `Bạn là một chuyên gia nghiên cứu thị trường và Chuyên viên Tư vấn Tuyển dụng Cấp cao.
-Nhiệm vụ của bạn là nghiên cứu và xây dựng một Báo cáo Trí tuệ Công ty (Company Intelligence Report) chi tiết cho khách hàng sau:
+Nhiệm vụ của bạn là nghiên cứu và xây dựng một Insights Công ty (Company Intelligence Profile) chi tiết cho khách hàng sau:
 
 Tên công ty khách hàng: \${currentClientName}
 
@@ -171,9 +171,9 @@ Hãy thu thập, phân tích và tổng hợp các thông tin cốt lõi sau dư
 Chú ý: Hãy đưa ra các phân tích có giá trị thực chiến cho tuyển dụng. Tránh bịa đặt số liệu không có thật. Viết rõ ràng bằng Markdown.`;
 
 const DEFAULT_RECRUITMENT_INTELLIGENCE_PROMPT = `Bạn là một Senior Headhunter và Recruitment Consultant với hơn 15 năm kinh nghiệm tại Việt Nam và APAC.
-Nhiệm vụ của bạn là phân tích Bản mô tả công việc (Job Description) kết hợp với Báo cáo Trí tuệ Công ty (Company Intelligence Report) để tạo ra một Báo cáo Trí tuệ Tuyển dụng (Recruitment Intelligence Report) toàn diện, sắc bén và thực chiến bằng tiếng Việt.
+Nhiệm vụ của bạn là phân tích Bản mô tả công việc (Job Description) kết hợp với Insights Công ty (Company Intelligence Profile) để tạo ra một Insight Tuyển dụng (Hiring Insights) toàn diện, sắc bén và thực chiến bằng tiếng Việt.
 
-Thông tin Công ty (Company Intelligence Report):
+Thông tin Công ty (Company Intelligence Profile):
 """
 \${companyReport}
 """
@@ -183,7 +183,7 @@ Bản mô tả công việc (Job Description):
 \${jobDescription}
 """
 
-Hãy tạo một báo cáo tuyển dụng toàn diện dưới dạng Markdown, cấu trúc chuyên nghiệp, phân tích sâu sắc các khái niệm sau:
+Hãy tạo một bộ Insight Tuyển dụng toàn diện dưới dạng Markdown, cấu trúc chuyên nghiệp, phân tích sâu sắc các khái niệm sau:
 1. Thông tin Công ty & Bối cảnh (Company Intelligence): Tích hợp các thông tin quan trọng nhất từ bản nghiên cứu công ty phía trên vào đây để tạo bối cảnh vững chắc.
 2. Tổng quan vị trí (Role Overview): Tên vị trí, Phòng ban, Cấp trên trực tiếp, Khoảng lương dự kiến, Địa điểm làm việc. (Trình bày dạng danh sách bullet points rõ ràng)
 3. Chân dung ứng viên lý tưởng (Ideal Persona): Kinh nghiệm, ngành nghề, kỹ năng cứng bắt buộc (Must-have), kỹ năng ưu tiên (Nice-to-have), đặc điểm tính cách.
@@ -194,12 +194,12 @@ Hãy tạo một báo cáo tuyển dụng toàn diện dưới dạng Markdown, 
 8. Gợi ý bài đăng tuyển dụng thu hút (Social Post / JD tóm tắt) & Bộ câu hỏi phỏng vấn gợi ý cho Consultant (Interview Questions / Questions for Client).
 
 LƯU Ý QUAN TRỌNG VỀ ĐỊNH DẠNG:
-- Trình bày toàn bộ báo cáo bằng định dạng Markdown chuyên nghiệp, thẩm mỹ cao.
+- Trình bày toàn bộ tài liệu bằng định dạng Markdown chuyên nghiệp, thẩm mỹ cao.
 - Sử dụng Tiêu đề (H1, H2, H3) để phân cấp thông tin rõ ràng.
 - Sử dụng **In đậm** cho các từ khóa then chốt để giúp người dùng nắm bắt nhanh thông tin (Scannability).
 - Sử dụng Bảng (Tables) cho các thông tin cần so sánh hoặc dữ liệu số nếu phù hợp. **LƯU Ý: Luôn để ít nhất một dòng trống trước và sau mỗi bảng.**
 - Sử dụng Danh sách (Bullet points) có phân cấp rõ ràng.
-- Đảm bảo báo cáo bắt đầu bằng một phần giới thiệu chuyên nghiệp về công ty khách hàng dựa trên dữ liệu research.
+- Đảm bảo nội dung bắt đầu bằng một phần giới thiệu chuyên nghiệp về công ty khách hàng dựa trên dữ liệu research.
 - KHÔNG trả về định dạng JSON hay bất cứ thông tin thừa nào khác ngoài nội dung Markdown.
 - Sử dụng ngôn phong tự nhiên, sắc bén, mang tính tư vấn cao của một Senior Consultant thực thụ.`;
 
@@ -215,20 +215,20 @@ function extractJobTitle(markdown: string, rawInput: string): string {
     }
   }
 
-  // 2. Try to find the main title header, which often has the format: # Báo cáo ... - Title
+  // 2. Try to find the main title header, which often has the format: # Insight ... - Title
   for (const line of lines) {
     const trimmed = line.trim();
     if (trimmed.startsWith("# ")) {
       const parts = trimmed.split("-");
       if (parts.length > 1) {
         const potentialTitle = parts[parts.length - 1].trim();
-        if (!/(Báo cáo|Trí tuệ|Tuyển dụng|Intelligence|Report|Phân tích|là gì)/i.test(potentialTitle)) {
+        if (!/(Insight|Trí tuệ|Tuyển dụng|Intelligence|Report|Phân tích|là gì)/i.test(potentialTitle)) {
           return potentialTitle;
         }
       }
       // If no hyphen, check if it's a generic title
       const title = trimmed.replace(/^#+\s*/, "").trim();
-      if (title && !/(Report|Intelligence|Báo cáo|Tổng quan|Trí tuệ|Tuyển dụng|là gì|Phân tích)/i.test(title)) {
+      if (title && !/(Report|Intelligence|Insight|Tổng quan|Trí tuệ|Tuyển dụng|là gì|Phân tích)/i.test(title)) {
         return title;
       }
     }
@@ -254,7 +254,7 @@ function extractJobTitle(markdown: string, rawInput: string): string {
   if (inputWords.length > 0) {
     return inputWords.slice(0, 5).join(" ") + "...";
   }
-  return "Báo cáo Tuyển dụng mới";
+  return "Insight Tuyển dụng mới";
 }
 
 const DEFAULT_SYSTEM_PROMPT = `Bạn là một Senior Headhunter và Recruitment Consultant với hơn 15 năm kinh nghiệm tại Việt Nam và APAC.
@@ -268,7 +268,7 @@ Mục tiêu của bạn là giúp consultant:
 4. Biết nên tìm ứng viên ở đâu.
 5. Biết cách bán job cho ứng viên.
 6. Biết những rủi ro tuyển dụng có thể xảy ra.
-7. Có thể bắt đầu sourcing ngay sau khi đọc báo cáo.
+7. Có thể bắt đầu sourcing ngay lập tức.
 
 ==================================================
 CORE PRINCIPLES
@@ -284,7 +284,7 @@ Phải sử dụng:
 
 Mỗi insight phải giúp consultant hành động được.
 
-Báo cáo phải mang tính tư vấn (consultative), thực chiến (actionable), không chỉ mang tính mô tả (descriptive).
+Tài liệu phải mang tính tư vấn (consultative), thực chiến (actionable), không chỉ mang tính mô tả (descriptive).
 
 ==================================================
 FACT VS INFERENCE (QUY TẮC CHỐNG LẶP & GHI NHÃN)
@@ -296,7 +296,7 @@ FACT: Có trong JD, website, LinkedIn chính thức hoặc nguồn đáng tin c�
 INFERENCE: Suy luận hợp lý từ dữ liệu có sẵn.
 
 CẢNH BÁO QUAN TRỌNG CHỐNG LẶP VÔ HẠN:
-- TUYỆT ĐỐI KHÔNG ghi chú hoặc thêm các nhãn đóng/mở ngoặc lặp đi lặp lại như "(Fact: ...)", "(Inference: ...)", "(Dựa trên...)" vào cuối mỗi câu hoặc từng ý nhỏ. Việc này làm báo cáo cực kỳ lộn xộn, mất tính chuyên nghiệp, và làm AI bị lặp từ vô hạn gây lỗi hệ thống.
+- TUYỆT ĐỐI KHÔNG ghi chú hoặc thêm các nhãn đóng/mở ngoặc lặp đi lặp lại như "(Fact: ...)", "(Inference: ...)", "(Dựa trên...)" vào cuối mỗi câu hoặc từng ý nhỏ. Việc này làm tài liệu cực kỳ lộn xộn, mất tính chuyên nghiệp, và làm AI bị lặp từ vô hạn gây lỗi hệ thống.
 - Hãy viết nội dung một cách tự nhiên, trôi chảy dưới góc nhìn của chuyên gia tư vấn. Nếu là suy luận, hãy dùng các cụm từ diễn đạt tự nhiên như: "Dựa trên thực tế tuyển dụng...", "Nhiều khả năng...", "Có thể nhận định...", "Từ góc độ thị trường..." thay vì sử dụng nhãn đóng mở ngoặc.
 
 Không được trình bày INFERENCE như FACT.
@@ -421,7 +421,7 @@ FINAL SELF-CHECK
 ==================================================
 
 Trước khi trả kết quả, hãy tự hỏi:
-"Nếu tôi là consultant chưa từng tuyển vị trí này, liệu báo cáo này đã đủ giúp tôi:
+"Nếu tôi là consultant chưa từng tuyển vị trí này, liệu tài liệu này đã đủ giúp tôi:
 1. Hiểu công ty?
 2. Hiểu vị trí?
 3. Hiểu thị trường?
@@ -435,7 +435,7 @@ Nếu câu trả lời là chưa, hãy bổ sung thêm recruitment insights.
 ==================================================
 LANGUAGE & STYLE INSTRUCTIONS
 ==================================================
-Báo cáo phải được viết chủ yếu bằng tiếng Việt, nhưng có sự kết hợp tự nhiên, khéo léo với các thuật ngữ tiếng Anh chuyên ngành nhân sự và tuyển dụng tại Việt Nam (ví dụ: Job Title, JD, Candidate Persona, Sourcing Channel, EVP, CV, Portfolio, Tech Stack, Must Have, Nice to Have, Headcount, Notice Period, Counter Offer, v.v.).
+Tài liệu phải được viết chủ yếu bằng tiếng Việt, nhưng có sự kết hợp tự nhiên, khéo léo với các thuật ngữ tiếng Anh chuyên ngành nhân sự và tuyển dụng tại Việt Nam (ví dụ: Job Title, JD, Candidate Persona, Sourcing Channel, EVP, CV, Portfolio, Tech Stack, Must Have, Nice to Have, Headcount, Notice Period, Counter Offer, v.v.).
 - Viết theo phong cách chuyên nghiệp, sắc sảo, tự tin của một Headhunter Senior tư vấn cho đồng nghiệp hoặc đối tác.
 - Các ý cần ngắn gọn, súc tích, dạng bullet-points gãy gọn, có chiều sâu thực chiến cao.
 
@@ -560,7 +560,29 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
     return { provider, model };
   };
 
+  const cleanMarkdownFences = (text: string): string => {
+    if (!text) return "";
+    let cleaned = text.trim();
+    
+    // Check if the entire response is wrapped in outer code blocks
+    // Only strip if it actually starts and ends with triple backticks
+    if (cleaned.startsWith("```")) {
+      const firstNewLine = cleaned.indexOf("\n");
+      if (firstNewLine !== -1) {
+        const afterFence = cleaned.substring(firstNewLine + 1).trim();
+        if (afterFence.endsWith("```")) {
+          cleaned = afterFence.substring(0, afterFence.length - 3).trim();
+        }
+      } else {
+        // Simple single-line fence
+        cleaned = cleaned.replace(/^```|```$/g, "").trim();
+      }
+    }
+    return cleaned;
+  };
+
   const extractUsageAndClean = (text: string) => {
+    let cleanedText = text;
     const marker = "__USAGE__:";
     if (text.includes(marker)) {
       const parts = text.split(marker);
@@ -569,12 +591,12 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
         const usage = JSON.parse(usageStr);
         const { provider, model } = getEffectiveAiDetails();
         UsageTracker.logUsage(provider, model, usage.prompt_tokens || 0, usage.completion_tokens || 0);
-        return parts[0].trim();
+        cleanedText = parts[0].trim();
       } catch (e) {
         console.error("Failed to parse usage:", e);
       }
     }
-    return text;
+    return cleanMarkdownFences(cleanedText);
   };
 
   const handleCopySection = (text: string, label: string) => {
@@ -1088,123 +1110,279 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
     if (!universalInput.trim() || !selectedClient) return;
     setIsProcessingInput(true);
     setProcessingProgress(0);
-    setProcessingStep(1); // Step 1: Researching Company...
+    setProcessingStep(1); // Step 1: Phân tích & Nghiên cứu thông tin...
     
     try {
-      // Step 1: Company Research AI Call
-      console.log("Step 1: Starting Company Research...");
-      const step1Response = await fetch('/api/freecai/step1-company-research', {
+      // 1. Analyze user intent
+      console.log("Analyzing user intent...");
+      const analyzeResponse = await fetch('/api/freecai/analyze-intent', {
         method: 'POST',
-        headers: getAiHeaders(),
+        headers: {
+          ...getAiHeaders(),
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify({
+          input: universalInput,
           clientName: selectedClient.name,
-          customPrompt: companyResearchPrompt || DEFAULT_COMPANY_RESEARCH_PROMPT
+          clientSummary: selectedClient.summary || {},
+          existingJobs: selectedClientJobs.map(j => ({ id: j.id, title: j.title }))
         })
       });
 
-      if (!step1Response.ok) {
-        throw new Error(`Step 1 (Company Research) failed: ${step1Response.statusText}`);
+      if (!analyzeResponse.ok) {
+        throw new Error(`Failed to analyze input intent: ${analyzeResponse.statusText}`);
       }
 
-      const step1Data = await step1Response.json();
-      const companyReport = step1Data.companyReport || "";
-      if (step1Data.usage) {
-        const { provider, model } = getEffectiveAiDetails();
-        UsageTracker.logUsage(provider, model, step1Data.usage.prompt_tokens || 0, step1Data.usage.completion_tokens || 0);
-      }
-
-      // Step 2: Transition to Analyzing Job Description...
-      setProcessingStep(2);
-      await new Promise(resolve => setTimeout(resolve, 1500)); // Smooth transition buffer
-
-      // Step 3: Transition to Generating Recruitment Intelligence Report...
-      setProcessingStep(3);
-
-      console.log("Step 2: Starting Recruitment Intelligence...");
-      const step2Response = await fetch('/api/freecai/step2-recruitment-intelligence', {
-        method: 'POST',
-        headers: getAiHeaders(),
-        body: JSON.stringify({
-          companyReport: companyReport,
-          jobDescription: universalInput,
-          customPrompt: recruitmentIntelligencePrompt || DEFAULT_RECRUITMENT_INTELLIGENCE_PROMPT
-        })
-      });
-
-      if (!step2Response.ok) {
-        throw new Error(`Step 2 (Recruitment Intelligence) failed: ${step2Response.statusText}`);
-      }
-
-      let rawResult = "";
-      const reader = step2Response.body?.getReader();
-      if (reader) {
-        const decoder = new TextDecoder();
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          const chunk = decoder.decode(value, { stream: true });
-          rawResult += chunk;
-          setProcessingProgress(prev => prev + chunk.length);
-        }
-      } else {
-        rawResult = await step2Response.text();
-        setProcessingProgress(rawResult.length);
-      }
-
-      // Clean up usage data from stream and log it
-      rawResult = extractUsageAndClean(rawResult);
-
-      if (rawResult.includes("ERROR_STREAMING:")) {
-        const parts = rawResult.split("ERROR_STREAMING:");
-        throw new Error(parts[parts.length - 1].trim() || "Failed to generate report during stream");
-      }
-
-      // Extract a clean title from the generated Markdown
-      const extractedTitle = manualJobTitle.trim() || extractJobTitle(rawResult, universalInput);
+      const { intentType, matchedJobId, reasoning } = await analyzeResponse.json();
+      console.log(`Intent analyzed: type=${intentType}, matchedId=${matchedJobId}`);
 
       setRawInputUsed(universalInput);
       setManualJobTitle(""); // Reset for next use
 
-      // Construct a compatible draftResult structure
-      const mockDraftResult = {
-        hasNewJob: true,
-        matchedJobId: "null",
-        timelineSummary: `Đã tạo Báo cáo Trí tuệ Tuyển dụng cho vị trí ${extractedTitle}.`,
-        clientUpdates: {
-          culture: "Chưa xác minh",
-          overview: companyReport || selectedClient.summary?.overview || "Đang cập nhật thông tin...",
-          industry: selectedClient.summary?.industry || "N/A",
-          keyInfo: selectedClient.summary?.keyInfo || []
-        },
-        jobData: {
-          title: extractedTitle,
-          roleOverview: {
-            title: extractedTitle,
-            dept: "TBD",
-            reportingLine: "TBD",
-            salaryRange: "Thỏa thuận",
-            location: "TBD",
-            teamSize: "TBD"
+      // Branch out depending on the analyzed intent:
+      if (intentType === "CLIENT_UPDATE") {
+        // CLIENT_UPDATE Flow
+        setProcessingStep(2); // Translates to "Step 2: Cập nhật thông tin chung công ty..."
+        console.log("Processing client-level updates...");
+        
+        const clientUpdateResponse = await fetch('/api/freecai/process-client-update', {
+          method: 'POST',
+          headers: {
+            ...getAiHeaders(),
+            'Content-Type': 'application/json'
           },
-          companyContext: [],
-          idealPersona: [],
-          mustHave: [],
-          niceToHave: [],
-          questionsForClient: [],
-          challenges: [],
-          targetCompanies: [],
-          booleanSearch: "",
-          interviewQuestions: [],
-          socialPost: "",
-          markdownReport: companyReport 
-            ? `## 🏢 BÁO CÁO NGHIÊN CỨU CÔNG TY (COMPANY INTELLIGENCE)\n\n${companyReport}\n\n---\n\n${rawResult}` 
-            : rawResult
-        }
-      };
+          body: JSON.stringify({
+            input: universalInput,
+            clientName: selectedClient.name,
+            clientSummary: selectedClient.summary || {}
+          })
+        });
 
-      setDraftResult(mockDraftResult);
-      setIsReviewingDraft(true);
-      setActiveReviewTab('markdown'); // Default to the final report tab
+        if (!clientUpdateResponse.ok) {
+          throw new Error(`Failed to process client-level update: ${clientUpdateResponse.statusText}`);
+        }
+
+        const clientUpdateData = await clientUpdateResponse.json();
+
+        const mockDraftResult = {
+          hasNewJob: false,
+          matchedJobId: "null",
+          timelineSummary: reasoning || `Cập nhật thông tin công ty ${selectedClient.name}.`,
+          clientUpdates: {
+            culture: clientUpdateData.culture || "Chưa xác minh",
+            overview: clientUpdateData.overview || "Đang cập nhật...",
+            industry: clientUpdateData.industry || "N/A",
+            keyInfo: clientUpdateData.keyInfo || []
+          },
+          jobData: null
+        };
+
+        setDraftResult(mockDraftResult);
+        setIsReviewingDraft(true);
+        setActiveReviewTab('client'); // Default to client updates review tab
+
+      } else if (intentType === "JOB_UPDATE" && matchedJobId && matchedJobId !== "null" && selectedClientJobs.some(j => j.id === matchedJobId)) {
+        // JOB_UPDATE Flow
+        const existingJob = selectedClientJobs.find(j => j.id === matchedJobId)!;
+        setProcessingStep(2); // Translates to "Step 2: Cập nhật & Gộp thông tin tuyển dụng..."
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        setProcessingStep(3); // Translates to "Step 3: Soạn thảo Insights Tuyển dụng..."
+        console.log(`Starting job update streaming merge for job: ${existingJob.title}`);
+        
+        const jobUpdateResponse = await fetch('/api/freecai/process-job-update', {
+          method: 'POST',
+          headers: {
+            ...getAiHeaders(),
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            input: universalInput,
+            clientName: selectedClient.name,
+            existingJobReport: existingJob.report
+          })
+        });
+
+        if (!jobUpdateResponse.ok) {
+          throw new Error(`Failed to merge job updates: ${jobUpdateResponse.statusText}`);
+        }
+
+        let rawResult = "";
+        const reader = jobUpdateResponse.body?.getReader();
+        if (reader) {
+          const decoder = new TextDecoder();
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            const chunk = decoder.decode(value, { stream: true });
+            rawResult += chunk;
+            setProcessingProgress(prev => prev + chunk.length);
+          }
+        } else {
+          rawResult = await jobUpdateResponse.text();
+          setProcessingProgress(rawResult.length);
+        }
+
+        rawResult = extractUsageAndClean(rawResult);
+
+        if (rawResult.includes("ERROR_STREAMING:")) {
+          const parts = rawResult.split("ERROR_STREAMING:");
+          throw new Error(parts[parts.length - 1].trim() || "Failed to stream job update merge");
+        }
+
+        setProcessingStep(4); // Translates to "Step 4: Cấu trúc hóa dữ liệu thông minh..."
+        console.log("Extracting structured fields from merged job report...");
+        
+        const extractResponse = await fetch('/api/freecai/extract-structured-fields', {
+          method: 'POST',
+          headers: {
+            ...getAiHeaders(),
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            markdownReport: rawResult,
+            title: existingJob.title
+          })
+        });
+
+        if (!extractResponse.ok) {
+          throw new Error(`Failed to extract structured fields: ${extractResponse.statusText}`);
+        }
+
+        const extractedFields = await extractResponse.json();
+
+        const mockDraftResult = {
+          hasNewJob: true,
+          matchedJobId: matchedJobId,
+          timelineSummary: reasoning || `Cập nhật Insight Tuyển dụng cho vị trí ${existingJob.title}.`,
+          clientUpdates: {
+            culture: "Chưa xác minh",
+            overview: selectedClient.summary?.overview || "Đang cập nhật thông tin...",
+            industry: selectedClient.summary?.industry || "N/A",
+            keyInfo: selectedClient.summary?.keyInfo || []
+          },
+          jobData: {
+            ...extractedFields,
+            markdownReport: rawResult
+          }
+        };
+
+        setDraftResult(mockDraftResult);
+        setIsReviewingDraft(true);
+        setActiveReviewTab('markdown'); // Default to markdown report tab
+
+      } else {
+        // NEW_JOB Flow (Default/Fallback)
+        console.log("Step 1: Starting Company Research...");
+        const step1Response = await fetch('/api/freecai/step1-company-research', {
+          method: 'POST',
+          headers: getAiHeaders(),
+          body: JSON.stringify({
+            clientName: selectedClient.name,
+            customPrompt: companyResearchPrompt || DEFAULT_COMPANY_RESEARCH_PROMPT
+          })
+        });
+
+        if (!step1Response.ok) {
+          throw new Error(`Step 1 (Company Research) failed: ${step1Response.statusText}`);
+        }
+
+        const step1Data = await step1Response.json();
+        const companyReport = step1Data.companyReport || "";
+        if (step1Data.usage) {
+          const { provider, model } = getEffectiveAiDetails();
+          UsageTracker.logUsage(provider, model, step1Data.usage.prompt_tokens || 0, step1Data.usage.completion_tokens || 0);
+        }
+
+        setProcessingStep(2); // Translates to "Step 2: Phân tích mô tả công việc (JD)..."
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        setProcessingStep(3); // Translates to "Step 3: Soạn thảo Insights Tuyển dụng..."
+        console.log("Step 2: Starting Hiring Insights...");
+        const step2Response = await fetch('/api/freecai/step2-recruitment-intelligence', {
+          method: 'POST',
+          headers: getAiHeaders(),
+          body: JSON.stringify({
+            companyReport: companyReport,
+            jobDescription: universalInput,
+            customPrompt: recruitmentIntelligencePrompt || DEFAULT_RECRUITMENT_INTELLIGENCE_PROMPT
+          })
+        });
+
+        if (!step2Response.ok) {
+          throw new Error(`Step 2 (Recruitment Intelligence) failed: ${step2Response.statusText}`);
+        }
+
+        let rawResult = "";
+        const reader = step2Response.body?.getReader();
+        if (reader) {
+          const decoder = new TextDecoder();
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            const chunk = decoder.decode(value, { stream: true });
+            rawResult += chunk;
+            setProcessingProgress(prev => prev + chunk.length);
+          }
+        } else {
+          rawResult = await step2Response.text();
+          setProcessingProgress(rawResult.length);
+        }
+
+        rawResult = extractUsageAndClean(rawResult);
+
+        if (rawResult.includes("ERROR_STREAMING:")) {
+          const parts = rawResult.split("ERROR_STREAMING:");
+          throw new Error(parts[parts.length - 1].trim() || "Failed to generate report during stream");
+        }
+
+        // Extract a clean title from the generated Markdown
+        const extractedTitle = manualJobTitle.trim() || extractJobTitle(rawResult, universalInput);
+
+        setProcessingStep(4); // Translates to "Step 4: Cấu trúc hóa dữ liệu thông minh..."
+        console.log("Extracting structured fields from generated new job report...");
+        
+        const extractResponse = await fetch('/api/freecai/extract-structured-fields', {
+          method: 'POST',
+          headers: {
+            ...getAiHeaders(),
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            markdownReport: rawResult,
+            title: extractedTitle
+          })
+        });
+
+        if (!extractResponse.ok) {
+          throw new Error(`Failed to extract structured fields: ${extractResponse.statusText}`);
+        }
+
+        const extractedFields = await extractResponse.json();
+
+        const mockDraftResult = {
+          hasNewJob: true,
+          matchedJobId: "null",
+          timelineSummary: reasoning || `Đã tạo Insight Tuyển dụng cho vị trí ${extractedTitle}.`,
+          clientUpdates: {
+            culture: "Chưa xác minh",
+            overview: companyReport || selectedClient.summary?.overview || "Đang cập nhật thông tin...",
+            industry: selectedClient.summary?.industry || "N/A",
+            keyInfo: selectedClient.summary?.keyInfo || []
+          },
+          jobData: {
+            ...extractedFields,
+            markdownReport: companyReport 
+              ? `## 🏢 INSIGHTS CÔNG TY (COMPANY INTELLIGENCE)\n\n${companyReport}\n\n---\n\n${rawResult}` 
+              : rawResult
+          }
+        };
+
+        setDraftResult(mockDraftResult);
+        setIsReviewingDraft(true);
+        setActiveReviewTab('markdown'); // Default to markdown report tab
+      }
+
     } catch (err: any) {
       console.error(err);
       toast(`Error processing: ${err.message || err}`, "error");
@@ -1869,7 +2047,7 @@ ${r.booleanSearch || "Not generated yet."}
                   transition: "all 0.2s"
                 }}
               >
-                Bước 2: Recruitment Intelligence Prompt
+                Bước 2: Hiring Insights Prompt
               </button>
             </div>
 
@@ -1893,7 +2071,7 @@ ${r.booleanSearch || "Not generated yet."}
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-muted)", display: "flex", justifyContent: "space-between" }}>
-                  <span>NỘI DUNG RECRUITMENT INTELLIGENCE PROMPT</span>
+                  <span>NỘI DUNG HIRING INSIGHTS PROMPT</span>
                   <span style={{ color: "var(--text-secondary)" }}>Biến khả dụng: <code>{"${companyReport}"}</code>, <code>{"${jobDescription}"}</code></span>
                 </div>
                 <textarea
@@ -1904,7 +2082,7 @@ ${r.booleanSearch || "Not generated yet."}
                     padding: 16, fontSize: 14, background: "var(--bg-body)", color: "var(--text-primary)", 
                     resize: "vertical", outline: "none", fontFamily: "monospace", lineHeight: 1.6
                   }}
-                  placeholder="Nhập nội dung prompt bóc tách JD và lập báo cáo tuyển dụng tại đây..."
+                  placeholder="Nhập nội dung prompt bóc tách JD và xây dựng Hiring Insights tại đây..."
                 />
               </div>
             )}
@@ -1917,7 +2095,7 @@ ${r.booleanSearch || "Not generated yet."}
                     toast("Đã đặt lại prompt Nghiên cứu Công ty mẫu", "success");
                   } else {
                     setRecruitmentIntelligencePrompt(DEFAULT_RECRUITMENT_INTELLIGENCE_PROMPT);
-                    toast("Đã đặt lại prompt Trí tuệ Tuyển dụng mẫu", "success");
+                    toast("Đã đặt lại prompt Insight Tuyển dụng mẫu", "success");
                   }
                 }}
                 style={{ padding: "10px 20px", background: "transparent", color: "var(--text-primary)", borderRadius: 8, border: "1.5px solid var(--border-glass)", cursor: "pointer", fontWeight: 600 }}
@@ -2421,16 +2599,17 @@ ${r.booleanSearch || "Not generated yet."}
                 </div>
               ) : selectedJob.report.markdownReport ? (
                 /* Beautiful Markdown Report View */
-                <div style={{ maxWidth: 1200, margin: "0 auto", width: "100%", padding: "0 32px" }}>
+                <div style={{ maxWidth: 1000, margin: "0 auto", width: "100%", padding: "0 24px" }}>
                   <div style={{
                     color: "var(--text-primary)",
-                    lineHeight: "1.8",
-                    fontSize: "16px",
-                    background: "transparent",
-                    border: "none",
-                    boxShadow: "none"
+                    background: "var(--bg-card)",
+                    border: "1px solid var(--border-color)",
+                    boxShadow: "0 10px 30px -10px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.02)",
+                    borderRadius: "16px",
+                    padding: "48px 56px",
+                    lineHeight: "1.8"
                   }} className="markdown-body">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{selectedJob.report.markdownReport}</ReactMarkdown>
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{cleanMarkdownFences(selectedJob.report.markdownReport)}</ReactMarkdown>
                   </div>
                 </div>
               ) : (
@@ -2924,11 +3103,22 @@ ${r.booleanSearch || "Not generated yet."}
                     borderRadius: 12, 
                     fontSize: 14, 
                     fontWeight: 500,
-                    border: "1.5px solid rgba(99, 102, 241, 0.1)",
+                    border: "1.5px solid rgba(99, 102, 241, 0.15)",
                     background: "rgba(255, 255, 255, 0.5)",
                     backdropFilter: "none",
                     boxShadow: "none",
-                    margin: "1px"
+                    margin: "1px",
+                    transition: "all 0.3s cubic-bezier(0.16, 1, 0.3, 1)"
+                  }}
+                  onFocus={e => {
+                    e.currentTarget.style.background = "#ffffff";
+                    e.currentTarget.style.borderColor = "#6366f1";
+                    e.currentTarget.style.boxShadow = "0 10px 25px -5px rgba(99, 102, 241, 0.15), 0 0 0 3px rgba(99, 102, 241, 0.1)";
+                  }}
+                  onBlur={e => {
+                    e.currentTarget.style.background = "rgba(255, 255, 255, 0.5)";
+                    e.currentTarget.style.borderColor = "rgba(99, 102, 241, 0.15)";
+                    e.currentTarget.style.boxShadow = "none";
                   }}
                 />
               </div>
@@ -2993,11 +3183,22 @@ ${r.booleanSearch || "Not generated yet."}
                     fontFamily: "inherit",
                     lineHeight: 1.6,
                     fontWeight: 500,
-                    border: "1.5px solid rgba(99, 102, 241, 0.1)",
+                    border: "1.5px solid rgba(99, 102, 241, 0.15)",
                     background: "rgba(255, 255, 255, 0.5)",
                     backdropFilter: "none",
                     boxShadow: "none",
-                    margin: "1px"
+                    margin: "1px",
+                    transition: "all 0.3s cubic-bezier(0.16, 1, 0.3, 1)"
+                  }}
+                  onFocus={e => {
+                    e.currentTarget.style.background = "#ffffff";
+                    e.currentTarget.style.borderColor = "#6366f1";
+                    e.currentTarget.style.boxShadow = "0 10px 25px -5px rgba(99, 102, 241, 0.15), 0 0 0 3px rgba(99, 102, 241, 0.1)";
+                  }}
+                  onBlur={e => {
+                    e.currentTarget.style.background = "rgba(255, 255, 255, 0.5)";
+                    e.currentTarget.style.borderColor = "rgba(99, 102, 241, 0.15)";
+                    e.currentTarget.style.boxShadow = "none";
                   }}
                 />
               </div>
@@ -3033,14 +3234,14 @@ ${r.booleanSearch || "Not generated yet."}
                   <h4 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 6px 0", color: "var(--text-primary)" }}>
                     {processingStep === 1 && "Step 1: Researching Company..."}
                     {processingStep === 2 && "Step 2: Analyzing Job Description..."}
-                    {processingStep === 3 && "Step 3: Generating Recruitment Intelligence Report..."}
+                    {processingStep === 3 && "Step 3: Generating Hiring Insights..."}
                     {processingStep === 4 && "Step 4: Finalizing Data Insights..."}
                   </h4>
                   <p style={{ fontSize: 13, margin: 0, color: "var(--text-muted)" }}>
                     {processingStep === 1 && "Thu thập và phân tích dữ liệu ngành nghề, văn hóa và bối cảnh của đối tác..."}
                     {processingStep === 2 && "Bóc tách yêu cầu công việc, phân tích chân dung ứng viên lý tưởng..."}
-                    {processingStep === 3 && `Đang soạn thảo báo cáo trí tuệ tuyển dụng toàn diện... (${processingProgress} kí tự)`}
-                    {processingStep === 4 && "Bóc tách và cấu trúc hóa dữ liệu báo cáo để lưu trữ vào hệ thống..."}
+                    {processingStep === 3 && `Đang soạn thảo Insight Tuyển dụng toàn diện... (${processingProgress} kí tự)`}
+                    {processingStep === 4 && "Bóc tách và cấu trúc hóa dữ liệu Hiring Insights để lưu trữ vào hệ thống..."}
                   </p>
                 </div>
                 {/* Visual Step Dots */}
@@ -3283,7 +3484,7 @@ ${r.booleanSearch || "Not generated yet."}
                     <div>
                       <div style={{ fontWeight: 800, fontSize: 15, color: "var(--text-primary)" }}>freeC AI</div>
                       <div style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 500 }}>
-                        {selectedClient ? `Đang hỗ trợ: ${selectedClient.name}` : "Trợ lý trí tuệ tuyển dụng"}
+                        {selectedClient ? `Đang hỗ trợ: ${selectedClient.name}` : "Trợ lý Insight Tuyển dụng"}
                       </div>
                     </div>
                   </div>
@@ -3751,7 +3952,7 @@ ${r.booleanSearch || "Not generated yet."}
                         transition: "all 0.2s"
                       }}
                     >
-                      Bước 2: Recruitment Intelligence Prompt
+                      Bước 2: Hiring Insights Prompt
                     </button>
                   </div>
 
@@ -3775,7 +3976,7 @@ ${r.booleanSearch || "Not generated yet."}
                   ) : (
                     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                       <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", display: "flex", justifyContent: "space-between" }}>
-                        <span>NỘI DUNG RECRUITMENT INTELLIGENCE PROMPT</span>
+                        <span>NỘI DUNG HIRING INSIGHTS PROMPT</span>
                         <span style={{ color: "var(--text-secondary)" }}>Biến khả dụng: <code>{"${companyReport}"}</code>, <code>{"${jobDescription}"}</code></span>
                       </div>
                       <textarea
@@ -3786,7 +3987,7 @@ ${r.booleanSearch || "Not generated yet."}
                           padding: 12, fontSize: 13, background: "var(--bg-body)", color: "var(--text-primary)", 
                           resize: "vertical", outline: "none", fontFamily: "monospace", lineHeight: 1.5
                         }}
-                        placeholder="Nhập nội dung prompt bóc tách JD và lập báo cáo tuyển dụng tại đây..."
+                        placeholder="Nhập nội dung prompt bóc tách JD và xây dựng Hiring Insights tại đây..."
                       />
                     </div>
                   )}
@@ -3799,7 +4000,7 @@ ${r.booleanSearch || "Not generated yet."}
                           toast("Đã đặt lại prompt Nghiên cứu Công ty mẫu", "success");
                         } else {
                           setRecruitmentIntelligencePrompt(DEFAULT_RECRUITMENT_INTELLIGENCE_PROMPT);
-                          toast("Đã đặt lại prompt Trí tuệ Tuyển dụng mẫu", "success");
+                          toast("Đã đặt lại prompt Insight Tuyển dụng mẫu", "success");
                         }
                       }}
                       style={{ padding: "10px 16px", background: "transparent", color: "var(--text-primary)", borderRadius: 8, border: "1.5px solid var(--border-glass)", cursor: "pointer", fontWeight: 600, fontSize: 13 }}
@@ -3910,7 +4111,7 @@ ${r.booleanSearch || "Not generated yet."}
                     transition: "all 0.2s"
                   }}
                 >
-                  Báo cáo Tổng hợp (Intelligence Report)
+                  Hiring Insights
                 </button>
               )}
             </div>
@@ -3988,7 +4189,7 @@ ${r.booleanSearch || "Not generated yet."}
               {activeReviewTab === 'markdown' && draftResult.jobData && (
                 <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <label style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 600 }}>Báo cáo Trí tuệ Tuyển dụng</label>
+                    <label style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 600 }}>Insight Tuyển dụng</label>
                     <div style={{ display: "flex", background: "var(--bg-body)", padding: 4, borderRadius: 8, border: "1px solid var(--border-color)" }}>
                       <button 
                         onClick={() => setActiveMarkdownReviewMode('preview')}
@@ -4009,20 +4210,20 @@ ${r.booleanSearch || "Not generated yet."}
                     <textarea 
                       value={draftResult.jobData.markdownReport || ""} 
                       onChange={e => handleDraftMarkdownChange(e.target.value)}
-                      style={{ width: "100%", height: 500, padding: "12px 16px", borderRadius: 8, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", fontSize: 14, outline: "none", resize: "vertical", fontFamily: "monospace", lineHeight: 1.6 }}
-                      placeholder="Nội dung báo cáo dạng Markdown..."
+                      style={{ width: "100%", height: 500, padding: "12px 16px", borderRadius: 8, border: "1px solid var(--border-color)", background: "var(--bg-card)", color: "var(--text-primary)", fontSize: 14, outline: "none", resize: "vertical", fontFamily: "monospace", lineHeight: 1.6 }}
+                      placeholder="Nội dung Hiring Insights dạng Markdown..."
                     />
                   ) : (
                     <div style={{ 
                       width: "100%", 
                       height: 500, 
-                      padding: "24px", 
-                      borderRadius: 8, 
+                      padding: "32px", 
+                      borderRadius: 12, 
                       border: "1px solid var(--border-color)", 
-                      background: "var(--bg-body)", 
+                      background: "var(--bg-card)", 
                       overflowY: "auto" 
                     }} className="markdown-body">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{draftResult.jobData.markdownReport || ""}</ReactMarkdown>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{cleanMarkdownFences(draftResult.jobData.markdownReport || "")}</ReactMarkdown>
                     </div>
                   )}
                 </div>
@@ -4039,15 +4240,44 @@ ${r.booleanSearch || "Not generated yet."}
               borderTop: "1px solid var(--border-color)",
               background: "var(--bg-glass)"
             }}>
-              <div>
+              <div style={{ display: "flex", flex: 1, flexDirection: "column", gap: 4, maxWidth: "55%" }}>
+                <label style={{ fontSize: 10, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                  Hành động / Vị trí đích (Action / Target Job)
+                </label>
                 {draftResult.hasNewJob ? (
-                  <span style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 500 }}>
-                    {draftResult.matchedJobId && selectedClientJobs.some(j => j.id === draftResult.matchedJobId) ? (
-                      <span style={{ color: "#d97706", fontWeight: 600 }}>⚠️ Updating existing job (ID: {draftResult.matchedJobId})</span>
-                    ) : (
-                      <span style={{ color: "#16a34a", fontWeight: 600 }}>✨ Creating brand new job opening</span>
-                    )}
-                  </span>
+                  <select
+                    value={draftResult.matchedJobId || "null"}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      handleDraftFieldChange('', 'matchedJobId', val);
+                      // Update timelineSummary reactively based on selection
+                      if (val === "null") {
+                        handleDraftFieldChange('', 'timelineSummary', `Đã tạo Insight Tuyển dụng cho vị trí ${draftResult.jobData?.title || ""}.`);
+                      } else {
+                        const tgtJob = selectedClientJobs.find(j => j.id === val);
+                        handleDraftFieldChange('', 'timelineSummary', `Đã cập nhật Insight Tuyển dụng cho vị trí ${tgtJob?.title || draftResult.jobData?.title || ""}.`);
+                      }
+                    }}
+                    style={{
+                      padding: "8px 12px",
+                      borderRadius: 8,
+                      border: "1px solid var(--border-color)",
+                      background: "var(--bg-body)",
+                      color: "var(--text-primary)",
+                      fontSize: 13,
+                      fontWeight: 600,
+                      outline: "none",
+                      cursor: "pointer",
+                      width: "100%"
+                    }}
+                  >
+                    <option value="null">✨ Tạo vị trí mới (Create brand new job)</option>
+                    {selectedClientJobs.map(j => (
+                      <option key={j.id} value={j.id}>
+                        📝 Cập nhật: {j.title}
+                      </option>
+                    ))}
+                  </select>
                 ) : (
                   <span style={{ fontSize: 13, color: "var(--text-muted)" }}>Only updating client knowledge base (No job detected)</span>
                 )}
@@ -4140,7 +4370,7 @@ ${r.booleanSearch || "Not generated yet."}
             <h3 style={{ fontSize: 24, fontWeight: 800, margin: "0 0 14px 0", color: "var(--text-primary)", letterSpacing: "-0.03em" }}>Xác nhận xóa Vị trí</h3>
             <p style={{ fontSize: 16, color: "var(--text-primary)", lineHeight: 1.6, marginBottom: 36, opacity: 0.9 }}>
               Xóa Job: <span style={{ fontWeight: 700 }}>{jobToDelete.title}</span>? <br />
-              <span style={{ fontSize: 14, color: "#ef4444", marginTop: 10, display: "block", fontWeight: 600 }}>Toàn bộ báo cáo sẽ bị mất.</span>
+              <span style={{ fontSize: 14, color: "#ef4444", marginTop: 10, display: "block", fontWeight: 600 }}>Toàn bộ thông tin sẽ bị mất.</span>
             </p>
             <div style={{ display: "flex", gap: 16 }}>
               <button 

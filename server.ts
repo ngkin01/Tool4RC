@@ -1,7 +1,7 @@
 import express from "express";
 import path from "path";
 import { Type } from "@google/genai";
-import { callLLM, callLLMStream } from "./api/_lib/ai.js";
+import { callLLM, callLLMStream, safeParseJson } from "./api/_lib/ai.js";
 
 export const app = express();
 const PORT = Number(process.env.PORT) || 3000;
@@ -187,7 +187,7 @@ If the input title or role matches or is highly related to an existing job, iden
        - Bullet points, summaries, and descriptions should be punchy, clear, and action-oriented.
 
        ==================================================
-       ADDITIONAL RECRUITMENT INTELLIGENCE
+       ADDITIONAL HIRING INSIGHTS
        ==================================================
        
        You are not a JD parser.
@@ -482,7 +482,7 @@ app.post("/api/freecai/step1-company-research", async (req, res) => {
     }
 
     const promptTemplate = customPrompt && customPrompt.trim() ? customPrompt : `Bạn là một chuyên gia nghiên cứu thị trường và Chuyên viên Tư vấn Tuyển dụng Cấp cao.
-Nhiệm vụ của bạn là nghiên cứu và xây dựng một Báo cáo Trí tuệ Công ty (Company Intelligence Report) chi tiết cho khách hàng sau:
+Nhiệm vụ của bạn là nghiên cứu và xây dựng một Insights Công ty (Company Intelligence Profile) chi tiết cho khách hàng sau:
 
 Tên công ty khách hàng: \${currentClientName}
 
@@ -517,7 +517,7 @@ Chú ý: Hãy đưa ra các phân tích có giá trị thực chiến cho tuyể
   }
 });
 
-// API route for Step 2: Recruitment Intelligence (Streaming Markdown)
+// API route for Step 2: Hiring Insights (Streaming Markdown)
 app.post("/api/freecai/step2-recruitment-intelligence", async (req, res) => {
   console.log("Processing /api/freecai/step2-recruitment-intelligence...");
   try {
@@ -544,9 +544,9 @@ app.post("/api/freecai/step2-recruitment-intelligence", async (req, res) => {
     }
 
     const promptTemplate = customPrompt && customPrompt.trim() ? customPrompt : `Bạn là một Senior Headhunter và Recruitment Consultant với hơn 15 năm kinh nghiệm tại Việt Nam và APAC.
-Nhiệm vụ của bạn là phân tích Bản mô tả công việc (Job Description) kết hợp với Báo cáo Trí tuệ Công ty (Company Intelligence Report) để tạo ra một Báo cáo Trí tuệ Tuyển dụng (Recruitment Intelligence Report) toàn diện, sắc bén và thực chiến bằng tiếng Việt.
+Nhiệm vụ của bạn là phân tích Bản mô tả công việc (Job Description) kết hợp với Insights Công ty (Company Intelligence Profile) để tạo ra một Insight Tuyển dụng (Hiring Insights) toàn diện, sắc bén và thực chiến bằng tiếng Việt.
 
-Thông tin Công ty (Company Intelligence Report):
+Thông tin Công ty (Company Intelligence Profile):
 """
 \${companyReport}
 """
@@ -556,7 +556,7 @@ Bản mô tả công việc (Job Description):
 \${jobDescription}
 """
 
-Hãy tạo một báo cáo tuyển dụng toàn diện dưới dạng Markdown, cấu trúc chuyên nghiệp, phân tích sâu sắc các khái niệm sau:
+Hãy tạo một bộ Insight Tuyển dụng toàn diện dưới dạng Markdown, cấu trúc chuyên nghiệp, phân tích sâu sắc các khái niệm sau:
 1. Tổng quan vị trí (Role Overview): Tên vị trí, Phòng ban, Cấp trên trực tiếp, Khoảng lương dự kiến, Địa điểm làm việc.
 2. Bối cảnh Công ty (Company Context) & Văn hóa phù hợp.
 3. Chân dung ứng viên lý tưởng (Ideal Persona): Kinh nghiệm, ngành nghề, kỹ năng cứng bắt buộc (Must-have), kỹ năng ưu tiên (Nice-to-have), đặc điểm tính cách.
@@ -567,7 +567,7 @@ Hãy tạo một báo cáo tuyển dụng toàn diện dưới dạng Markdown, 
 8. Gợi ý bài đăng tuyển dụng thu hút (Social Post / JD tóm tắt) & Bộ câu hỏi phỏng vấn gợi ý cho Consultant (Interview Questions / Questions for Client).
 
 LƯU Ý QUAN TRỌNG:
-- Trình bày toàn bộ báo cáo bằng định dạng Markdown đẹp mắt, có tiêu đề (Headings), danh sách (Bullet points), bảng biểu hoặc định dạng đậm nhạt rõ ràng.
+- Trình bày toàn bộ tài liệu bằng định dạng Markdown đẹp mắt, có tiêu đề (Headings), danh sách (Bullet points), bảng biểu hoặc định dạng đậm nhạt rõ ràng.
 - KHÔNG trả về định dạng JSON hay bất cứ thông tin thừa nào khác ngoài nội dung Markdown.
 - Sử dụng ngôn phong tự nhiên, sắc bén, mang tính tư vấn cao của một Senior Consultant thực thụ.`;
 
@@ -575,7 +575,7 @@ LƯU Ý QUAN TRỌNG:
       .replace(/\$\{companyReport\}/g, companyReport)
       .replace(/\$\{jobDescription\}/g, jobDescription);
 
-    console.log(`Step 2: Generating Recruitment Intelligence Report using model ${model || "default"}`);
+    console.log(`Step 2: Generating Hiring Insights Report using model ${model || "default"}`);
 
     const stream = callLLMStream({
       provider,
@@ -666,6 +666,433 @@ app.post("/api/freecai/chat", async (req, res) => {
     } else {
       res.status(500).json({ error: errorMessage });
     }
+  }
+});
+
+// API route for smart analyzing and routing intent
+app.post("/api/freecai/analyze-intent", async (req, res) => {
+  console.log("Processing /api/freecai/analyze-intent...");
+  try {
+    const provider = (req.headers["x-ai-provider"] as string) || "gemini";
+    const headerKey = req.headers["x-ai-key"] as string;
+    const model = (req.headers["x-ai-model"] as string) || "";
+    const customEndpoint = (req.headers["x-ai-custom-endpoint"] as string) || "";
+
+    let apiKey = headerKey;
+    if (!apiKey && provider === "gemini") {
+      apiKey = process.env.GEMINI_API_KEY || "";
+    }
+
+    if (!apiKey) {
+      return res.status(400).json({ 
+        error: `Vui lòng cấu hình API Key cho nhà cung cấp ${provider.toUpperCase()} của bạn trong bảng cài đặt!` 
+      });
+    }
+
+    const { input, clientName, clientSummary, existingJobs } = req.body;
+
+    if (!input || !clientName) {
+      return res.status(400).json({ error: "Missing input or clientName" });
+    }
+
+    const existingJobsList = Array.isArray(existingJobs) ? existingJobs : [];
+
+    const prompt = `Bạn là một AI phân tích ý định (Intent Analyzer) tích hợp trong hệ thống tuyển dụng cao cấp.
+Tên Khách hàng / Công ty: "${clientName}"
+
+Thông tin tổng quan hiện tại của Khách hàng:
+- Tóm tắt hoạt động: ${clientSummary?.overview || "Chưa có"}
+- Văn hóa: ${clientSummary?.culture || "Chưa có"}
+- Ngành nghề: ${clientSummary?.industry || "Chưa có"}
+- Các từ khóa ghi nhớ (Key Info): ${JSON.stringify(clientSummary?.keyInfo || [])}
+
+Danh sách các vị trí tuyển dụng hiện có của Khách hàng này (Existing Jobs):
+${existingJobsList.map((j: any) => `- ID: "${j.id}", Vị trí: "${j.title}"`).join("\n")}
+
+Nội dung người dùng vừa nhập (Input):
+"""
+${input}
+"""
+
+Nhiệm vụ của bạn:
+Phân tích xem nội dung vừa nhập ở trên thuộc loại nào trong 3 nhóm sau:
+1. "CLIENT_UPDATE": Nội dung cập nhật thông tin chung về công ty khách hàng (ví dụ: giờ làm việc từ T2 đến T7, đổi địa chỉ văn phòng, thông tin về văn hóa doanh nghiệp, phúc lợi chung, mô tả tổng quan công ty...). Nội dung này áp dụng cho toàn bộ công ty hoặc chung cho tất cả các vị trí, chứ KHÔNG phải là bản mô tả công việc (JD) mới hay thông tin riêng của một vị trí tuyển dụng cụ thể nào.
+2. "JOB_UPDATE": Nội dung cập nhật, sửa đổi, thêm bớt thông tin, hoặc là feedback bổ sung cho MỘT VỊ TRÍ tuyển dụng ĐÃ CÓ trong danh sách "Existing Jobs" ở trên (ví dụ: "vị trí Job B cần thêm tiếng Nhật", "update cho JD tuyển dung inspector...", hoặc "vị trí kỹ sư phần mềm nâng lương lên 2000$"). Bạn phải tìm ra chính xác ID của vị trí khớp nhất trong danh sách.
+3. "NEW_JOB": Nội dung là một bản mô tả công việc (JD) cho một VỊ TRÍ TUYỂN DỤNG HOÀN TOÀN MỚI chưa có trong danh sách Existing Jobs ở trên (ví dụ: "Cần tuyển vị trí ABC với các yêu cầu...").
+
+Yêu cầu đầu ra:
+Trả về kết quả JSON khớp chính xác với schema. 
+- intentType: một trong các giá trị "CLIENT_UPDATE", "JOB_UPDATE", "NEW_JOB"
+- matchedJobId: nếu là "JOB_UPDATE", hãy chỉ định ID của công việc khớp nhất (ví dụ "j1"). Với tất cả các trường hợp khác, hãy trả về chuỗi "null".
+- reasoning: Giải thích ngắn gọn lý do bằng tiếng Việt vì sao bạn phân loại như vậy.
+
+Quy tắc phân biệt cực kỳ quan trọng:
+- Nếu nội dung đề cập đến một chức danh cụ thể (ví dụ: Inspector, Accountant, Dev...) và các yêu cầu tuyển dụng cho vị trí đó, hãy xếp vào JOB_UPDATE (nếu đã có vị trí tương tự trong Existing Jobs) hoặc NEW_JOB (nếu chưa có).
+- Nếu nội dung mang tính chất chung cho toàn công ty (như giờ làm việc chung, quy định chung, phong cách chung, giới thiệu chung về công ty), hãy xếp vào CLIENT_UPDATE.
+`;
+
+    const responseSchema = {
+      type: Type.OBJECT,
+      properties: {
+        intentType: { 
+          type: Type.STRING, 
+          description: "One of: CLIENT_UPDATE, JOB_UPDATE, NEW_JOB" 
+        },
+        matchedJobId: { 
+          type: Type.STRING, 
+          description: "Matched job ID string if JOB_UPDATE, or the exact string 'null'" 
+        },
+        reasoning: { 
+          type: Type.STRING, 
+          description: "Brief reasoning in Vietnamese" 
+        }
+      },
+      required: ["intentType", "matchedJobId", "reasoning"]
+    };
+
+    const result = await callLLM({
+      provider,
+      apiKey,
+      model,
+      customEndpoint,
+      prompt,
+      responseSchema,
+    });
+
+    const parsed = safeParseJson(result.text);
+    console.log("Analyze intent result:", parsed);
+    res.json(parsed);
+
+  } catch (error) {
+    console.error("LLM Analyze Intent Error:", error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    res.status(500).json({ error: errorMessage });
+  }
+});
+
+// API route for processing general client updates
+app.post("/api/freecai/process-client-update", async (req, res) => {
+  console.log("Processing /api/freecai/process-client-update...");
+  try {
+    const provider = (req.headers["x-ai-provider"] as string) || "gemini";
+    const headerKey = req.headers["x-ai-key"] as string;
+    const model = (req.headers["x-ai-model"] as string) || "";
+    const customEndpoint = (req.headers["x-ai-custom-endpoint"] as string) || "";
+
+    let apiKey = headerKey;
+    if (!apiKey && provider === "gemini") {
+      apiKey = process.env.GEMINI_API_KEY || "";
+    }
+
+    if (!apiKey) {
+      return res.status(400).json({ 
+        error: `Vui lòng cấu hình API Key cho nhà cung cấp ${provider.toUpperCase()} của bạn trong bảng cài đặt!` 
+      });
+    }
+
+    const { input, clientName, clientSummary } = req.body;
+
+    if (!input || !clientName) {
+      return res.status(400).json({ error: "Missing input or clientName" });
+    }
+
+    const prompt = `Bạn là một Recruitment Consultant cao cấp. Khách hàng của bạn là "${clientName}".
+Dưới đây là thông tin chung hiện tại của khách hàng:
+- Tóm tắt hoạt động (Overview): ${clientSummary?.overview || "Chưa có"}
+- Văn hóa (Culture): ${clientSummary?.culture || "Chưa có"}
+- Ngành nghề (Industry): ${clientSummary?.industry || "Chưa có"}
+- Các từ khóa ghi nhớ (Key Info): ${JSON.stringify(clientSummary?.keyInfo || [])}
+
+Người dùng vừa cung cấp thông tin cập nhật mới dưới đây cho Khách hàng này:
+"""
+${input}
+"""
+
+Nhiệm vụ của bạn:
+Hãy cập nhật, sửa đổi và bổ sung thông tin mới này vào thông tin chung của công ty khách hàng một cách thông minh và trôi chảy bằng tiếng Việt.
+- Nếu thông tin mới thay đổi hoặc mâu thuẫn với thông tin cũ (ví dụ: đổi giờ làm việc, đổi địa chỉ, thay đổi mô hình kinh doanh), hãy thay thế hoặc sửa lại thông tin cũ theo đúng thông tin mới.
+- Nếu thông tin mới là bổ sung thêm (ví dụ: thêm văn hóa làm việc, thêm perk phúc lợi mới), hãy kết hợp hài hòa thông tin cũ và thông tin mới.
+- Giữ phong cách hành văn chuyên nghiệp, súc tích, mang tính tuyển dụng cao.
+
+Hãy trả về kết quả dưới dạng đối tượng JSON khớp chính xác với cấu trúc:
+- overview: mô tả tóm tắt hoạt động cập nhật
+- culture: văn hóa doanh nghiệp cập nhật
+- industry: ngành nghề cập nhật
+- keyInfo: mảng các chuỗi từ khóa/thông tin quan trọng cập nhật (ví dụ ["Làm việc T2-T7", "Phúc lợi hấp dẫn"])
+`;
+
+    const responseSchema = {
+      type: Type.OBJECT,
+      properties: {
+        overview: { type: Type.STRING },
+        culture: { type: Type.STRING },
+        industry: { type: Type.STRING },
+        keyInfo: { type: Type.ARRAY, items: { type: Type.STRING } }
+      },
+      required: ["overview", "culture", "industry", "keyInfo"]
+    };
+
+    const result = await callLLM({
+      provider,
+      apiKey,
+      model,
+      customEndpoint,
+      prompt,
+      responseSchema,
+    });
+
+    const parsed = safeParseJson(result.text);
+    console.log("Process client update result:", parsed);
+    res.json(parsed);
+
+  } catch (error) {
+    console.error("LLM Process Client Update Error:", error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    res.status(500).json({ error: errorMessage });
+  }
+});
+
+// API route for streaming merged job updates
+app.post("/api/freecai/process-job-update", async (req, res) => {
+  console.log("Processing /api/freecai/process-job-update...");
+  try {
+    const provider = (req.headers["x-ai-provider"] as string) || "gemini";
+    const headerKey = req.headers["x-ai-key"] as string;
+    const model = (req.headers["x-ai-model"] as string) || "";
+    const customEndpoint = (req.headers["x-ai-custom-endpoint"] as string) || "";
+
+    let apiKey = headerKey;
+    if (!apiKey && provider === "gemini") {
+      apiKey = process.env.GEMINI_API_KEY || "";
+    }
+
+    if (!apiKey) {
+      return res.status(400).json({ 
+        error: `Vui lòng cấu hình API Key cho nhà cung cấp ${provider.toUpperCase()} của bạn trong bảng cài đặt!` 
+      });
+    }
+
+    const { input, clientName, existingJobReport } = req.body;
+
+    if (!input || !clientName || !existingJobReport || !existingJobReport.markdownReport) {
+      return res.status(400).json({ error: "Missing required fields for job update" });
+    }
+
+    const prompt = `Bạn là một Bộ máy Gộp & Tối ưu Thông tin Tuyển dụng Thông minh (Smart Recruitment Merging & Optimization Engine) với tư duy sắc bén của một Senior Headhunter và Recruitment Consultant cấp cao (15+ năm kinh nghiệm).
+
+Tên Khách hàng / Công ty: "${clientName}"
+
+Dưới đây là Báo cáo Insight Tuyển dụng hiện tại (Existing Hiring Insights Report) của vị trí tuyển dụng này dưới dạng Markdown:
+"""
+${existingJobReport.markdownReport}
+"""
+
+Dưới đây là thông tin cập nhật mới, yêu cầu bổ sung hoặc phản hồi từ người dùng:
+"""
+${input}
+"""
+
+Nhiệm vụ của bạn:
+Hãy phân tích thông tin cập nhật mới và thực hiện gộp/tích hợp nó vào Báo cáo Insight Tuyển dụng hiện tại để tạo ra một bản báo cáo mới chất lượng cao hơn, nhất quán hơn và phản ánh sâu sắc mọi mong muốn mới của người dùng.
+
+Để giải quyết vấn đề "báo cáo bị đóng khung cứng nhắc" (rigid/fixed) và đảm bảo tính linh hoạt tối đa (flexible), bạn phải tuân thủ nghiêm ngặt các quy tắc gộp sau:
+
+1. TRUYỀN DẪN THÔNG TIN TOÀN CỤC (GLOBAL PROPAGATION):
+   Khi có một thay đổi hoặc yêu cầu mới (ví dụ: "yêu cầu tiếng Nhật thay vì tiếng Anh", "thêm kỹ năng AWS", "tăng mức lương", "đổi mô hình báo cáo", "phản hồi về phong cách làm việc"), thay đổi này KHÔNG được chỉ xuất hiện ở một dòng đơn lẻ. Bạn PHẢI cập nhật và truyền dẫn (cascade) thông tin này qua TẤT CẢ các mục liên quan trong báo cáo:
+   - Nếu đổi yêu cầu ngôn ngữ hoặc kỹ năng: Phải cập nhật trong [Ideal Persona], [Must-Have / Nice-To-Have], [Boolean Search Queries] (ví dụ: tạo câu lệnh search mới có chứa từ khóa liên quan như "Japanese", "AWS",...), [Social Post] (viết lại tin tuyển dụng để làm nổi bật yêu cầu mới), và [Interview Questions] (gợi ý câu hỏi kiểm tra kỹ năng mới).
+   - Nếu đổi mức lương hoặc chế độ: Cập nhật trong [Role Overview] và phần phân tích rủi ro trong [Talent Market Insight] (nhận định xem mức lương mới cạnh tranh hơn hay kém cạnh tranh hơn trên thị trường).
+   - Nếu thêm thách thức hoặc yêu cầu công việc mới: Phải cập nhật trong [Position Intelligence] (day-to-day challenges, key success factors, hidden expectations) và cập nhật bộ câu hỏi phỏng vấn tương ứng.
+
+2. CẬP NHẬT THÔNG TIN THAY VÌ CHỈ CHÉP ĐÈ HOẶC GHÉP CHỮ:
+   - Hãy chủ động viết lại các câu chữ, đoạn phân tích để đảm bảo thông tin mới được tích hợp mượt mà, tự nhiên vào bối cảnh chung, chứ không chỉ đơn giản là copy-paste hoặc chèn dòng thô sơ.
+   - Nếu thông tin mới mâu thuẫn trực tiếp với thông tin cũ, hãy loại bỏ hoàn toàn thông tin cũ lỗi thời và thay thế hoàn chỉnh bằng thông tin mới.
+
+3. DUY TRÌ VÀ PHÁT TRIỂN CÁC PHÂN TÍCH CHUYÊN SÂU:
+   - Giữ nguyên các phần phân tích sâu sắc khác của báo cáo không bị ảnh hưởng bởi thay đổi này, đồng thời sử dụng thông tin mới để làm cho các phần phân tích đó trở nên thực chiến và sắc bén hơn.
+   - Đầu ra phải là TOÀN BỘ báo cáo Markdown hoàn chỉnh sau khi đã được cập nhật/gộp thông tin sâu sắc.
+
+LƯU Ý QUAN TRỌNG VỀ ĐỊNH DẠNG:
+- Trình bày toàn bộ tài liệu bằng định dạng Markdown chuyên nghiệp, thẩm mỹ cao.
+- KHÔNG trả về định dạng JSON hay bất cứ thông tin thừa nào khác ngoài nội dung Markdown.
+- Sử dụng ngôn phong tự nhiên, sắc bén, mang tính tư vấn cao của một Senior Consultant thực thụ.`;
+
+    const stream = callLLMStream({
+      provider,
+      apiKey,
+      model,
+      customEndpoint,
+      prompt,
+    });
+
+    res.setHeader("Content-Type", "text/plain; charset=utf-8");
+    res.setHeader("Transfer-Encoding", "chunked");
+
+    for await (const chunk of stream) {
+      res.write(chunk);
+    }
+    res.end();
+  } catch (error) {
+    console.error("LLM Process Job Update Error:", error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    if (res.headersSent) {
+      res.write(`\n\nERROR_STREAMING: ${errorMessage}`);
+      res.end();
+    } else {
+      res.status(500).json({ error: errorMessage });
+    }
+  }
+});
+
+// API route for extracting structured fields from a markdown report
+app.post("/api/freecai/extract-structured-fields", async (req, res) => {
+  console.log("Processing /api/freecai/extract-structured-fields...");
+  try {
+    const provider = (req.headers["x-ai-provider"] as string) || "gemini";
+    const headerKey = req.headers["x-ai-key"] as string;
+    const model = (req.headers["x-ai-model"] as string) || "";
+    const customEndpoint = (req.headers["x-ai-custom-endpoint"] as string) || "";
+
+    let apiKey = headerKey;
+    if (!apiKey && provider === "gemini") {
+      apiKey = process.env.GEMINI_API_KEY || "";
+    }
+
+    if (!apiKey) {
+      return res.status(400).json({ 
+        error: `Vui lòng cấu hình API Key cho nhà cung cấp ${provider.toUpperCase()} của bạn trong bảng cài đặt!` 
+      });
+    }
+
+    const { markdownReport, title } = req.body;
+
+    if (!markdownReport) {
+      return res.status(400).json({ error: "Missing markdownReport" });
+    }
+
+    const prompt = `Bạn là một AI data extractor chuyên nghiệp. Nhiệm vụ của bạn là đọc Báo cáo Insight Tuyển dụng (Hiring Insights) dạng Markdown dưới đây, bóc tách và phân tích các thông tin để điền vào cấu trúc dữ liệu JSON chính xác.
+
+Báo cáo Markdown:
+"""
+${markdownReport}
+"""
+
+Tiêu đề vị trí (nếu có): "${title || ""}"
+
+Hãy phân tích báo cáo và điền đầy đủ các trường JSON sau theo đúng schema yêu cầu. 
+Lưu ý:
+- Nếu một thông tin không xuất hiện trong báo cáo, hãy điền giá trị mặc định hợp lý (ví dụ "TBD", "Thỏa thuận", hoặc mảng rỗng []).
+- Đảm bảo đầu ra khớp hoàn hảo với cấu trúc JSON định nghĩa sẵn. Không tự ý bịa thêm thông tin ngoài những gì có trong báo cáo hoặc thông tin có thể suy luận trực tiếp một cách logic.
+`;
+
+    const responseSchema = {
+      type: Type.OBJECT,
+      properties: {
+        title: { type: Type.STRING },
+        roleOverview: {
+          type: Type.OBJECT,
+          properties: {
+            dept: { type: Type.STRING },
+            reportingLine: { type: Type.STRING },
+            salaryRange: { type: Type.STRING },
+            location: { type: Type.STRING }
+          },
+          required: ["dept", "reportingLine", "salaryRange", "location"]
+        },
+        companyContext: { type: Type.ARRAY, items: { type: Type.STRING } },
+        idealPersona: { type: Type.ARRAY, items: { type: Type.STRING } },
+        mustHave: { type: Type.ARRAY, items: { type: Type.STRING } },
+        niceToHave: { type: Type.ARRAY, items: { type: Type.STRING } },
+        questionsForClient: { type: Type.ARRAY, items: { type: Type.STRING } },
+        booleanSearch: { type: Type.STRING },
+        socialPost: { type: Type.STRING },
+        interviewQuestions: { type: Type.ARRAY, items: { type: Type.STRING } },
+        competitorCompanies: {
+          type: Type.OBJECT,
+          properties: {
+            directCompetitors: { type: Type.ARRAY, items: { type: Type.STRING } },
+            similarBusinessModels: { type: Type.ARRAY, items: { type: Type.STRING } },
+            transferableTalent: { type: Type.ARRAY, items: { type: Type.STRING } },
+            whyTheseCompanies: { type: Type.STRING }
+          },
+          required: ["directCompetitors", "similarBusinessModels", "transferableTalent", "whyTheseCompanies"]
+        },
+        positionIntelligence: {
+          type: Type.OBJECT,
+          properties: {
+            natureOfRole: { type: Type.STRING },
+            dayToDayChallenges: { type: Type.ARRAY, items: { type: Type.STRING } },
+            hiddenExpectations: { type: Type.ARRAY, items: { type: Type.STRING } },
+            keySuccessFactors: { type: Type.ARRAY, items: { type: Type.STRING } },
+            commonCandidateBackgrounds: { type: Type.ARRAY, items: { type: Type.STRING } },
+            commonReasonsCandidatesFail: { type: Type.ARRAY, items: { type: Type.STRING } },
+            transferableBackgrounds: { type: Type.ARRAY, items: { type: Type.STRING } }
+          },
+          required: ["natureOfRole", "dayToDayChallenges", "hiddenExpectations", "keySuccessFactors", "commonCandidateBackgrounds", "commonReasonsCandidatesFail", "transferableBackgrounds"]
+        },
+        candidatePersonaObj: {
+          type: Type.OBJECT,
+          properties: {
+            yearsOfExperience: { type: Type.STRING },
+            industryBackground: { type: Type.STRING },
+            functionalBackground: { type: Type.STRING },
+            languageRequirements: { type: Type.STRING },
+            personalityTraits: { type: Type.ARRAY, items: { type: Type.STRING } }
+          },
+          required: ["yearsOfExperience", "industryBackground", "functionalBackground", "languageRequirements", "personalityTraits"]
+        },
+        talentMarketInsight: {
+          type: Type.OBJECT,
+          properties: {
+            talentPoolDifficulty: { type: Type.STRING },
+            hiringChallenges: { type: Type.ARRAY, items: { type: Type.STRING } },
+            counterOfferRisk: { type: Type.STRING },
+            salaryCompetitiveness: { type: Type.STRING },
+            noticePeriodRisk: { type: Type.STRING }
+          },
+          required: ["talentPoolDifficulty", "hiringChallenges", "counterOfferRisk", "salaryCompetitiveness", "noticePeriodRisk"]
+        },
+        candidateSellingPoints: { type: Type.ARRAY, items: { type: Type.STRING } },
+        recruitmentStrategy: {
+          type: Type.OBJECT,
+          properties: {
+            whereToSource: { type: Type.ARRAY, items: { type: Type.STRING } },
+            companiesToTargetFirst: { type: Type.ARRAY, items: { type: Type.STRING } },
+            challengesAndMitigations: { type: Type.ARRAY, items: { type: Type.STRING } }
+          },
+          required: ["whereToSource", "companiesToTargetFirst", "challengesAndMitigations"]
+        },
+        booleanSearchQueries: {
+          type: Type.OBJECT,
+          properties: {
+            linkedin: { type: Type.STRING },
+            cvDb: { type: Type.STRING },
+            xray: { type: Type.STRING },
+            industry: { type: Type.STRING },
+            japanese: { type: Type.STRING }
+          },
+          required: ["linkedin", "cvDb", "xray", "industry", "japanese"]
+        }
+      },
+      required: ["title", "roleOverview", "companyContext", "idealPersona", "mustHave", "niceToHave", "questionsForClient", "booleanSearch", "socialPost", "interviewQuestions", "competitorCompanies", "positionIntelligence", "candidatePersonaObj", "talentMarketInsight", "candidateSellingPoints", "recruitmentStrategy", "booleanSearchQueries"]
+    };
+
+    const result = await callLLM({
+      provider,
+      apiKey,
+      model,
+      customEndpoint,
+      prompt,
+      responseSchema,
+    });
+
+    const parsed = safeParseJson(result.text);
+    console.log("Structured fields extraction result:", parsed);
+    res.json(parsed);
+
+  } catch (error) {
+    console.error("LLM Extract Structured Fields Error:", error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    res.status(500).json({ error: errorMessage });
   }
 });
 
