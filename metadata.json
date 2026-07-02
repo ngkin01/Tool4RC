@@ -1,6 +1,6 @@
 {
   "name": "Tool4RC",
-  "description": "",
+  "description": "A high-performance AI Report Viewer and Job Intelligence Platform featuring modern, high-contrast typography, interactive floating AI chat assistant, and seamless version history control.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

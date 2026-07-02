@@ -1,5 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { motion, AnimatePresence, useMotionValue } from 'motion/react';
 import { Btn } from '../components/ui';
 import { db, auth, handleFirestoreError, OperationType } from '../lib/firebase';
 import { signInAnonymously } from 'firebase/auth';
@@ -194,7 +196,7 @@ LƯU Ý QUAN TRỌNG VỀ ĐỊNH DẠNG:
 - Trình bày toàn bộ báo cáo bằng định dạng Markdown chuyên nghiệp, thẩm mỹ cao.
 - Sử dụng Tiêu đề (H1, H2, H3) để phân cấp thông tin rõ ràng.
 - Sử dụng **In đậm** cho các từ khóa then chốt để giúp người dùng nắm bắt nhanh thông tin (Scannability).
-- Sử dụng Bảng (Tables) cho các thông tin cần so sánh hoặc dữ liệu số nếu phù hợp.
+- Sử dụng Bảng (Tables) cho các thông tin cần so sánh hoặc dữ liệu số nếu phù hợp. **LƯU Ý: Luôn để ít nhất một dòng trống trước và sau mỗi bảng.**
 - Sử dụng Danh sách (Bullet points) có phân cấp rõ ràng.
 - Đảm bảo báo cáo bắt đầu bằng một phần giới thiệu chuyên nghiệp về công ty khách hàng dựa trên dữ liệu research.
 - KHÔNG trả về định dạng JSON hay bất cứ thông tin thừa nào khác ngoài nội dung Markdown.
@@ -466,6 +468,26 @@ const cleanUndefined = (obj: any): any => {
 
 export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error') => void }) {
   const [clients, setClients] = useState<Client[]>([]);
+  const [windowWidth, setWindowWidth] = useState(typeof window !== "undefined" ? window.innerWidth : 1200);
+  const [windowHeight, setWindowHeight] = useState(typeof window !== "undefined" ? window.innerHeight : 800);
+
+  const dragX = useMotionValue(0);
+  const dragY = useMotionValue(0);
+  const [draggedX, setDraggedX] = useState(0);
+  const [draggedY, setDraggedY] = useState(0);
+  const isDraggingRef = useRef(false);
+  const dragStartPos = useRef({ x: 0, y: 0 });
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const handleResize = () => {
+      setWindowWidth(window.innerWidth);
+      setWindowHeight(window.innerHeight);
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   const [customPrompt, setCustomPrompt] = useState<string>("");
   const [companyResearchPrompt, setCompanyResearchPrompt] = useState<string>("");
   const [recruitmentIntelligencePrompt, setRecruitmentIntelligencePrompt] = useState<string>("");
@@ -696,6 +718,7 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
   // Job active tab and selected version index
   const [activeJobTab, setActiveJobTab] = useState<'report' | 'history'>('report');
   const [selectedVersionIndex, setSelectedVersionIndex] = useState<number | null>(null);
+  const [isJobMenuOpen, setIsJobMenuOpen] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [isCreatingClient, setIsCreatingClient] = useState(false);
@@ -706,15 +729,13 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
   const [universalInput, setUniversalInput] = useState("");
   const [manualJobTitle, setManualJobTitle] = useState("");
   const [isProcessingInput, setIsProcessingInput] = useState(false);
+  const [showSavedFeedback, setShowSavedFeedback] = useState(false);
   const [processingProgress, setProcessingProgress] = useState(0);
-  
-  const [isChatOpen, setIsChatOpen] = useState(false);
-  const [chatMessages, setChatMessages] = useState<{role: 'user'|'assistant', content: string}[]>([{role: 'assistant', content: 'Hi! I am your AI Copilot. Ask me anything about your clients or jobs.'}]);
-  const [chatInput, setChatInput] = useState("");
-  const chatEndRef = useRef<HTMLDivElement>(null);
   
   const [editingClientId, setEditingClientId] = useState<string | null>(null);
   const [editingNameVal, setEditingNameVal] = useState("");
+  const [editingWebsiteVal, setEditingWebsiteVal] = useState("");
+  const [editingTaglineVal, setEditingTaglineVal] = useState("");
 
   const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
   const [jobToDelete, setJobToDelete] = useState<Job | null>(null);
@@ -723,6 +744,7 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
   useEffect(() => {
     setActiveJobTab('report');
     setSelectedVersionIndex(null);
+    setIsJobMenuOpen(false);
   }, [selectedJobId]);
 
   // Synchronize jobs and timeline from subcollections for the selected client
@@ -809,24 +831,24 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
     migrateOldData();
   }, [clients]);
 
-  const handleUpdateClientName = async (clientId: string) => {
+  const handleUpdateClient = async (clientId: string) => {
     if (!editingNameVal.trim()) {
       setEditingClientId(null);
       return;
     }
     try {
-      await setDoc(doc(db, 'clients', clientId), { name: editingNameVal }, { merge: true });
-      toast("Client name updated", "success");
+      await setDoc(doc(db, 'clients', clientId), { 
+        name: editingNameVal,
+        website: editingWebsiteVal,
+        tagline: editingTaglineVal
+      }, { merge: true });
+      toast("Client updated", "success");
     } catch (err) {
       console.error(err);
-      toast("Failed to update client name", "error");
+      toast("Failed to update client", "error");
     }
     setEditingClientId(null);
   };
-
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [chatMessages, isChatOpen]);
 
   const rawSelectedClient = clients.find(c => c.id === selectedClientId);
   const selectedClient = rawSelectedClient ? {
@@ -834,6 +856,65 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
     jobs: selectedClientJobs,
     timeline: selectedClientTimeline
   } : undefined;
+
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const nowTime = () => new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+  const [chatHistories, setChatHistories] = useState<Record<string, {role: 'user'|'assistant', content: string, time?: string}[]>>({});
+  const [chatInput, setChatInput] = useState("");
+  const chatEndRef = useRef<HTMLDivElement>(null);
+  
+  const chatMessages = selectedClientId ? (chatHistories[selectedClientId] || []) : [];
+  const setChatMessages = (updater: any) => {
+    if (!selectedClientId) return;
+    setChatHistories(prev => ({
+      ...prev,
+      [selectedClientId]: typeof updater === 'function' ? updater(prev[selectedClientId] || []) : updater
+    }));
+  };
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chatMessages, isChatOpen]);
+
+  // Handle Chat initialization and persistence
+  useEffect(() => {
+    if (selectedClientId && selectedClient) {
+      // Initialize greeting if history is empty for this client
+      if (!chatHistories[selectedClientId]) {
+        const greeting = { 
+          role: 'assistant' as const, 
+          content: `Hi! Mình là freeC AI. Bạn muốn hỏi điều gì về client **${selectedClient.name}** này, hay về job nào? Mình sẽ giải đáp nhé!`,
+          time: nowTime() 
+        };
+        setChatHistories(prev => ({
+          ...prev,
+          [selectedClientId]: [greeting]
+        }));
+      }
+      
+      // Auto open chat when switching clients or selecting a client
+      if (!isChatOpen) {
+        setIsChatOpen(true);
+      }
+    } else if (!selectedClientId) {
+      setIsChatOpen(false);
+    }
+  }, [selectedClientId, !!selectedClient]);
+
+  // Ensure chat messages are synced when opening chat manually if history was somehow missing
+  useEffect(() => {
+    if (isChatOpen && selectedClientId && selectedClient && !chatHistories[selectedClientId]) {
+      const greeting = { 
+        role: 'assistant' as const, 
+        content: `Hi! Mình là freeC AI. Bạn muốn hỏi điều gì về client **${selectedClient.name}** này, hay về job nào? Mình sẽ giải đáp nhé!`,
+        time: nowTime() 
+      };
+      setChatHistories(prev => ({
+        ...prev,
+        [selectedClientId]: [greeting]
+      }));
+    }
+  }, [isChatOpen, selectedClientId, !!selectedClient]);
 
   const selectedJob = selectedClientJobs.find(j => j.id === selectedJobId);
 
@@ -1256,7 +1337,7 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
   const handleChatSubmit = async () => {
     if (!chatInput.trim()) return;
     const msg = chatInput;
-    setChatMessages(prev => [...prev, { role: 'user', content: msg }]);
+    setChatMessages(prev => [...prev, { role: 'user', content: msg, time: nowTime() }]);
     setChatInput("");
     
     try {
@@ -1287,7 +1368,7 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
 
       const reader = response.body?.getReader();
       if (reader) {
-        setChatMessages(prev => [...prev, { role: 'assistant', content: "" }]);
+        setChatMessages(prev => [...prev, { role: 'assistant', content: "", time: nowTime() }]);
         const decoder = new TextDecoder();
         let streamedText = "";
         while (true) {
@@ -1312,7 +1393,7 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
             const parts = text.split("ERROR_STREAMING:");
             throw new Error(parts[parts.length - 1].trim() || "Failed to process chat during stream");
         }
-        setChatMessages(prev => [...prev, { role: 'assistant', content: text }]);
+        setChatMessages(prev => [...prev, { role: 'assistant', content: text, time: nowTime() }]);
       }
     } catch (err) {
       console.error(err);
@@ -1446,92 +1527,182 @@ ${r.booleanSearch || "Not generated yet."}
   };
 
   return (
-    <div style={{ padding: "32px 40px", maxWidth: 1400, margin: "0 auto", height: "100%", display: "flex", gap: 32 }}>
+    <div style={{ 
+      padding: selectedJob ? "24px 16px" : "32px 40px", 
+      maxWidth: selectedJob ? 1200 : 1600, 
+      margin: "0 auto", 
+      height: "100%", 
+      display: "flex", 
+      gap: 32 
+    }}>
       
       {/* LEFT PANE: Client List */}
-      <div style={{ width: 260, display: "flex", flexDirection: "column", gap: 16, flexShrink: 0 }}>
-        
-        {/* Search */}
-        <div style={{ position: "relative" }}>
-          <svg style={{ position: "absolute", left: 14, top: 12, color: "var(--text-muted)" }} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input 
-            placeholder="Search clients..." 
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            style={{ width: "100%", padding: "10px 14px 10px 40px", borderRadius: 8, border: "1px solid var(--border-color)", background: "var(--bg-card)", fontSize: 14, outline: "none", color: "var(--text-primary)", boxShadow: "0 1px 2px rgba(0,0,0,0.05)" }} 
-          />
-        </div>
-        
-        <div style={{ display: "flex", gap: 10 }}>
-          <Btn onClick={() => { setIsCreatingClient(true); setSelectedJobId(null); setIsEditingPrompt(false); }} style={{ flex: 1, padding: "10px", background: "#4f46e5", color: "white", border: "none", fontWeight: 600, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, boxShadow: "0 2px 8px rgba(79, 70, 229, 0.3)" }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-            New Client
-          </Btn>
+      {!selectedJob && (
+        <div style={{ width: 260, display: "flex", flexDirection: "column", gap: 16, flexShrink: 0 }}>
+          
+          {/* Search */}
+          <div style={{ position: "relative" }}>
+            <svg style={{ position: "absolute", left: 14, top: 12, color: "var(--text-muted)" }} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input 
+              placeholder="Tìm kiếm đối tác..." 
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              style={{ 
+                width: "100%", 
+                padding: "11px 14px 11px 40px", 
+                borderRadius: 12, 
+                border: "1.5px solid rgba(99, 102, 241, 0.12)", 
+                background: "rgba(255, 255, 255, 0.6)", 
+                backdropFilter: "blur(12px)",
+                WebkitBackdropFilter: "blur(12px)",
+                fontSize: 14.5, 
+                outline: "none", 
+                color: "var(--text-primary)", 
+                boxShadow: "0 2px 8px rgba(99, 102, 241, 0.02)",
+                transition: "all 0.25s ease"
+              }} 
+              onFocus={e => {
+                e.currentTarget.style.borderColor = "#6366f1";
+                e.currentTarget.style.boxShadow = "0 0 14px rgba(99, 102, 241, 0.15), inset 0 1px 1px rgba(255, 255, 255, 0.4)";
+                e.currentTarget.style.background = "var(--bg-card)";
+              }}
+              onBlur={e => {
+                e.currentTarget.style.borderColor = "rgba(99, 102, 241, 0.12)";
+                e.currentTarget.style.boxShadow = "0 2px 8px rgba(99, 102, 241, 0.02)";
+                e.currentTarget.style.background = "rgba(255, 255, 255, 0.6)";
+              }}
+            />
+          </div>
+          
+          <div style={{ display: "flex", gap: 10 }}>
+            <Btn 
+              onClick={() => { setIsCreatingClient(true); setSelectedJobId(null); setIsEditingPrompt(false); }} 
+              className="liquid-glass-btn"
+              style={{ 
+                flex: 1, 
+                padding: "11px", 
+                borderRadius: 12, 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                gap: 6, 
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              New Client
+            </Btn>
 
-          <Btn onClick={() => { setIsAiSettingsOpen(true); }} style={{ padding: "10px 12px", background: "var(--bg-glass)", color: "var(--text-primary)", border: "1px solid var(--border-glass)", fontWeight: 600, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }} title="Cấu hình AI (Provider, Keys & Prompt)">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-            AI Config
-          </Btn>
-        </div>
-        
-        <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 8, marginTop: 12 }}>
-          {filteredClients.map(client => {
-            const isSelected = selectedClientId === client.id && !isCreatingClient && !isEditingPrompt;
-            return (
-              <div 
-                key={client.id}
-                onClick={() => { setSelectedClientId(client.id); setSelectedJobId(null); setIsCreatingClient(false); setIsEditingPrompt(false); }}
-                onMouseEnter={e => {
-                  const btn = e.currentTarget.querySelector('.delete-btn') as HTMLElement;
-                  if (btn) btn.style.opacity = '1';
-                  if (!isSelected) {
-                    e.currentTarget.style.background = "rgba(0, 0, 0, 0.02)";
-                  }
-                }}
-                onMouseLeave={e => {
-                  const btn = e.currentTarget.querySelector('.delete-btn') as HTMLElement;
-                  if (btn) btn.style.opacity = '0';
-                  if (!isSelected) {
-                    e.currentTarget.style.background = "transparent";
-                  }
-                }}
-                style={{ 
-                  padding: "16px", 
-                  borderRadius: 12, 
-                  cursor: "pointer",
-                  background: isSelected ? "rgba(79, 70, 229, 0.08)" : "transparent",
-                  display: "flex",
-                  alignItems: "flex-start",
-                  gap: 12,
-                  transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-                  position: "relative",
-                  border: isSelected ? "1px solid rgba(79, 70, 229, 0.2)" : "1px solid transparent",
-                  boxShadow: isSelected ? "0 8px 20px -4px rgba(79, 70, 229, 0.12)" : "none",
-                  backdropFilter: isSelected ? "blur(12px)" : "none",
-                }}
-              >
-                <div style={{ marginTop: 2, color: isSelected ? "#4f46e5" : "var(--text-muted)" }}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 21h18"></path><path d="M9 8h1"></path><path d="M9 12h1"></path><path d="M9 16h1"></path><path d="M14 8h1"></path><path d="M14 12h1"></path><path d="M14 16h1"></path><path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16"></path></svg>
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 600, color: isSelected ? "#4f46e5" : "var(--text-primary)", fontSize: 14, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{client.name}</div>
-                  <div style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{client.tagline || client.summary.industry}</div>
-                </div>
-                
-                {/* Delete button (visible on hover) */}
-                <button 
-                  className="delete-btn"
-                  onClick={(e) => handleDeleteClient(e, client)}
-                  style={{ position: 'absolute', right: 12, top: 16, background: 'none', border: 'none', color: 'var(--error)', cursor: 'pointer', padding: 4, opacity: 0, transition: 'opacity 0.2s' }}
-                  title="Delete Client"
+            <Btn 
+              onClick={() => { setIsAiSettingsOpen(true); }} 
+              className="liquid-glass-btn"
+              style={{ 
+                padding: "11px 14px", 
+                background: "rgba(255, 255, 255, 0.82)", 
+                color: "#3730a3", 
+                border: "1.5px solid rgba(255, 255, 255, 0.9)", 
+                fontWeight: 800, 
+                borderRadius: 12, 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                gap: 6,
+              }} 
+              title="Cấu hình AI (Provider, Keys & Prompt)"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+              AI Config
+            </Btn>
+          </div>
+          
+          <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 8, marginTop: 12, padding: "8px 14px 14px 14px" }}>
+            {filteredClients.map(client => {
+              const isSelected = selectedClientId === client.id && !isCreatingClient && !isEditingPrompt;
+              return (
+                <div 
+                  key={client.id}
+                  onClick={() => { setSelectedClientId(client.id); setSelectedJobId(null); setIsCreatingClient(false); setIsEditingPrompt(false); }}
+                  onMouseEnter={e => {
+                    const btn = e.currentTarget.querySelector('.delete-btn') as HTMLElement;
+                    if (btn) btn.style.opacity = '1';
+                    e.currentTarget.style.background = isSelected 
+                      ? "linear-gradient(135deg, rgba(99, 102, 241, 0.14), rgba(139, 92, 246, 0.1))" 
+                      : "linear-gradient(135deg, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.4))";
+                    e.currentTarget.style.transform = "translateY(-2px)";
+                    e.currentTarget.style.borderColor = isSelected ? "rgba(99, 102, 241, 0.35)" : "rgba(99, 102, 241, 0.15)";
+                    e.currentTarget.style.boxShadow = "0 8px 24px rgba(99, 102, 241, 0.06), inset 0 1px 1px rgba(255, 255, 255, 0.5)";
+                  }}
+                  onMouseLeave={e => {
+                    const btn = e.currentTarget.querySelector('.delete-btn') as HTMLElement;
+                    if (btn) btn.style.opacity = '0';
+                    e.currentTarget.style.background = isSelected 
+                      ? "linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(139, 92, 246, 0.08))" 
+                      : "rgba(255, 255, 255, 0.25)";
+                    e.currentTarget.style.transform = "none";
+                    e.currentTarget.style.borderColor = isSelected ? "rgba(99, 102, 241, 0.25)" : "transparent";
+                    e.currentTarget.style.boxShadow = isSelected ? "0 4px 16px rgba(99, 102, 241, 0.08), inset 0 1px 1px rgba(255, 255, 255, 0.6)" : "none";
+                  }}
+                  style={{ 
+                    padding: "16px", 
+                    borderRadius: 14, 
+                    cursor: "pointer",
+                    background: isSelected 
+                      ? "linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(139, 92, 246, 0.08))" 
+                      : "rgba(255, 255, 255, 0.25)",
+                    backdropFilter: "blur(16px) saturate(180%)",
+                    WebkitBackdropFilter: "blur(16px) saturate(180%)",
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: 12,
+                    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                    position: "relative",
+                    border: isSelected 
+                      ? "1px solid rgba(99, 102, 241, 0.25)" 
+                      : "1px solid transparent",
+                    boxShadow: isSelected 
+                      ? "0 4px 16px rgba(99, 102, 241, 0.08), inset 0 1px 1px rgba(255, 255, 255, 0.6)" 
+                      : "none",
+                  }}
                 >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                </button>
-              </div>
-            );
-          })}
+                  <div style={{ marginTop: 2, color: isSelected ? "#3730a3" : "var(--text-muted)", transition: "color 0.2s" }}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M3 21h18"></path><path d="M9 8h1"></path><path d="M9 12h1"></path><path d="M9 16h1"></path><path d="M14 8h1"></path><path d="M14 12h1"></path><path d="M14 16h1"></path><path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16"></path></svg>
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ 
+                      fontWeight: 800, 
+                      color: isSelected ? "#3730a3" : "var(--text-primary)", 
+                      fontSize: 14.5, 
+                      whiteSpace: "nowrap", 
+                      overflow: "hidden", 
+                      textOverflow: "ellipsis",
+                      transition: "color 0.2s"
+                    }}>{client.name}</div>
+                    <div style={{ 
+                      fontSize: 12, 
+                      color: isSelected ? "#3730a3" : "var(--text-secondary)", 
+                      marginTop: 4, 
+                      whiteSpace: "nowrap", 
+                      overflow: "hidden", 
+                      textOverflow: "ellipsis",
+                      transition: "color 0.2s",
+                      opacity: isSelected ? 0.9 : 1
+                    }}>{client.tagline || client.summary.industry}</div>
+                  </div>
+                  
+                  {/* Delete button (visible on hover) */}
+                  <button 
+                    className="delete-btn"
+                    onClick={(e) => handleDeleteClient(e, client)}
+                    style={{ position: 'absolute', right: 12, top: 16, background: 'none', border: 'none', color: 'var(--error)', cursor: 'pointer', padding: 4, opacity: 0, transition: 'opacity 0.2s' }}
+                    title="Delete Client"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                  </button>
+                </div>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* RIGHT PANE: Main Workspace */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, position: "relative" }}>
@@ -1644,89 +1815,359 @@ ${r.booleanSearch || "Not generated yet."}
             </div>
           </div>
         ) : isCreatingClient ? (
-          <div style={{ padding: 40, maxWidth: 500, background: "var(--bg-glass)", backdropFilter: "blur(16px)", borderRadius: 16, border: "1.5px solid var(--border-glass)", boxShadow: "var(--shadow-glass)" }}>
-            <h2 style={{ fontSize: 24, fontWeight: 800, marginBottom: 24, color: "var(--text-primary)" }}>Create New Client</h2>
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <div style={{ 
+            padding: "40px", 
+            width: "100%",
+            maxWidth: "500px", 
+            background: "var(--bg-glass)", 
+            backdropFilter: "blur(24px) saturate(180%)", 
+            WebkitBackdropFilter: "blur(24px) saturate(180%)", 
+            borderRadius: 24, 
+            border: "1.5px solid rgba(99, 102, 241, 0.18)", 
+            boxShadow: "0 20px 50px rgba(99, 102, 241, 0.08), inset 0 1px 1px rgba(255, 255, 255, 0.5)" 
+          }}>
+            <h2 style={{ fontSize: 24, fontWeight: 800, marginBottom: 24, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 10 }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth="2.5"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="17" y1="11" x2="23" y2="11"></line></svg>
+              Create New Client
+            </h2>
+            <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
               <div>
-                <label style={{ fontSize: 13, fontWeight: 600, display: "block", marginBottom: 6, color: "var(--text-secondary)" }}>Company Name *</label>
-                <input style={{ width: "100%", padding: "12px 14px", borderRadius: 8, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", outline: "none" }} value={newClientName} onChange={e => setNewClientName(e.target.value)} />
+                <label style={{ fontSize: 13.5, fontWeight: 700, display: "block", marginBottom: 8, color: "var(--text-primary)" }}>Company Name *</label>
+                <input 
+                  style={{ 
+                    width: "100%", 
+                    padding: "12px 16px", 
+                    borderRadius: 12, 
+                    border: "1.5px solid rgba(99, 102, 241, 0.12)", 
+                    background: "rgba(255, 255, 255, 0.6)", 
+                    color: "var(--text-primary)", 
+                    outline: "none",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.01)",
+                    transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
+                    fontSize: 14
+                  }} 
+                  placeholder="Ví dụ: TUV Rheinland, FPT Software..."
+                  value={newClientName} 
+                  onChange={e => setNewClientName(e.target.value)} 
+                  onFocus={e => {
+                    e.currentTarget.style.borderColor = "#6366f1";
+                    e.currentTarget.style.boxShadow = "0 0 15px rgba(99, 102, 241, 0.15), 0 0 0 3px rgba(99, 102, 241, 0.1)";
+                    e.currentTarget.style.background = "var(--bg-card)";
+                  }}
+                  onBlur={e => {
+                    e.currentTarget.style.borderColor = "rgba(99, 102, 241, 0.12)";
+                    e.currentTarget.style.boxShadow = "0 2px 8px rgba(0, 0, 0, 0.01)";
+                    e.currentTarget.style.background = "rgba(255, 255, 255, 0.6)";
+                  }}
+                />
               </div>
               <div>
-                <label style={{ fontSize: 13, fontWeight: 600, display: "block", marginBottom: 6, color: "var(--text-secondary)" }}>Tagline / Industry (optional)</label>
-                <input style={{ width: "100%", padding: "12px 14px", borderRadius: 8, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", outline: "none" }} value={newClientTagline} onChange={e => setNewClientTagline(e.target.value)} placeholder="e.g. Japanese Trading Company" />
+                <label style={{ fontSize: 13.5, fontWeight: 700, display: "block", marginBottom: 8, color: "var(--text-primary)" }}>Tagline / Industry (optional)</label>
+                <input 
+                  style={{ 
+                    width: "100%", 
+                    padding: "12px 16px", 
+                    borderRadius: 12, 
+                    border: "1.5px solid rgba(99, 102, 241, 0.12)", 
+                    background: "rgba(255, 255, 255, 0.6)", 
+                    color: "var(--text-primary)", 
+                    outline: "none",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.01)",
+                    transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
+                    fontSize: 14
+                  }} 
+                  value={newClientTagline} 
+                  onChange={e => setNewClientTagline(e.target.value)} 
+                  placeholder="e.g. Japanese Trading Company, Logistics, IT..." 
+                  onFocus={e => {
+                    e.currentTarget.style.borderColor = "#6366f1";
+                    e.currentTarget.style.boxShadow = "0 0 15px rgba(99, 102, 241, 0.15), 0 0 0 3px rgba(99, 102, 241, 0.1)";
+                    e.currentTarget.style.background = "var(--bg-card)";
+                  }}
+                  onBlur={e => {
+                    e.currentTarget.style.borderColor = "rgba(99, 102, 241, 0.12)";
+                    e.currentTarget.style.boxShadow = "0 2px 8px rgba(0, 0, 0, 0.01)";
+                    e.currentTarget.style.background = "rgba(255, 255, 255, 0.6)";
+                  }}
+                />
               </div>
               <div>
-                <label style={{ fontSize: 13, fontWeight: 600, display: "block", marginBottom: 6, color: "var(--text-secondary)" }}>Website (optional)</label>
-                <input style={{ width: "100%", padding: "12px 14px", borderRadius: 8, border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-primary)", outline: "none" }} value={newClientWebsite} onChange={e => setNewClientWebsite(e.target.value)} />
+                <label style={{ fontSize: 13.5, fontWeight: 700, display: "block", marginBottom: 8, color: "var(--text-primary)" }}>Website (optional)</label>
+                <input 
+                  style={{ 
+                    width: "100%", 
+                    padding: "12px 16px", 
+                    borderRadius: 12, 
+                    border: "1.5px solid rgba(99, 102, 241, 0.12)", 
+                    background: "rgba(255, 255, 255, 0.6)", 
+                    color: "var(--text-primary)", 
+                    outline: "none",
+                    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.01)",
+                    transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
+                    fontSize: 14
+                  }} 
+                  value={newClientWebsite} 
+                  onChange={e => setNewClientWebsite(e.target.value)} 
+                  placeholder="https://example.com"
+                  onFocus={e => {
+                    e.currentTarget.style.borderColor = "#6366f1";
+                    e.currentTarget.style.boxShadow = "0 0 15px rgba(99, 102, 241, 0.15), 0 0 0 3px rgba(99, 102, 241, 0.1)";
+                    e.currentTarget.style.background = "var(--bg-card)";
+                  }}
+                  onBlur={e => {
+                    e.currentTarget.style.borderColor = "rgba(99, 102, 241, 0.12)";
+                    e.currentTarget.style.boxShadow = "0 2px 8px rgba(0, 0, 0, 0.01)";
+                    e.currentTarget.style.background = "rgba(255, 255, 255, 0.6)";
+                  }}
+                />
               </div>
-              <Btn onClick={handleCreateClient} style={{ marginTop: 8, padding: "14px", background: "#4f46e5", color: "white", border: "none" }}>Create Client</Btn>
+              <Btn 
+                onClick={handleCreateClient} 
+                style={{ 
+                  marginTop: 12, 
+                  padding: "14px", 
+                  background: "linear-gradient(135deg, #6366f1, #8b5cf6)", 
+                  color: "white", 
+                  border: "none",
+                  borderRadius: 12,
+                  fontWeight: 700,
+                  fontSize: 15,
+                  boxShadow: "0 4px 14px rgba(99, 102, 241, 0.35)",
+                  transition: "all 0.25s ease"
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.transform = "translateY(-1px)";
+                  e.currentTarget.style.boxShadow = "0 6px 18px rgba(99, 102, 241, 0.55)";
+                  e.currentTarget.style.filter = "brightness(1.12)";
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.transform = "translateY(0)";
+                  e.currentTarget.style.boxShadow = "0 4px 14px rgba(99, 102, 241, 0.35)";
+                  e.currentTarget.style.filter = "none";
+                }}
+              >
+                Create Client
+              </Btn>
             </div>
           </div>
         ) : selectedClient ? (
           selectedJob ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: 24, maxWidth: 1000, height: "100%" }}>
-              {/* Job Header */}
-              <div style={{ display: "flex", gap: 16, alignItems: "center", paddingBottom: 24, borderBottom: "1px solid var(--border-color)" }}>
-                <button onClick={() => setSelectedJobId(null)} style={{ width: 40, height: 40, borderRadius: 20, border: "1px solid var(--border-color)", background: "var(--bg-card)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "var(--text-secondary)" }}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
-                </button>
-                <div style={{ flex: 1 }}>
-                  <h1 style={{ fontSize: 28, fontWeight: 800, margin: 0, color: "var(--text-primary)" }}>{selectedJob.title}</h1>
-                  <div style={{ fontSize: 14, color: "var(--text-secondary)", marginTop: 4 }}>Job Intelligence Report • {selectedClient.name}</div>
+            <div style={{ display: "flex", flexDirection: "column", width: "100%", height: "100%", overflowY: "auto", position: "relative" }}>
+              
+              {/* Static Header */}
+              <div style={{ 
+                position: "relative",
+                zIndex: 10,
+                background: "transparent",
+                borderBottom: "none",
+                padding: "24px 0 16px 0",
+                display: "flex", flexDirection: "column", gap: 20
+              }}>
+                <div style={{ maxWidth: 1200, margin: "0 auto", width: "100%", padding: "0 32px" }}>
+                  <button
+                    onClick={() => setSelectedJobId(null)}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 6,
+                      background: "none", border: "none", padding: "4px 0 16px 0",
+                      cursor: "pointer", color: "var(--text-secondary)", fontSize: 13, fontWeight: 500
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.color = "var(--text-primary)"}
+                    onMouseLeave={e => e.currentTarget.style.color = "var(--text-secondary)"}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                    Quay lại danh sách công việc
+                  </button>
+                  <div style={{ display: "flex", gap: 20, alignItems: "flex-start" }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <h1 style={{ fontSize: 34, fontWeight: 800, margin: "0 0 12px 0", color: "var(--text-primary)", letterSpacing: "-0.02em", lineHeight: 1.2 }}>{selectedJob.title}</h1>
+                      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
+                        <span style={{ 
+                          background: "rgba(99, 102, 241, 0.08)", 
+                          color: "#6366f1", 
+                          border: "1px solid rgba(99, 102, 241, 0.15)", 
+                          padding: "4px 12px", 
+                          borderRadius: "100px", 
+                          fontSize: 12, 
+                          fontWeight: 600 
+                        }}>{selectedClient.name}</span>
+                        <span style={{ 
+                          background: "rgba(139, 92, 246, 0.08)", 
+                          color: "#8b5cf6", 
+                          border: "1px solid rgba(139, 92, 246, 0.15)", 
+                          padding: "4px 12px", 
+                          borderRadius: "100px", 
+                          fontSize: 12, 
+                          fontWeight: 600 
+                        }}>Job Intelligence Report</span>
+                        <span style={{ 
+                          background: "rgba(34, 197, 94, 0.08)", 
+                          color: "#16a34a", 
+                          border: "1px solid rgba(34, 197, 94, 0.15)", 
+                          padding: "4px 12px", 
+                          borderRadius: "100px", 
+                          fontSize: 12, 
+                          fontWeight: 600,
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 6
+                        }}>
+                          <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#22c55e", display: "inline-block" }}></span>
+                          Updated {selectedJob.updatedAt}
+                        </span>
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, position: "relative" }}>
+                      <Btn
+                        onClick={handleCopyFullReport}
+                        style={{
+                          display: "flex", 
+                          alignItems: "center", 
+                          gap: 8,
+                          background: "linear-gradient(135deg, #6366f1, #8b5cf6)", 
+                          color: "white",
+                          border: "none", 
+                          borderRadius: 12, 
+                          padding: "10px 20px",
+                          height: "auto",
+                          fontWeight: 700, 
+                          fontSize: 13.5,
+                          boxShadow: "0 4px 14px rgba(99, 102, 241, 0.25)",
+                          cursor: "pointer",
+                          transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)"
+                        }}
+                        onMouseEnter={e => {
+                          e.currentTarget.style.transform = "translateY(-1.5px)";
+                          e.currentTarget.style.boxShadow = "0 6px 18px rgba(99, 102, 241, 0.4)";
+                          e.currentTarget.style.filter = "brightness(1.12)";
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.transform = "translateY(0)";
+                          e.currentTarget.style.boxShadow = "0 4px 14px rgba(99, 102, 241, 0.25)";
+                          e.currentTarget.style.filter = "none";
+                        }}
+                      >
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                        Copy Report
+                      </Btn>
+                      <button
+                        onClick={() => setIsJobMenuOpen(v => !v)}
+                        style={{
+                          width: 38, 
+                          height: 38, 
+                          borderRadius: 12,
+                          border: "1.5px solid rgba(99, 102, 241, 0.15)", 
+                          background: "rgba(255,255,255,0.6)",
+                          backdropFilter: "blur(8px)",
+                          WebkitBackdropFilter: "blur(8px)",
+                          display: "flex", 
+                          alignItems: "center", 
+                          justifyContent: "center",
+                          cursor: "pointer", 
+                          color: "#6366f1",
+                          transition: "all 0.2s"
+                        }}
+                        onMouseEnter={e => {
+                          e.currentTarget.style.background = "rgba(99, 102, 241, 0.08)";
+                          e.currentTarget.style.borderColor = "#6366f1";
+                          e.currentTarget.style.transform = "translateY(-1px)";
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.background = "rgba(255,255,255,0.6)";
+                          e.currentTarget.style.borderColor = "rgba(99, 102, 241, 0.15)";
+                          e.currentTarget.style.transform = "translateY(0)";
+                        }}
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="5" r="1.5"></circle><circle cx="12" cy="12" r="1.5"></circle><circle cx="12" cy="19" r="1.5"></circle></svg>
+                      </button>
+                      {isJobMenuOpen && (
+                        <div style={{
+                          position: "absolute", top: 42, right: 0, zIndex: 20,
+                          background: "var(--bg-card)", border: "1px solid var(--border-color)",
+                          borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+                          minWidth: 160, overflow: "hidden"
+                        }}>
+                          <button
+                            onClick={(e) => { setIsJobMenuOpen(false); handleDeleteJob(e, selectedJob); }}
+                            style={{
+                              width: "100%", textAlign: "left", padding: "10px 14px",
+                              background: "none", border: "none", cursor: "pointer",
+                              color: "#ef4444", fontSize: 13, fontWeight: 500,
+                              display: "flex", alignItems: "center", gap: 8
+                            }}
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                            Xóa Job
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
-                <Btn 
-                  onClick={handleCopyFullReport}
-                  style={{ display: "flex", alignItems: "center", gap: 8, background: "white", color: "#111", border: "1px solid #e2e8f0" }}
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                  Copy Full Report
-                </Btn>
+
+                {/* Tabs */}
+                <div style={{ maxWidth: 1200, margin: "0 auto", width: "100%", padding: "0 32px" }}>
+                  <div style={{ 
+                    display: "inline-flex", 
+                    gap: 4, 
+                    background: "rgba(99, 102, 241, 0.05)", 
+                    padding: "4px", 
+                    borderRadius: "14px", 
+                    border: "1px solid rgba(99, 102, 241, 0.08)" 
+                  }}>
+                    <button
+                      onClick={() => { setActiveJobTab('report'); setSelectedVersionIndex(null); }}
+                      style={{
+                        padding: "8px 18px",
+                        background: activeJobTab === 'report' ? "var(--bg-card)" : "transparent",
+                        border: "none",
+                        borderRadius: "10px",
+                        color: activeJobTab === 'report' ? "#6366f1" : "var(--text-muted)",
+                        fontWeight: activeJobTab === 'report' ? 700 : 600, 
+                        fontSize: 13.5,
+                        boxShadow: activeJobTab === 'report' ? "0 4px 12px rgba(99, 102, 241, 0.06)" : "none",
+                        cursor: "pointer", 
+                        transition: "all 0.2s ease"
+                      }}
+                    >
+                      AI Report
+                    </button>
+                    <button
+                      onClick={() => { setActiveJobTab('history'); setSelectedVersionIndex(null); }}
+                      style={{
+                        padding: "8px 18px",
+                        background: activeJobTab === 'history' ? "var(--bg-card)" : "transparent",
+                        border: "none",
+                        borderRadius: "10px",
+                        color: activeJobTab === 'history' ? "#6366f1" : "var(--text-muted)",
+                        fontWeight: activeJobTab === 'history' ? 700 : 600, 
+                        fontSize: 13.5,
+                        boxShadow: activeJobTab === 'history' ? "0 4px 12px rgba(99, 102, 241, 0.06)" : "none",
+                        cursor: "pointer", 
+                        transition: "all 0.2s ease",
+                        display: "flex", 
+                        alignItems: "center", 
+                        gap: 6
+                      }}
+                    >
+                      History <span style={{ 
+                        background: activeJobTab === 'history' ? "rgba(99, 102, 241, 0.15)" : "rgba(0,0,0,0.06)", 
+                        color: activeJobTab === 'history' ? "#6366f1" : "var(--text-muted)",
+                        padding: "1px 6px", 
+                        borderRadius: 8, 
+                        fontSize: 11,
+                        fontWeight: 700,
+                        transition: "all 0.2s"
+                      }}>{selectedJob.versions?.length || 0}</span>
+                    </button>
+                  </div>
+                </div>
               </div>
 
-              {/* Tabs for Report vs History (VẤN ĐỀ 4) */}
-              <div style={{ display: "flex", borderBottom: "1.5px solid var(--border-glass)", gap: 16, marginTop: -8 }}>
-                <button
-                  onClick={() => { setActiveJobTab('report'); setSelectedVersionIndex(null); }}
-                  style={{
-                    padding: "12px 16px",
-                    background: "none",
-                    border: "none",
-                    borderBottom: activeJobTab === 'report' ? "2.5px solid #4f46e5" : "2.5px solid transparent",
-                    color: activeJobTab === 'report' ? "var(--text-primary)" : "var(--text-muted)",
-                    fontWeight: 600,
-                    fontSize: 14,
-                    cursor: "pointer",
-                    transition: "all 0.2s ease"
-                  }}
-                >
-                  AI Report
-                </button>
-                <button
-                  onClick={() => { setActiveJobTab('history'); setSelectedVersionIndex(null); }}
-                  style={{
-                    padding: "12px 16px",
-                    background: "none",
-                    border: "none",
-                    borderBottom: activeJobTab === 'history' ? "2.5px solid #4f46e5" : "2.5px solid transparent",
-                    color: activeJobTab === 'history' ? "var(--text-primary)" : "var(--text-muted)",
-                    fontWeight: 600,
-                    fontSize: 14,
-                    cursor: "pointer",
-                    transition: "all 0.2s ease",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 6
-                  }}
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                  History ({selectedJob.versions?.length || 0})
-                </button>
-              </div>
-
-              {activeJobTab === 'history' ? (
-                <div style={{ flex: 1, overflowY: "auto", display: "flex", gap: 24, paddingRight: 8 }}>
-                  {/* Left list of versions */}
-                  <div style={{ width: 280, flexShrink: 0, display: "flex", flexDirection: "column", gap: 12 }}>
+              <div style={{ display: "flex", flexDirection: "column", paddingTop: 32, paddingBottom: 120 }}>
+                {activeJobTab === 'history' ? (
+                  <div style={{ display: "flex", gap: 24, padding: "0 32px", maxWidth: 1200, margin: "0 auto", width: "100%" }}>
+                    {/* Left list of versions */}
+                    <div style={{ width: 280, flexShrink: 0, display: "flex", flexDirection: "column", gap: 12 }}>
                     <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Version History</div>
                     {(!selectedJob.versions || selectedJob.versions.length === 0) ? (
                       <div style={{ fontSize: 14, color: "var(--text-secondary)", padding: 16, background: "var(--bg-glass)", borderRadius: 12, border: "1.5px solid var(--border-glass)" }}>
@@ -1741,8 +2182,8 @@ ${r.booleanSearch || "Not generated yet."}
                             width: "100%",
                             textAlign: "left",
                             padding: 16,
-                            background: selectedVersionIndex === idx ? "rgba(79, 70, 229, 0.15)" : "var(--bg-glass)",
-                            border: selectedVersionIndex === idx ? "1.5px solid #4f46e5" : "1.5px solid var(--border-glass)",
+                            background: selectedVersionIndex === idx ? "rgba(0, 0, 0, 0.04)" : "transparent",
+                            border: selectedVersionIndex === idx ? "1px solid var(--border-color)" : "1px solid transparent",
                             borderRadius: 12,
                             cursor: "pointer",
                             color: "var(--text-primary)",
@@ -1764,7 +2205,7 @@ ${r.booleanSearch || "Not generated yet."}
                   {/* Right details panel */}
                   <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 20 }}>
                     {selectedVersionIndex === null ? (
-                      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", minHeight: 300, background: "var(--bg-glass)", borderRadius: 16, border: "1.5px solid var(--border-glass)", color: "var(--text-secondary)", padding: 40, textAlign: "center" }}>
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", minHeight: 300, background: "transparent", color: "var(--text-secondary)", padding: 40, textAlign: "center" }}>
                         <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ color: "var(--text-muted)", marginBottom: 16 }}><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
                         <h3 style={{ fontSize: 16, fontWeight: 600, margin: "0 0 8px 0" }}>Select a Version</h3>
                         <p style={{ fontSize: 14, margin: 0, color: "var(--text-muted)" }}>Choose a version from the left panel to inspect the raw input used and the snapshot state before that update.</p>
@@ -1772,7 +2213,7 @@ ${r.booleanSearch || "Not generated yet."}
                     ) : (
                       <>
                         {/* Raw Input Area */}
-                        <div style={{ background: "var(--bg-glass)", backdropFilter: "blur(16px)", padding: 24, borderRadius: 16, border: "1.5px solid var(--border-glass)", boxShadow: "var(--shadow-glass)" }}>
+                        <div style={{ background: "transparent", padding: "0 0 24px 0" }}>
                           <h3 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 12px 0", color: "var(--text-primary)", textTransform: "uppercase", letterSpacing: "0.05em", display: "flex", alignItems: "center", gap: 8 }}>
                             <span style={{ display: "inline-block", width: 6, height: 6, background: "#4f46e5", borderRadius: "50%" }}></span>
                             Raw input for V{selectedVersionIndex + 1}
@@ -1783,7 +2224,7 @@ ${r.booleanSearch || "Not generated yet."}
                         </div>
 
                         {/* Snapshot Report State */}
-                        <div style={{ background: "var(--bg-glass)", backdropFilter: "blur(16px)", padding: 24, borderRadius: 16, border: "1.5px solid var(--border-glass)", boxShadow: "var(--shadow-glass)", display: "flex", flexDirection: "column", gap: 16 }}>
+                        <div style={{ background: "transparent", display: "flex", flexDirection: "column", gap: 16, paddingTop: 12 }}>
                           <h3 style={{ fontSize: 14, fontWeight: 700, margin: 0, color: "var(--text-primary)", textTransform: "uppercase", letterSpacing: "0.05em", display: "flex", alignItems: "center", gap: 8 }}>
                             <span style={{ display: "inline-block", width: 6, height: 6, background: "#10b981", borderRadius: "50%" }}></span>
                             Previous Snapshot Report (State before update)
@@ -1842,93 +2283,91 @@ ${r.booleanSearch || "Not generated yet."}
                 </div>
               ) : selectedJob.report.markdownReport ? (
                 /* Beautiful Markdown Report View */
-                <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 24, paddingRight: 8 }}>
+                <div style={{ maxWidth: 1200, margin: "0 auto", width: "100%", padding: "0 32px" }}>
                   <div style={{
-                    background: "var(--bg-glass-strong)",
-                    backdropFilter: "blur(16px)",
-                    padding: "32px",
-                    borderRadius: 16,
-                    border: "1.5px solid var(--border-glass-strong)",
-                    boxShadow: "var(--shadow-glass)",
                     color: "var(--text-primary)",
-                    lineHeight: "1.75",
+                    lineHeight: "1.8",
+                    fontSize: "16px",
+                    background: "transparent",
+                    border: "none",
+                    boxShadow: "none"
                   }} className="markdown-body">
-                    <ReactMarkdown>{selectedJob.report.markdownReport}</ReactMarkdown>
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{selectedJob.report.markdownReport}</ReactMarkdown>
                   </div>
                 </div>
               ) : (
                 /* Job Content Scrollable */
-                <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 24, paddingRight: 8 }}>
+                <div style={{ maxWidth: 1200, margin: "0 auto", width: "100%", padding: "0 32px", display: "flex", flexDirection: "column", gap: 56 }}>
                   
                   {/* 1. Role Overview */}
-                  <div style={{ background: "var(--bg-glass-strong)", backdropFilter: "blur(16px)", padding: 24, borderRadius: 16, border: "1.5px solid var(--border-glass-strong)", borderLeft: "3px solid var(--primary)", boxShadow: "var(--shadow-glass)" }}>
-                    <h3 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 16px 0", color: "var(--text-primary)" }}>1. Role Overview</h3>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 24 }}>
-                      <div><div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 4 }}>Department</div><div style={{ fontSize: 15, fontWeight: 600 }}>{selectedJob.report.roleOverview.dept || "N/A"}</div></div>
-                      <div><div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 4 }}>Reporting Line</div><div style={{ fontSize: 15, fontWeight: 600 }}>{selectedJob.report.roleOverview.reportTo || "N/A"}</div></div>
-                      <div><div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 4 }}>Salary Range</div><div style={{ fontSize: 15, fontWeight: 600, color: "#16a34a" }}>{selectedJob.report.roleOverview.salary || "N/A"}</div></div>
-                      <div><div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 4 }}>Location</div><div style={{ fontSize: 15, fontWeight: 600 }}>{selectedJob.report.roleOverview.location || "N/A"}</div></div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+                    <h3 style={{ fontSize: 30, fontWeight: 700, margin: 0, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>Role Overview</h3>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 32 }}>
+                      <div><div style={{ fontSize: 14, color: "var(--text-secondary)", marginBottom: 8 }}>Department</div><div style={{ fontSize: 17, fontWeight: 500, color: "var(--text-primary)", lineHeight: 1.8 }}>{selectedJob.report.roleOverview.dept || "N/A"}</div></div>
+                      <div><div style={{ fontSize: 14, color: "var(--text-secondary)", marginBottom: 8 }}>Reporting Line</div><div style={{ fontSize: 17, fontWeight: 500, color: "var(--text-primary)", lineHeight: 1.8 }}>{selectedJob.report.roleOverview.reportTo || "N/A"}</div></div>
+                      <div><div style={{ fontSize: 14, color: "var(--text-secondary)", marginBottom: 8 }}>Salary Range</div><div style={{ fontSize: 17, fontWeight: 500, color: "#16a34a", lineHeight: 1.8 }}>{selectedJob.report.roleOverview.salary || "N/A"}</div></div>
+                      <div><div style={{ fontSize: 14, color: "var(--text-secondary)", marginBottom: 8 }}>Location</div><div style={{ fontSize: 17, fontWeight: 500, color: "var(--text-primary)", lineHeight: 1.8 }}>{selectedJob.report.roleOverview.location || "N/A"}</div></div>
                     </div>
                   </div>
 
                   {/* 2 & 3: Context and Persona */}
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
-                    <div style={{ background: "var(--bg-glass)", backdropFilter: "blur(16px)", padding: 24, borderRadius: 16, border: "1.5px solid var(--border-glass)", boxShadow: "var(--shadow-glass)" }}>
-                      <h3 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 16px 0", color: "var(--text-primary)" }}>2. Company Context</h3>
-                      <ul style={{ margin: 0, paddingLeft: 20, fontSize: 14, lineHeight: 1.7, color: "var(--text-secondary)" }}>
-                        {selectedJob.report.companyContext.length > 0 ? selectedJob.report.companyContext.map((item, i) => <li key={i}>{item}</li>) : <li>Not available</li>}
+                  <>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+                      <h3 style={{ fontSize: 30, fontWeight: 700, margin: 0, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>Company Context</h3>
+                      <ul style={{ margin: 0, paddingLeft: 24, fontSize: 17, lineHeight: 1.8, color: "var(--text-primary)" }}>
+                        {selectedJob.report.companyContext.length > 0 ? selectedJob.report.companyContext.map((item, i) => <li key={i} style={{ marginBottom: 12 }}>{item}</li>) : <li>Not available</li>}
                       </ul>
                     </div>
                     
                     {selectedJob.report.candidatePersonaObj ? (
-                    <div style={{ background: "var(--bg-glass)", backdropFilter: "blur(16px)", padding: 24, borderRadius: 16, border: "1.5px solid var(--border-glass)", boxShadow: "var(--shadow-glass)" }}>
-                      <h3 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 16px 0", color: "var(--text-primary)" }}>3. Candidate Persona</h3>
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, fontSize: 14, color: "var(--text-secondary)" }}>
-                        <div><strong>Experience:</strong> {selectedJob.report.candidatePersonaObj.yearsOfExperience}</div>
-                        <div><strong>Industry:</strong> {selectedJob.report.candidatePersonaObj.industryBackground}</div>
-                        <div><strong>Function:</strong> {selectedJob.report.candidatePersonaObj.functionalBackground}</div>
-                        <div><strong>Language:</strong> {selectedJob.report.candidatePersonaObj.languageRequirements}</div>
-                        <div style={{ gridColumn: "1 / -1" }}>
-                          <strong>Traits:</strong> {selectedJob.report.candidatePersonaObj.personalityTraits?.join(", ")}
+                    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+                      <h3 style={{ fontSize: 30, fontWeight: 700, margin: 0, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>Candidate Persona</h3>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 32, fontSize: 17, lineHeight: 1.8, color: "var(--text-primary)" }}>
+                        <div><strong style={{ color: "var(--text-secondary)" }}>Experience:</strong> <br/>{selectedJob.report.candidatePersonaObj.yearsOfExperience}</div>
+                        <div><strong style={{ color: "var(--text-secondary)" }}>Industry:</strong> <br/>{selectedJob.report.candidatePersonaObj.industryBackground}</div>
+                        <div><strong style={{ color: "var(--text-secondary)" }}>Function:</strong> <br/>{selectedJob.report.candidatePersonaObj.functionalBackground}</div>
+                        <div><strong style={{ color: "var(--text-secondary)" }}>Language:</strong> <br/>{selectedJob.report.candidatePersonaObj.languageRequirements}</div>
+                        <div style={{ gridColumn: "1 / -1", marginTop: 8 }}>
+                          <strong style={{ color: "var(--text-secondary)" }}>Traits:</strong> <br/>{selectedJob.report.candidatePersonaObj.personalityTraits?.join(", ")}
                         </div>
                       </div>
                     </div>
                     ) : (
-                    <div style={{ background: "var(--bg-glass)", backdropFilter: "blur(16px)", padding: 24, borderRadius: 16, border: "1.5px solid var(--border-glass)", boxShadow: "var(--shadow-glass)" }}>
-                      <h3 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 16px 0", color: "var(--text-primary)" }}>3. Ideal Persona</h3>
-                      <ul style={{ margin: 0, paddingLeft: 20, fontSize: 14, lineHeight: 1.7, color: "var(--text-secondary)" }}>
-                        {selectedJob.report.idealPersona.length > 0 ? selectedJob.report.idealPersona.map((item, i) => <li key={i}>{item}</li>) : <li>Not available</li>}
+                    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+                      <h3 style={{ fontSize: 30, fontWeight: 700, margin: 0, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>Ideal Persona</h3>
+                      <ul style={{ margin: 0, paddingLeft: 24, fontSize: 17, lineHeight: 1.8, color: "var(--text-primary)" }}>
+                        {selectedJob.report.idealPersona.length > 0 ? selectedJob.report.idealPersona.map((item, i) => <li key={i} style={{ marginBottom: 12 }}>{item}</li>) : <li>Not available</li>}
                       </ul>
                     </div>
                     )}
-                  </div>
+                  </>
 
                   {/* Competitor Companies */}
                   {selectedJob.report.competitorCompanies && (
-                  <div style={{ background: "var(--bg-glass-strong)", backdropFilter: "blur(16px)", padding: 24, borderRadius: 16, border: "1.5px solid var(--border-glass-strong)", borderLeft: "3px solid #f59e0b", boxShadow: "var(--shadow-glass)" }}>
-                    <h3 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 16px 0", color: "var(--text-primary)" }}>Competitor Companies</h3>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+                    <h3 style={{ fontSize: 30, fontWeight: 700, margin: 0, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>Competitor Companies</h3>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 32 }}>
                       <div>
-                        <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", marginBottom: 8 }}>Direct Competitors</div>
-                        <ul style={{ margin: 0, paddingLeft: 20, fontSize: 14, color: "var(--text-secondary)" }}>
-                          {selectedJob.report.competitorCompanies.directCompetitors?.map((c,i)=><li key={i}>{c}</li>)}
+                        <div style={{ fontSize: 24, fontWeight: 600, color: "var(--text-primary)", letterSpacing: "-0.01em", marginBottom: 16 }}>Direct Competitors</div>
+                        <ul style={{ margin: 0, paddingLeft: 24, fontSize: 17, lineHeight: 1.8, color: "var(--text-primary)" }}>
+                          {selectedJob.report.competitorCompanies.directCompetitors?.map((c,i)=><li key={i} style={{ marginBottom: 12 }}>{c}</li>)}
                         </ul>
                       </div>
                       <div>
-                        <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", marginBottom: 8 }}>Similar Business Models</div>
-                        <ul style={{ margin: 0, paddingLeft: 20, fontSize: 14, color: "var(--text-secondary)" }}>
-                          {selectedJob.report.competitorCompanies.similarBusinessModels?.map((c,i)=><li key={i}>{c}</li>)}
+                        <div style={{ fontSize: 24, fontWeight: 600, color: "var(--text-primary)", letterSpacing: "-0.01em", marginBottom: 16 }}>Similar Business Models</div>
+                        <ul style={{ margin: 0, paddingLeft: 24, fontSize: 17, lineHeight: 1.8, color: "var(--text-primary)" }}>
+                          {selectedJob.report.competitorCompanies.similarBusinessModels?.map((c,i)=><li key={i} style={{ marginBottom: 12 }}>{c}</li>)}
                         </ul>
                       </div>
                       <div>
-                        <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", marginBottom: 8 }}>Transferable Talent</div>
-                        <ul style={{ margin: 0, paddingLeft: 20, fontSize: 14, color: "var(--text-secondary)" }}>
-                          {selectedJob.report.competitorCompanies.transferableTalent?.map((c,i)=><li key={i}>{c}</li>)}
+                        <div style={{ fontSize: 24, fontWeight: 600, color: "var(--text-primary)", letterSpacing: "-0.01em", marginBottom: 16 }}>Transferable Talent</div>
+                        <ul style={{ margin: 0, paddingLeft: 24, fontSize: 17, lineHeight: 1.8, color: "var(--text-primary)" }}>
+                          {selectedJob.report.competitorCompanies.transferableTalent?.map((c,i)=><li key={i} style={{ marginBottom: 12 }}>{c}</li>)}
                         </ul>
                       </div>
                       <div>
-                        <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", marginBottom: 8 }}>Why These Companies</div>
-                        <div style={{ fontSize: 14, color: "var(--text-secondary)" }}>{selectedJob.report.competitorCompanies.whyTheseCompanies}</div>
+                        <div style={{ fontSize: 24, fontWeight: 600, color: "var(--text-primary)", letterSpacing: "-0.01em", marginBottom: 16 }}>Why These Companies</div>
+                        <div style={{ fontSize: 17, lineHeight: 1.8, color: "var(--text-primary)" }}>{selectedJob.report.competitorCompanies.whyTheseCompanies}</div>
                       </div>
                     </div>
                   </div>
@@ -1936,28 +2375,28 @@ ${r.booleanSearch || "Not generated yet."}
 
                   {/* Position Intelligence */}
                   {selectedJob.report.positionIntelligence && (
-                  <div style={{ background: "var(--bg-glass)", backdropFilter: "blur(16px)", padding: 24, borderRadius: 16, border: "1.5px solid var(--border-glass)", boxShadow: "var(--shadow-glass)" }}>
-                    <h3 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 16px 0", color: "var(--text-primary)" }}>Position Intelligence</h3>
-                    <div style={{ marginBottom: 12 }}>
-                      <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Nature of Role: </span>
-                      <span style={{ fontSize: 14, color: "var(--text-secondary)" }}>{selectedJob.report.positionIntelligence.natureOfRole}</span>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+                    <h3 style={{ fontSize: 30, fontWeight: 700, margin: 0, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>Position Intelligence</h3>
+                    <div style={{ marginBottom: 8 }}>
+                      <span style={{ fontSize: 17, fontWeight: 600, color: "var(--text-secondary)" }}>Nature of Role: </span>
+                      <span style={{ fontSize: 17, color: "var(--text-primary)", lineHeight: 1.8 }}>{selectedJob.report.positionIntelligence.natureOfRole}</span>
                     </div>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 32 }}>
                       <div>
-                        <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", marginBottom: 8 }}>Day-to-day Challenges</div>
-                        <ul style={{ margin: 0, paddingLeft: 20, fontSize: 14, color: "var(--text-secondary)" }}>{selectedJob.report.positionIntelligence.dayToDayChallenges?.map((c,i)=><li key={i}>{c}</li>)}</ul>
+                        <div style={{ fontSize: 24, fontWeight: 600, color: "var(--text-primary)", letterSpacing: "-0.01em", marginBottom: 16 }}>Day-to-day Challenges</div>
+                        <ul style={{ margin: 0, paddingLeft: 24, fontSize: 17, lineHeight: 1.8, color: "var(--text-primary)" }}>{selectedJob.report.positionIntelligence.dayToDayChallenges?.map((c,i)=><li key={i} style={{ marginBottom: 12 }}>{c}</li>)}</ul>
                       </div>
                       <div>
-                        <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", marginBottom: 8 }}>Hidden Expectations</div>
-                        <ul style={{ margin: 0, paddingLeft: 20, fontSize: 14, color: "var(--text-secondary)" }}>{selectedJob.report.positionIntelligence.hiddenExpectations?.map((c,i)=><li key={i}>{c}</li>)}</ul>
+                        <div style={{ fontSize: 24, fontWeight: 600, color: "var(--text-primary)", letterSpacing: "-0.01em", marginBottom: 16 }}>Hidden Expectations</div>
+                        <ul style={{ margin: 0, paddingLeft: 24, fontSize: 17, lineHeight: 1.8, color: "var(--text-primary)" }}>{selectedJob.report.positionIntelligence.hiddenExpectations?.map((c,i)=><li key={i} style={{ marginBottom: 12 }}>{c}</li>)}</ul>
                       </div>
                       <div>
-                        <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", marginBottom: 8 }}>Key Success Factors</div>
-                        <ul style={{ margin: 0, paddingLeft: 20, fontSize: 14, color: "var(--text-secondary)" }}>{selectedJob.report.positionIntelligence.keySuccessFactors?.map((c,i)=><li key={i}>{c}</li>)}</ul>
+                        <div style={{ fontSize: 24, fontWeight: 600, color: "var(--text-primary)", letterSpacing: "-0.01em", marginBottom: 16 }}>Key Success Factors</div>
+                        <ul style={{ margin: 0, paddingLeft: 24, fontSize: 17, lineHeight: 1.8, color: "var(--text-primary)" }}>{selectedJob.report.positionIntelligence.keySuccessFactors?.map((c,i)=><li key={i} style={{ marginBottom: 12 }}>{c}</li>)}</ul>
                       </div>
                       <div>
-                        <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", marginBottom: 8 }}>Reasons Candidates Fail</div>
-                        <ul style={{ margin: 0, paddingLeft: 20, fontSize: 14, color: "var(--text-secondary)" }}>{selectedJob.report.positionIntelligence.commonReasonsCandidatesFail?.map((c,i)=><li key={i}>{c}</li>)}</ul>
+                        <div style={{ fontSize: 24, fontWeight: 600, color: "var(--text-primary)", letterSpacing: "-0.01em", marginBottom: 16 }}>Reasons Candidates Fail</div>
+                        <ul style={{ margin: 0, paddingLeft: 24, fontSize: 17, lineHeight: 1.8, color: "var(--text-primary)" }}>{selectedJob.report.positionIntelligence.commonReasonsCandidatesFail?.map((c,i)=><li key={i} style={{ marginBottom: 12 }}>{c}</li>)}</ul>
                       </div>
                     </div>
                   </div>
@@ -1965,129 +2404,140 @@ ${r.booleanSearch || "Not generated yet."}
 
                   {/* Talent Market Insight & Strategy */}
                   {(selectedJob.report.talentMarketInsight || selectedJob.report.recruitmentStrategy || selectedJob.report.candidateSellingPoints) && (
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
+                  <>
                     {selectedJob.report.talentMarketInsight && (
-                    <div style={{ background: "var(--bg-glass)", backdropFilter: "blur(16px)", padding: 24, borderRadius: 16, border: "1.5px solid var(--border-glass)", boxShadow: "var(--shadow-glass)" }}>
-                      <h3 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 16px 0", color: "var(--text-primary)" }}>Talent Market Insight</h3>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: 14, color: "var(--text-secondary)" }}>
-                        <div><strong>Talent Pool Difficulty:</strong> {selectedJob.report.talentMarketInsight.talentPoolDifficulty}</div>
-                        <div><strong>Counter Offer Risk:</strong> {selectedJob.report.talentMarketInsight.counterOfferRisk}</div>
-                        <div><strong>Salary Competitiveness:</strong> {selectedJob.report.talentMarketInsight.salaryCompetitiveness}</div>
-                        <div><strong>Notice Period Risk:</strong> {selectedJob.report.talentMarketInsight.noticePeriodRisk}</div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+                      <h3 style={{ fontSize: 30, fontWeight: 700, margin: 0, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>Talent Market Insight</h3>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 16, fontSize: 17, lineHeight: 1.8, color: "var(--text-primary)" }}>
+                        <div><strong style={{ color: "var(--text-secondary)" }}>Talent Pool Difficulty:</strong> {selectedJob.report.talentMarketInsight.talentPoolDifficulty}</div>
+                        <div><strong style={{ color: "var(--text-secondary)" }}>Counter Offer Risk:</strong> {selectedJob.report.talentMarketInsight.counterOfferRisk}</div>
+                        <div><strong style={{ color: "var(--text-secondary)" }}>Salary Competitiveness:</strong> {selectedJob.report.talentMarketInsight.salaryCompetitiveness}</div>
+                        <div><strong style={{ color: "var(--text-secondary)" }}>Notice Period Risk:</strong> {selectedJob.report.talentMarketInsight.noticePeriodRisk}</div>
                         <div>
-                          <strong>Hiring Challenges:</strong> 
-                          <ul style={{ margin: "4px 0 0", paddingLeft: 20 }}>{selectedJob.report.talentMarketInsight.hiringChallenges?.map((c,i)=><li key={i}>{c}</li>)}</ul>
+                          <strong style={{ color: "var(--text-secondary)" }}>Hiring Challenges:</strong> 
+                          <ul style={{ margin: "8px 0 0", paddingLeft: 24 }}>{selectedJob.report.talentMarketInsight.hiringChallenges?.map((c,i)=><li key={i} style={{ marginBottom: 12 }}>{c}</li>)}</ul>
                         </div>
                       </div>
                     </div>
                     )}
+                    {selectedJob.report.recruitmentStrategy && (
                     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-                      {selectedJob.report.recruitmentStrategy && (
-                      <div style={{ background: "var(--bg-glass)", backdropFilter: "blur(16px)", padding: 24, borderRadius: 16, border: "1.5px solid var(--border-glass)", boxShadow: "var(--shadow-glass)" }}>
-                        <h3 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 16px 0", color: "var(--text-primary)" }}>Recruitment Strategy</h3>
-                        <div style={{ fontSize: 14, color: "var(--text-secondary)" }}>
-                          <div style={{ marginBottom: 8 }}><strong>Where to Source:</strong> {selectedJob.report.recruitmentStrategy.whereToSource?.join(", ")}</div>
-                          <div style={{ marginBottom: 8 }}><strong>Target First:</strong> {selectedJob.report.recruitmentStrategy.companiesToTargetFirst?.join(", ")}</div>
-                          <div style={{ marginBottom: 8 }}><strong>Challenges/Mitigations:</strong></div>
-                          <ul style={{ margin: 0, paddingLeft: 20 }}>{selectedJob.report.recruitmentStrategy.challengesAndMitigations?.map((c,i)=><li key={i}>{c}</li>)}</ul>
-                        </div>
+                      <h3 style={{ fontSize: 30, fontWeight: 700, margin: 0, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>Recruitment Strategy</h3>
+                      <div style={{ fontSize: 17, lineHeight: 1.8, color: "var(--text-primary)" }}>
+                        <div style={{ marginBottom: 12 }}><strong style={{ color: "var(--text-secondary)" }}>Where to Source:</strong> {selectedJob.report.recruitmentStrategy.whereToSource?.join(", ")}</div>
+                        <div style={{ marginBottom: 12 }}><strong style={{ color: "var(--text-secondary)" }}>Target First:</strong> {selectedJob.report.recruitmentStrategy.companiesToTargetFirst?.join(", ")}</div>
+                        <div style={{ marginBottom: 12 }}><strong style={{ color: "var(--text-secondary)" }}>Challenges/Mitigations:</strong></div>
+                        <ul style={{ margin: 0, paddingLeft: 24 }}>{selectedJob.report.recruitmentStrategy.challengesAndMitigations?.map((c,i)=><li key={i} style={{ marginBottom: 12 }}>{c}</li>)}</ul>
                       </div>
-                      )}
-                      {selectedJob.report.candidateSellingPoints && (
-                      <div style={{ background: "var(--bg-glass)", backdropFilter: "blur(16px)", padding: 24, borderRadius: 16, border: "1.5px solid var(--border-glass)", boxShadow: "var(--shadow-glass)" }}>
-                        <h3 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 16px 0", color: "var(--text-primary)" }}>Selling Points</h3>
-                        <ul style={{ margin: 0, paddingLeft: 20, fontSize: 14, lineHeight: 1.7, color: "var(--text-secondary)" }}>
-                          {selectedJob.report.candidateSellingPoints.map((c,i) => <li key={i}>{c}</li>)}
-                        </ul>
-                      </div>
-                      )}
                     </div>
-                  </div>
+                    )}
+                    {selectedJob.report.candidateSellingPoints && (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+                      <h3 style={{ fontSize: 30, fontWeight: 700, margin: 0, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>Selling Points</h3>
+                      <ul style={{ margin: 0, paddingLeft: 24, fontSize: 17, lineHeight: 1.8, color: "var(--text-primary)" }}>
+                        {selectedJob.report.candidateSellingPoints.map((c,i) => <li key={i} style={{ marginBottom: 12 }}>{c}</li>)}
+                      </ul>
+                    </div>
+                    )}
+                  </>
                   )}
 
                   {/* 4 & 5: Must have / Nice to have */}
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
-                    <div style={{ background: "var(--bg-glass)", backdropFilter: "blur(16px)", padding: 24, borderRadius: 16, border: "1.5px solid var(--border-glass)", boxShadow: "var(--shadow-glass)" }}>
-                      <h3 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 16px 0", color: "var(--text-primary)" }}>4. Must Have</h3>
-                      <ul style={{ margin: 0, paddingLeft: 20, fontSize: 14, lineHeight: 1.7, color: "var(--text-secondary)" }}>
-                        {selectedJob.report.mustHave.length > 0 ? selectedJob.report.mustHave.map((item, i) => <li key={i}>{item}</li>) : <li>Not available</li>}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 56 }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+                      <h3 style={{ fontSize: 30, fontWeight: 700, margin: 0, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>Must Have</h3>
+                      <ul style={{ margin: 0, paddingLeft: 24, fontSize: 17, lineHeight: 1.8, color: "var(--text-primary)" }}>
+                        {selectedJob.report.mustHave.length > 0 ? selectedJob.report.mustHave.map((item, i) => <li key={i} style={{ marginBottom: 12 }}>{item}</li>) : <li>Not available</li>}
                       </ul>
                     </div>
-                    <div style={{ background: "var(--bg-glass)", backdropFilter: "blur(16px)", padding: 24, borderRadius: 16, border: "1.5px solid var(--border-glass)", boxShadow: "var(--shadow-glass)" }}>
-                      <h3 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 16px 0", color: "var(--text-primary)" }}>5. Nice to Have</h3>
-                      <ul style={{ margin: 0, paddingLeft: 20, fontSize: 14, lineHeight: 1.7, color: "var(--text-secondary)" }}>
-                        {selectedJob.report.niceToHave.length > 0 ? selectedJob.report.niceToHave.map((item, i) => <li key={i}>{item}</li>) : <li>Not available</li>}
+                    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+                      <h3 style={{ fontSize: 30, fontWeight: 700, margin: 0, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>Nice to Have</h3>
+                      <ul style={{ margin: 0, paddingLeft: 24, fontSize: 17, lineHeight: 1.8, color: "var(--text-primary)" }}>
+                        {selectedJob.report.niceToHave.length > 0 ? selectedJob.report.niceToHave.map((item, i) => <li key={i} style={{ marginBottom: 12 }}>{item}</li>) : <li>Not available</li>}
                       </ul>
                     </div>
                   </div>
 
                   {/* 7. Social Post */}
-                  <div style={{ background: "var(--bg-output)", border: "1px solid var(--border-output)", borderRadius: 12, padding: 24 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-                      <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: "var(--text-primary)" }}>7. Social Post</h3>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <h3 style={{ fontSize: 30, fontWeight: 700, margin: 0, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>Social Post</h3>
                       <button 
                         onClick={() => handleCopySection(selectedJob.report.socialPost || "", "Social Post")}
                         style={{ 
-                          display: "flex", alignItems: "center", gap: 4, padding: "4px 10px", 
-                          background: "var(--bg-glass)", border: "1px solid var(--border-output)", 
-                          borderRadius: 6, fontSize: 12, color: "var(--text-primary)", cursor: "pointer",
-                          fontWeight: 500
+                          display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", 
+                          background: "transparent", border: "1px solid var(--border-color)", 
+                          borderRadius: 6, fontSize: 13, color: "var(--text-primary)", cursor: "pointer",
+                          fontWeight: 500, transition: "all 0.2s"
                         }}
+                        onMouseEnter={e => e.currentTarget.style.background = "rgba(0,0,0,0.03)"}
+                        onMouseLeave={e => e.currentTarget.style.background = "transparent"}
                       >
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                         Copy
                       </button>
                     </div>
-                    <div style={{ fontFamily: "monospace", color: "var(--text-output)", fontSize: 13, whiteSpace: "pre-wrap" }}>
+                    <div style={{ fontFamily: "var(--font-mono)", color: "var(--text-primary)", fontSize: 15, lineHeight: 1.8, whiteSpace: "pre-wrap", background: "rgba(0,0,0,0.02)", padding: 24, borderRadius: 12 }}>
                       {selectedJob.report.socialPost || "Not generated yet."}
                     </div>
                   </div>
 
                   {/* 8. Boolean Search */}
                   {selectedJob.report.booleanSearchQueries ? (
-                  <div style={{ background: "var(--bg-output)", border: "1px solid var(--border-output)", borderRadius: 12, padding: 24 }}>
-                    <h3 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 16px 0", color: "var(--text-primary)" }}>Boolean Search</h3>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                      {Object.entries(selectedJob.report.booleanSearchQueries).map(([key, query]) => query ? (
-                        <div key={key}>
-                          <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", marginBottom: 4 }}>{key}</div>
-                          <div style={{ display: "flex", gap: 8 }}>
-                            <div style={{ flex: 1, fontFamily: "monospace", color: "var(--text-output)", fontSize: 13, background: "rgba(0,0,0,0.1)", padding: "8px 12px", borderRadius: 6 }}>{query}</div>
-                            <button onClick={() => handleCopySection(query as string, `Boolean ${key}`)} style={{ padding: "8px 12px", background: "var(--bg-glass)", border: "1px solid var(--border-output)", borderRadius: 6, fontSize: 12, color: "var(--text-primary)", cursor: "pointer", fontWeight: 500 }}>Copy</button>
-                          </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+                    <h3 style={{ fontSize: 30, fontWeight: 700, margin: 0, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>Boolean Search</h3>
+                    {Object.entries(selectedJob.report.booleanSearchQueries).map(([key, query]) => query ? (
+                      <div key={key}>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase", marginBottom: 8 }}>{key}</div>
+                        <div style={{ display: "flex", gap: 12 }}>
+                          <div style={{ flex: 1, fontFamily: "var(--font-mono)", color: "var(--text-primary)", fontSize: 15, background: "rgba(0,0,0,0.02)", padding: "16px 20px", borderRadius: 8, lineHeight: 1.8 }}>{query}</div>
+                          <button 
+                            onClick={() => handleCopySection(query as string, `Boolean ${key}`)} 
+                            style={{ 
+                              padding: "0 16px", background: "transparent", border: "1px solid var(--border-color)", 
+                              borderRadius: 8, fontSize: 13, color: "var(--text-primary)", cursor: "pointer", 
+                              fontWeight: 500, display: "flex", alignItems: "center", transition: "all 0.2s" 
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.background = "rgba(0,0,0,0.03)"}
+                            onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                          >
+                            Copy
+                          </button>
                         </div>
-                      ) : null)}
-                    </div>
+                      </div>
+                    ) : null)}
                   </div>
                   ) : (
-                  <div style={{ background: "var(--bg-output)", border: "1px solid var(--border-output)", borderRadius: 12, padding: 24 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-                      <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: "var(--text-primary)" }}>Boolean Search</h3>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <h3 style={{ fontSize: 30, fontWeight: 700, margin: 0, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>Boolean Search</h3>
                       <button 
                         onClick={() => handleCopySection(selectedJob.report.booleanSearch || "", "Boolean Search")}
                         style={{ 
-                          display: "flex", alignItems: "center", gap: 4, padding: "4px 10px", 
-                          background: "var(--bg-glass)", border: "1px solid var(--border-output)", 
-                          borderRadius: 6, fontSize: 12, color: "var(--text-primary)", cursor: "pointer",
-                          fontWeight: 500
+                          display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", 
+                          background: "transparent", border: "1px solid var(--border-color)", 
+                          borderRadius: 6, fontSize: 13, color: "var(--text-primary)", cursor: "pointer",
+                          fontWeight: 500, transition: "all 0.2s"
                         }}
+                        onMouseEnter={e => e.currentTarget.style.background = "rgba(0,0,0,0.03)"}
+                        onMouseLeave={e => e.currentTarget.style.background = "transparent"}
                       >
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                         Copy
                       </button>
                     </div>
-                    <div style={{ fontFamily: "monospace", color: "var(--text-output)", fontSize: 13 }}>
+                    <div style={{ fontFamily: "var(--font-mono)", color: "var(--text-primary)", fontSize: 15, lineHeight: 1.8, background: "rgba(0,0,0,0.02)", padding: 24, borderRadius: 12 }}>
                       {selectedJob.report.booleanSearch || "Not generated yet."}
                     </div>
                   </div>
                   )}
 
                   {/* 6 & 9: Questions for Client / Interview Questions (Layout 2 cột) */}
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 56 }}>
                     {/* 6. Questions for Client */}
-                    <div style={{ background: "var(--bg-glass)", backdropFilter: "blur(16px)", padding: 24, borderRadius: 16, border: "1.5px solid var(--border-glass)", boxShadow: "var(--shadow-glass)" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-                        <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: "var(--text-primary)" }}>6. Questions for Client</h3>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <h3 style={{ fontSize: 30, fontWeight: 700, margin: 0, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>Questions for Client</h3>
                         <button 
                           onClick={() => {
                             const textToCopy = selectedJob.report.questionsForClient && selectedJob.report.questionsForClient.length > 0 
@@ -2096,19 +2546,21 @@ ${r.booleanSearch || "Not generated yet."}
                             handleCopySection(textToCopy, "Questions for Client");
                           }}
                           style={{ 
-                            display: "flex", alignItems: "center", gap: 4, padding: "4px 10px", 
-                            background: "var(--bg-glass)", border: "1px solid var(--border-glass)", 
-                            borderRadius: 6, fontSize: 12, color: "var(--text-primary)", cursor: "pointer",
-                            fontWeight: 500
+                            display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", 
+                            background: "transparent", border: "1px solid var(--border-color)", 
+                            borderRadius: 6, fontSize: 13, color: "var(--text-primary)", cursor: "pointer",
+                            fontWeight: 500, transition: "all 0.2s"
                           }}
+                          onMouseEnter={e => e.currentTarget.style.background = "rgba(0,0,0,0.03)"}
+                          onMouseLeave={e => e.currentTarget.style.background = "transparent"}
                         >
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                           Copy
                         </button>
                       </div>
-                      <ul style={{ margin: 0, paddingLeft: 20, fontSize: 14, lineHeight: 1.7, color: "var(--text-secondary)" }}>
+                      <ul style={{ margin: 0, paddingLeft: 24, fontSize: 17, lineHeight: 1.8, color: "var(--text-primary)" }}>
                         {selectedJob.report.questionsForClient && selectedJob.report.questionsForClient.length > 0 ? (
-                          selectedJob.report.questionsForClient.map((item, i) => <li key={i}>{item}</li>)
+                          selectedJob.report.questionsForClient.map((item, i) => <li key={i} style={{ marginBottom: 12 }}>{item}</li>)
                         ) : (
                           <li>Not available</li>
                         )}
@@ -2116,9 +2568,9 @@ ${r.booleanSearch || "Not generated yet."}
                     </div>
 
                     {/* 9. Interview Questions */}
-                    <div style={{ background: "var(--bg-glass)", backdropFilter: "blur(16px)", padding: 24, borderRadius: 16, border: "1.5px solid var(--border-glass)", boxShadow: "var(--shadow-glass)" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-                        <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: "var(--text-primary)" }}>9. Interview Questions</h3>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <h3 style={{ fontSize: 30, fontWeight: 700, margin: 0, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>Interview Questions</h3>
                         <button 
                           onClick={() => {
                             const textToCopy = selectedJob.report.interviewQuestions && selectedJob.report.interviewQuestions.length > 0 
@@ -2127,19 +2579,21 @@ ${r.booleanSearch || "Not generated yet."}
                             handleCopySection(textToCopy, "Interview Questions");
                           }}
                           style={{ 
-                            display: "flex", alignItems: "center", gap: 4, padding: "4px 10px", 
-                            background: "var(--bg-glass)", border: "1px solid var(--border-glass)", 
-                            borderRadius: 6, fontSize: 12, color: "var(--text-primary)", cursor: "pointer",
-                            fontWeight: 500
+                            display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", 
+                            background: "transparent", border: "1px solid var(--border-color)", 
+                            borderRadius: 6, fontSize: 13, color: "var(--text-primary)", cursor: "pointer",
+                            fontWeight: 500, transition: "all 0.2s"
                           }}
+                          onMouseEnter={e => e.currentTarget.style.background = "rgba(0,0,0,0.03)"}
+                          onMouseLeave={e => e.currentTarget.style.background = "transparent"}
                         >
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                           Copy
                         </button>
                       </div>
-                      <ul style={{ margin: 0, paddingLeft: 20, fontSize: 14, lineHeight: 1.7, color: "var(--text-secondary)" }}>
+                      <ul style={{ margin: 0, paddingLeft: 24, fontSize: 17, lineHeight: 1.8, color: "var(--text-primary)" }}>
                         {selectedJob.report.interviewQuestions && selectedJob.report.interviewQuestions.length > 0 ? (
-                          selectedJob.report.interviewQuestions.map((item, i) => <li key={i}>{item}</li>)
+                          selectedJob.report.interviewQuestions.map((item, i) => <li key={i} style={{ marginBottom: 12 }}>{item}</li>)
                         ) : (
                           <li>Not available</li>
                         )}
@@ -2148,91 +2602,266 @@ ${r.booleanSearch || "Not generated yet."}
                   </div>
                 </div>
               )}
+              </div>
             </div>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 32, maxWidth: 900 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 32, maxWidth: 900, height: "100%", overflowY: "auto", paddingRight: 16 }}>
             
             {/* Header */}
             <div style={{ display: "flex", gap: 24, alignItems: "center" }}>
               <div>
                 <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
                   {editingClientId === selectedClient.id ? (
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <input 
-                        value={editingNameVal} 
-                        onChange={e => setEditingNameVal(e.target.value)}
-                        style={{ fontSize: 24, fontWeight: 800, padding: "4px 8px", borderRadius: 6, border: "1.5px solid var(--border-glass)", background: "var(--bg-glass)", color: "var(--text-primary)", outline: "none", width: 300 }} 
-                        autoFocus
-                        onKeyDown={e => { if (e.key === 'Enter') handleUpdateClientName(selectedClient.id); if (e.key === 'Escape') setEditingClientId(null); }}
-                      />
-                      <button onClick={() => handleUpdateClientName(selectedClient.id)} style={{ padding: "8px 16px", background: "#4f46e5", color: "white", borderRadius: 6, border: "none", cursor: "pointer", fontWeight: 600 }}>Save</button>
-                      <button onClick={() => setEditingClientId(null)} style={{ padding: "8px 16px", background: "var(--bg-glass)", color: "var(--text-primary)", borderRadius: 6, border: "1.5px solid var(--border-glass)", cursor: "pointer", fontWeight: 600 }}>Cancel</button>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8, flex: 1 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                        <input 
+                          value={editingNameVal} 
+                          onChange={e => setEditingNameVal(e.target.value)}
+                          placeholder="Tên công ty..."
+                          style={{ 
+                            fontSize: 28, 
+                            fontWeight: 800, 
+                            padding: "4px 0", 
+                            background: "transparent", 
+                            color: "#3730a3", 
+                            border: "none", 
+                            borderBottom: "2px solid #6366f1",
+                            outline: "none", 
+                            minWidth: 240,
+                            letterSpacing: "-0.02em"
+                          }} 
+                          autoFocus
+                        />
+                        <div style={{ display: "flex", gap: 6 }}>
+                          <button 
+                            onClick={() => handleUpdateClient(selectedClient.id)} 
+                            style={{ 
+                              width: 32, 
+                              height: 32, 
+                              borderRadius: 8, 
+                              background: "#10b981", 
+                              color: "white", 
+                              border: "none", 
+                              display: "flex", 
+                              alignItems: "center", 
+                              justifyContent: "center",
+                              cursor: "pointer"
+                            }}
+                          >
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                          </button>
+                          <button 
+                            onClick={() => setEditingClientId(null)} 
+                            style={{ 
+                              width: 32, 
+                              height: 32, 
+                              borderRadius: 8, 
+                              background: "rgba(0,0,0,0.05)", 
+                              color: "#64748b", 
+                              border: "none", 
+                              display: "flex", 
+                              alignItems: "center", 
+                              justifyContent: "center",
+                              cursor: "pointer"
+                            }}
+                          >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                          </button>
+                        </div>
+                      </div>
+                      
+                      <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2.5"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+                          <input 
+                            value={editingWebsiteVal} 
+                            onChange={e => setEditingWebsiteVal(e.target.value)}
+                            placeholder="Website..."
+                            style={{ 
+                              fontSize: 13, 
+                              fontWeight: 600, 
+                              padding: "2px 0", 
+                              background: "transparent", 
+                              color: "#4f46e5", 
+                              border: "none", 
+                              borderBottom: "1.5px solid rgba(79, 70, 229, 0.2)",
+                              outline: "none", 
+                              width: 180
+                            }} 
+                          />
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                          <input 
+                            value={editingTaglineVal} 
+                            onChange={e => setEditingTaglineVal(e.target.value)}
+                            placeholder="Tagline..."
+                            style={{ 
+                              fontSize: 13, 
+                              fontWeight: 500, 
+                              padding: "2px 0", 
+                              background: "transparent", 
+                              color: "#64748b", 
+                              border: "none", 
+                              borderBottom: "1.5px solid rgba(100, 116, 139, 0.2)",
+                              outline: "none", 
+                              width: 200
+                            }} 
+                          />
+                        </div>
+                      </div>
                     </div>
                   ) : (
-                    <>
-                      <h1 style={{ fontSize: 28, fontWeight: 800, margin: 0, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 12 }}>
-                        {selectedClient.name}
-                        <button onClick={() => { setEditingClientId(selectedClient.id); setEditingNameVal(selectedClient.name); }} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                        <h1 style={{ fontSize: 28, fontWeight: 800, margin: 0, color: "#3730a3", display: "flex", alignItems: "center", gap: 12, letterSpacing: "-0.02em" }}>
+                          {selectedClient.name}
+                        </h1>
+                        <button 
+                          onClick={() => { 
+                            setEditingClientId(selectedClient.id); 
+                            setEditingNameVal(selectedClient.name); 
+                            setEditingWebsiteVal(selectedClient.website || ""); 
+                            setEditingTaglineVal(selectedClient.tagline || "");
+                          }} 
+                          style={{ 
+                            background: "rgba(99, 102, 241, 0.08)", 
+                            border: "none", 
+                            width: 28,
+                            height: 28,
+                            borderRadius: 8,
+                            cursor: "pointer", 
+                            color: "#6366f1", 
+                            display: "flex", 
+                            alignItems: "center", 
+                            justifyContent: "center"
+                          }}
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                         </button>
-                      </h1>
-                      <span style={{ padding: "4px 10px", background: "rgba(34, 197, 94, 0.15)", color: "#16a34a", fontSize: 12, fontWeight: 600, borderRadius: 12 }}>Active</span>
-                    </>
+                        <span style={{ padding: "4px 10px", background: "rgba(34, 197, 94, 0.15)", color: "#16a34a", fontSize: 11, fontWeight: 700, borderRadius: 12, textTransform: "uppercase" }}>Active</span>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 2 }}>
+                        {selectedClient.website && (
+                          <a href={selectedClient.website} target="_blank" rel="noreferrer" style={{ fontSize: 13, color: "#4f46e5", fontWeight: 600, display: "flex", alignItems: "center", gap: 6, textDecoration: "none" }}>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+                            {selectedClient.website.replace(/^https?:\/\//, '').replace(/\/$/, '')}
+                          </a>
+                        )}
+                        <span style={{ fontSize: 13, color: "#64748b", fontWeight: 500, display: "flex", alignItems: "center", gap: 6 }}>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                          {selectedClient.tagline || "N/A"}
+                        </span>
+                      </div>
+                    </div>
                   )}
                 </div>
-                <div style={{ fontSize: 15, color: "var(--text-secondary)", marginBottom: 10 }}>{selectedClient.tagline || selectedClient.summary.industry}</div>
-                {selectedClient.website && (
-                  <a href={selectedClient.website} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 14, color: "#4f46e5", textDecoration: "none", fontWeight: 500 }}>
-                    {selectedClient.website}
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-                  </a>
-                )}
               </div>
             </div>
 
             {/* Universal Input Area */}
-            <div style={{ background: "var(--bg-glass)", backdropFilter: "blur(16px)", borderRadius: 16, border: "1.5px solid var(--border-glass)", padding: 24, boxShadow: "var(--shadow-glass)" }}>
-              
-              <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 16 }}>
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  <label style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 600 }}>Tên vị trí (Không bắt buộc)</label>
-                  <input 
-                    type="text"
-                    value={manualJobTitle}
-                    onChange={e => setManualJobTitle(e.target.value)}
-                    placeholder="Ví dụ: Lead Auditor - CSR & Sustainability"
-                    style={{ 
-                      width: "100%", padding: "10px 14px", borderRadius: 8, border: "1px solid var(--border-glass)", 
-                      fontSize: 14, background: "var(--bg-body)", color: "var(--text-primary)", outline: "none"
-                    }}
-                  />
-                </div>
-
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  <label style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 600 }}>Nội dung mô tả công việc (JD)</label>
-                  <div style={{ position: "relative" }}>
-                    <textarea 
-                      value={universalInput}
-                      onChange={e => setUniversalInput(e.target.value)}
-                      placeholder="Dán hoặc nhập bất kỳ thông tin nào về vị trí này (JD, Meeting notes, Emails, Feedback)..."
-                      style={{ 
-                        width: "100%", height: 120, borderRadius: 8, border: "1px solid var(--border-glass)", 
-                        padding: 16, fontSize: 14, background: "var(--bg-body)", color: "var(--text-primary)", 
-                        resize: "none", outline: "none", fontFamily: "inherit"
-                      }}
-                    />
-                  </div>
-                </div>
+            <div 
+              style={{ 
+                display: "flex",
+                flexDirection: "column",
+                gap: 20,
+                padding: "0 4px"
+              }}
+            >
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <label style={{ fontSize: 13, color: "#3730a3", fontWeight: 800, display: "flex", alignItems: "center", gap: 8, paddingLeft: 4 }}>
+                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#6366f1", boxShadow: "0 0 8px rgba(99, 102, 241, 0.4)" }}></span>
+                  Tên vị trí tuyển dụng
+                  <span style={{ fontSize: 10, color: "var(--text-muted)", fontWeight: 500 }}>(Không bắt buộc)</span>
+                </label>
+                <input 
+                  type="text"
+                  className="liquid-glass-input"
+                  value={manualJobTitle}
+                  onChange={e => setManualJobTitle(e.target.value)}
+                  placeholder="Ví dụ: Lead Auditor - CSR & Sustainability..."
+                  style={{ 
+                    width: "100%", 
+                    padding: "12px 16px", 
+                    borderRadius: 12, 
+                    fontSize: 14, 
+                    fontWeight: 500,
+                    border: "1.5px solid rgba(99, 102, 241, 0.1)",
+                    background: "rgba(255, 255, 255, 0.5)",
+                    backdropFilter: "none",
+                    boxShadow: "none",
+                    margin: "1px"
+                  }}
+                />
               </div>
-              
-              <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                <Btn 
-                  onClick={handleUniversalInputSubmit} 
-                  disabled={isProcessingInput || !universalInput.trim()} 
-                  style={{ padding: "10px 24px", background: "#4f46e5", color: "white", border: "none", borderRadius: 8, fontWeight: 600, fontSize: 14 }}
-                >
-                  {isProcessingInput ? (processingProgress > 0 ? `Processing... (${processingProgress} chars)` : "Processing...") : "Save Information"}
-                </Btn>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: 12, position: "relative" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingLeft: 4, paddingRight: 4 }}>
+                  <label style={{ fontSize: 13, color: "#3730a3", fontWeight: 800, display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#8b5cf6", boxShadow: "0 0 8px rgba(139, 92, 246, 0.4)" }}></span>
+                    Nội dung mô tả công việc (JD)
+                  </label>
+                  
+                  <Btn 
+                    onClick={async () => {
+                      if (!universalInput.trim()) return;
+                      await handleUniversalInputSubmit();
+                      setShowSavedFeedback(true);
+                      setTimeout(() => setShowSavedFeedback(false), 2000);
+                    }} 
+                    disabled={isProcessingInput || !universalInput.trim()} 
+                    style={{ 
+                      padding: "6px 16px", 
+                      height: 34,
+                      borderRadius: 10, 
+                      fontSize: 13,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                      background: showSavedFeedback ? "#10b981" : "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                      color: "white",
+                      border: "none",
+                      boxShadow: showSavedFeedback ? "0 4px 12px rgba(16, 185, 129, 0.3)" : "0 4px 12px rgba(99, 102, 241, 0.3)",
+                      transform: showSavedFeedback ? "scale(1.05)" : "scale(1)",
+                      transition: "all 0.3s cubic-bezier(0.16, 1, 0.3, 1)"
+                    }}
+                  >
+                    {showSavedFeedback ? (
+                      <>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        Saved
+                      </>
+                    ) : (
+                      <>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        Save
+                      </>
+                    )}
+                  </Btn>
+                </div>
+                
+                <textarea 
+                  value={universalInput}
+                  onChange={e => setUniversalInput(e.target.value)}
+                  placeholder="Dán JD, ghi chú cuộc họp, phản hồi hoặc email yêu cầu..."
+                  className="liquid-glass-input"
+                  style={{ 
+                    width: "100%", 
+                    height: 180, 
+                    borderRadius: 16, 
+                    padding: "16px 18px", 
+                    fontSize: 14, 
+                    resize: "none", 
+                    fontFamily: "inherit",
+                    lineHeight: 1.6,
+                    fontWeight: 500,
+                    border: "1.5px solid rgba(99, 102, 241, 0.1)",
+                    background: "rgba(255, 255, 255, 0.5)",
+                    backdropFilter: "none",
+                    boxShadow: "none",
+                    margin: "1px"
+                  }}
+                />
               </div>
             </div>
 
@@ -2288,43 +2917,88 @@ ${r.booleanSearch || "Not generated yet."}
 
             {/* Jobs Section */}
             <div>
-              <h2 style={{ fontSize: 20, fontWeight: 800, margin: "0 0 16px 0", color: "var(--text-primary)" }}>Jobs</h2>
-              <div style={{ display: "flex", flexDirection: "column", gap: 0, borderRadius: 12, border: "1.5px solid var(--border-glass)", background: "var(--bg-glass)", backdropFilter: "blur(16px)", overflow: "hidden", boxShadow: "var(--shadow-glass)" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+                <h2 style={{ fontSize: 20, fontWeight: 800, margin: 0, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 10 }}>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth="2.5"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                  Danh sách công việc (Jobs)
+                </h2>
+                <span style={{ fontSize: 13, color: "var(--text-muted)", fontWeight: 500 }}>
+                  {selectedClient.jobs.length} công việc
+                </span>
+              </div>
+              
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 {selectedClient.jobs.length === 0 && (
-                  <div style={{ padding: 24, textAlign: "center", color: "var(--text-muted)", fontSize: 14 }}>
-                    No jobs yet. Paste a JD in the box above to generate one automatically.
+                  <div style={{ 
+                    padding: "32px 24px", 
+                    textAlign: "center", 
+                    color: "var(--text-muted)", 
+                    fontSize: 14,
+                    background: "var(--bg-glass)",
+                    borderRadius: 16,
+                    border: "1px dashed rgba(99, 102, 241, 0.2)",
+                    backdropFilter: "blur(12px)"
+                  }}>
+                    Chưa có công việc nào. Hãy dán mô tả công việc (JD) ở trên để bắt đầu!
                   </div>
                 )}
                 {selectedClient.jobs.map((job, index) => (
                   <div 
                     key={job.id} 
                     onClick={() => setSelectedJobId(job.id)}
+                    className="liquid-glass-card"
                     onMouseEnter={e => {
                       const btn = e.currentTarget.querySelector('.job-delete-btn') as HTMLElement;
                       if (btn) btn.style.opacity = '1';
+                      const icon = e.currentTarget.querySelector('.job-icon-container') as HTMLElement;
+                      if (icon) icon.style.transform = "scale(1.05)";
                     }}
                     onMouseLeave={e => {
                       const btn = e.currentTarget.querySelector('.job-delete-btn') as HTMLElement;
                       if (btn) btn.style.opacity = '0';
+                      const icon = e.currentTarget.querySelector('.job-icon-container') as HTMLElement;
+                      if (icon) icon.style.transform = "scale(1)";
                     }}
                     style={{ 
-                      padding: "20px 24px", 
+                      padding: "18px 24px", 
                       display: "flex", 
                       alignItems: "center", 
-                      gap: 16,
-                      borderBottom: index < selectedClient.jobs.length - 1 ? "1px solid var(--border-color)" : "none",
+                      gap: 18,
+                      borderRadius: 16,
                       cursor: "pointer",
-                      transition: "background 0.2s",
                       position: "relative"
                     }}
-                    className="hover:bg-[var(--bg-hover)]"
                   >
-                    <div style={{ color: "var(--text-secondary)", display: "flex", alignItems: "center", justifyContent: "center", width: 36, height: 36, borderRadius: 8, background: "var(--bg-body)" }}>
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                    <div 
+                      className="job-icon-container"
+                      style={{ 
+                        color: "#6366f1", 
+                        display: "flex", 
+                        alignItems: "center", 
+                        justifyContent: "center", 
+                        width: 44, 
+                        height: 44, 
+                        borderRadius: 12, 
+                        background: "linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.15))",
+                        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                        border: "1px solid rgba(99, 102, 241, 0.15)"
+                      }}
+                    >
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 15, fontWeight: 600, color: "var(--text-primary)", marginBottom: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{job.title}</div>
-                      <div style={{ fontSize: 13, color: "var(--text-secondary)" }}>Updated {job.updatedAt}</div>
+                      <div style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)", marginBottom: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                        {job.title}
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <span style={{ fontSize: 12, color: "var(--text-muted)" }}>
+                          Cập nhật: {job.updatedAt}
+                        </span>
+                        <span style={{ width: 4, height: 4, borderRadius: "50%", background: "#10B981" }}></span>
+                        <span style={{ fontSize: 11, background: "rgba(16, 185, 129, 0.1)", color: "#10B981", padding: "2px 8px", borderRadius: 12, fontWeight: 600 }}>
+                          Sẵn sàng
+                        </span>
+                      </div>
                     </div>
                     
                     {/* Delete job button (visible on hover) */}
@@ -2334,23 +3008,42 @@ ${r.booleanSearch || "Not generated yet."}
                       style={{ 
                         background: 'none', 
                         border: 'none', 
-                        color: 'var(--error)', 
+                        color: 'var(--danger)', 
                         cursor: 'pointer', 
                         padding: 8, 
                         opacity: 0, 
-                        transition: 'opacity 0.2s',
+                        transition: 'all 0.2s',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        borderRadius: 6
+                        borderRadius: 8,
+                        marginRight: 8
+                      }}
+                      onMouseEnter={e => {
+                        e.currentTarget.style.background = "rgba(239, 68, 68, 0.1)";
+                        e.currentTarget.style.transform = "scale(1.1)";
+                      }}
+                      onMouseLeave={e => {
+                        e.currentTarget.style.background = "none";
+                        e.currentTarget.style.transform = "scale(1)";
                       }}
                       title="Xóa Job"
                     >
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                     </button>
-
-                    <div style={{ color: "var(--text-muted)" }}>
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                    
+                    <div style={{ 
+                      color: "#6366f1", 
+                      background: "rgba(99, 102, 241, 0.08)", 
+                      width: 32, 
+                      height: 32, 
+                      borderRadius: "50%", 
+                      display: "flex", 
+                      alignItems: "center", 
+                      justifyContent: "center",
+                      transition: "all 0.2s"
+                    }}>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
                     </div>
                   </div>
                 ))}
@@ -2368,63 +3061,259 @@ ${r.booleanSearch || "Not generated yet."}
 
       </div>
 
-      {/* FLOATING AI ASSISTANT BUTTON */}
-      <div style={{ position: "fixed", bottom: 32, right: 32, zIndex: 100 }}>
-        {isChatOpen && (
-          <div style={{ position: "absolute", bottom: 64, right: 0, width: 380, height: 500, background: "var(--bg-glass)", backdropFilter: "blur(16px)", borderRadius: 16, boxShadow: "var(--shadow-glass)", border: "1.5px solid var(--border-glass)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
-            <div style={{ background: "linear-gradient(135deg, #4f46e5, #6366f1)", padding: "16px 20px", color: "white", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <div style={{ width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", filter: 'drop-shadow(0.5px 0 0 white) drop-shadow(0 0.5px 0 white) drop-shadow(-0.5px 0 0 white) drop-shadow(0 -0.5px 0 white)' }}>
-                  <img src="/freec-icon.png" alt="AI" style={{ width: 28, height: 28, objectFit: 'contain' }} />
+      {/* FLOATING ASK AI SECTION & TRIGGER BUTTON */}
+      <div
+        style={{
+          position: "fixed",
+          bottom: 32,
+          right: 32,
+          zIndex: 9999,
+          pointerEvents: "none"
+        }}
+      >
+        {/* FLOATING ASK AI WINDOW */}
+        <AnimatePresence>
+          {isChatOpen && (() => {
+            const chatBottomFromViewport = 104 - draggedY;
+            const maxAllowedHeight = windowHeight - 24 - chatBottomFromViewport;
+            const dynamicHeight = Math.max(250, Math.min(550, maxAllowedHeight));
+
+            const buttonRightFromRightEdge = 32 - draggedX;
+            const rightOffset = Math.max(0, buttonRightFromRightEdge - (windowWidth - 396));
+
+            return (
+              <motion.div 
+                initial={{ opacity: 0, y: 35, scale: 0.9, filter: "blur(4px)" }}
+                animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
+                exit={{ opacity: 0, y: 25, scale: 0.92, filter: "blur(4px)" }}
+                transition={{ type: "spring", damping: 22, stiffness: 200 }}
+                onPointerDown={e => e.stopPropagation()}
+                onMouseDown={e => e.stopPropagation()}
+                onTouchStart={e => e.stopPropagation()}
+                style={{
+                  position: "absolute",
+                  bottom: 72,
+                  right: -rightOffset,
+                  width: 380,
+                  height: dynamicHeight,
+                  x: dragX,
+                  y: dragY,
+                  background: "var(--bg-glass)",
+                  backdropFilter: "blur(24px) saturate(180%)",
+                  WebkitBackdropFilter: "blur(24px) saturate(180%)",
+                  borderRadius: 24,
+                  border: "1.5px solid rgba(99, 102, 241, 0.18)",
+                  boxShadow: "0 20px 50px rgba(99, 102, 241, 0.12), inset 0 1px 1px rgba(255, 255, 255, 0.5)",
+                  display: "flex",
+                  flexDirection: "column",
+                  overflow: "hidden",
+                  pointerEvents: "auto",
+                  zIndex: 9999
+                }}
+              >
+                {/* Header */}
+                <div style={{
+                  padding: "16px 18px",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  borderBottom: "1.5px solid rgba(99, 102, 241, 0.12)",
+                  background: "rgba(255, 255, 255, 0.12)"
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <div style={{ width: 34, height: 34, borderRadius: 10, background: "linear-gradient(135deg, #6366f1, #8b5cf6)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ color: "white" }}><path d="M12 2l1.8 5.2L19 9l-5.2 1.8L12 16l-1.8-5.2L5 9l5.2-1.8z"></path></svg>
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: 800, fontSize: 15, color: "var(--text-primary)" }}>freeC AI</div>
+                      <div style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 500 }}>
+                        {selectedClient ? `Đang hỗ trợ: ${selectedClient.name}` : "Trợ lý trí tuệ tuyển dụng"}
+                      </div>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => setIsChatOpen(false)} 
+                    style={{ 
+                      background: "rgba(99, 102, 241, 0.08)", 
+                      border: "none", 
+                      color: "#6366f1", 
+                      cursor: "pointer", 
+                      padding: 6, 
+                      borderRadius: "50%",
+                      display: "flex", 
+                      transition: "all 0.2s" 
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.background = "rgba(239, 68, 68, 0.1)";
+                      e.currentTarget.style.color = "var(--danger)";
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.background = "rgba(99, 102, 241, 0.08)";
+                      e.currentTarget.style.color = "#6366f1";
+                    }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                  </button>
                 </div>
-                <div style={{ fontWeight: 600, fontSize: 15 }}>Ask AI Copilot</div>
-              </div>
-              <button onClick={() => setIsChatOpen(false)} style={{ background: "none", border: "none", color: "white", cursor: "pointer", opacity: 0.8, padding: 4 }}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-              </button>
-            </div>
-            
-            <div style={{ flex: 1, overflowY: "auto", padding: 20, display: "flex", flexDirection: "column", gap: 16, background: "transparent" }}>
-              {chatMessages.map((msg, i) => (
-                <div key={i} style={{ display: "flex", flexDirection: msg.role === 'user' ? 'row-reverse' : 'row', gap: 8 }}>
-                  <div style={{ background: msg.role === 'user' ? "#4f46e5" : "var(--bg-glass)", color: msg.role === 'user' ? "white" : "var(--text-primary)", padding: "10px 14px", borderRadius: 12, border: msg.role === 'user' ? "none" : "1px solid var(--border-glass)", maxWidth: "85%", fontSize: 14, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>
-                    {msg.content}
+
+                {/* Messages */}
+                <div style={{ flex: 1, overflowY: "auto", padding: "18px", display: "flex", flexDirection: "column", gap: 18, background: "rgba(255, 255, 255, 0.04)" }}>
+                  {chatMessages.map((msg, i) => (
+                    <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
+                      <div style={{
+                        background: msg.role === 'user' ? "linear-gradient(135deg, #6366f1, #8b5cf6)" : "var(--bg-card)",
+                        color: msg.role === 'user' ? "white" : "var(--text-primary)",
+                        padding: "11px 15px", borderRadius: 16,
+                        borderBottomRightRadius: msg.role === 'user' ? 4 : 16,
+                        borderBottomLeftRadius: msg.role === 'user' ? 16 : 4,
+                        maxWidth: "88%", fontSize: 13.5, lineHeight: 1.6, 
+                        whiteSpace: msg.role === 'user' ? "pre-wrap" : "normal",
+                        boxShadow: msg.role === 'user' ? "0 4px 12px rgba(99, 102, 241, 0.15)" : "0 2px 8px rgba(0,0,0,0.03)",
+                        border: msg.role === 'user' ? "none" : "1.5px solid rgba(99, 102, 241, 0.1)"
+                      }}>
+                        {msg.role === 'user' ? (
+                          msg.content
+                        ) : (
+                          <div className="chat-bubble-markdown">
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+                          </div>
+                        )}
+                      </div>
+                      {msg.time && (
+                        <div style={{ fontSize: 10.5, color: "var(--text-muted)", marginTop: 4, display: "flex", alignItems: "center", gap: 4, padding: "0 4px" }}>
+                           {msg.time}
+                           {msg.role === 'user' && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12"></polyline></svg>}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  <div ref={chatEndRef} />
+                </div>
+
+                {/* Input */}
+                <div style={{ padding: "14px", borderTop: "1.5px solid rgba(99, 102, 241, 0.12)", background: "rgba(255, 255, 255, 0.12)" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, background: "var(--bg-card)", borderRadius: 24, border: "1.5px solid rgba(99, 102, 241, 0.15)", padding: "4px 4px 4px 14px" }}>
+                    <input
+                      value={chatInput}
+                      onChange={e => setChatInput(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') handleChatSubmit(); }}
+                      placeholder={selectedClient ? `Hỏi về ${selectedClient.name}...` : "Hỏi freeC AI..."}
+                      style={{ flex: 1, border: "none", background: "transparent", fontSize: 13.5, outline: "none", color: "var(--text-primary)" }}
+                    />
+                    <button onClick={handleChatSubmit} style={{ width: 34, height: 34, borderRadius: "50%", background: "linear-gradient(135deg, #6366f1, #8b5cf6)", color: "white", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, boxShadow: "0 2px 8px rgba(99, 102, 241, 0.25)" }}>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                    </button>
+                  </div>
+                  <div style={{ fontSize: 11, color: "var(--text-muted)", textAlign: "center", marginTop: 8, fontWeight: 500 }}>
+                    AI có thể mắc lỗi. Vui lòng kiểm tra thông tin quan trọng.
                   </div>
                 </div>
-              ))}
-              <div ref={chatEndRef} />
-            </div>
-            
-            <div style={{ padding: 16, borderTop: "1.5px solid var(--border-glass)", background: "transparent", display: "flex", gap: 8 }}>
-              <input 
-                value={chatInput}
-                onChange={e => setChatInput(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') handleChatSubmit(); }}
-                placeholder="Ask about this client or job..."
-                style={{ flex: 1, padding: "10px 14px", borderRadius: 20, border: "1px solid var(--border-color)", background: "var(--bg-body)", fontSize: 14, outline: "none", color: "var(--text-primary)" }}
-              />
-              <button onClick={handleChatSubmit} style={{ width: 40, height: 40, borderRadius: 20, background: "#4f46e5", color: "white", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-              </button>
-            </div>
-          </div>
-        )}
-        
-        <button 
-          onClick={() => setIsChatOpen(!isChatOpen)}
-          style={{ padding: "12px 24px", borderRadius: 30, background: "#4f46e5", color: "white", border: "none", boxShadow: "0 8px 24px rgba(79, 70, 229, 0.4)", display: "flex", alignItems: "center", gap: 10, cursor: "pointer", transition: "transform 0.2s", fontWeight: 600, fontSize: 15 }}
-          onMouseEnter={e => e.currentTarget.style.transform = "scale(1.03)"}
-          onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}
+              </motion.div>
+            );
+          })()}
+        </AnimatePresence>
+
+        {/* FLOATING AI TRIGGER BUTTON */}
+        <motion.button 
+          drag
+          dragMomentum={false}
+          dragElastic={0.1}
+          dragConstraints={{
+            left: -windowWidth + 88,
+            right: 16,
+            top: -windowHeight + 88,
+            bottom: 16
+          }}
+          onDragStart={(event, info) => {
+            dragStartPos.current = { x: info.point.x, y: info.point.y };
+            isDraggingRef.current = true;
+          }}
+          onDragEnd={(event, info) => {
+            const dx = info.point.x - dragStartPos.current.x;
+            const dy = info.point.y - dragStartPos.current.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            setDraggedX(dragX.get());
+            setDraggedY(dragY.get());
+
+            if (distance > 5) {
+              isDraggingRef.current = true;
+            } else {
+              isDraggingRef.current = false;
+            }
+
+            // Keep true for a brief duration to swallow any immediate tap/click events
+            setTimeout(() => {
+              isDraggingRef.current = false;
+            }, 150);
+          }}
+          onTap={() => {
+            if (isDraggingRef.current) return;
+            setIsChatOpen(prev => !prev);
+          }}
+          whileHover={{ scale: 1.1, boxShadow: "0 12px 28px rgba(99, 102, 241, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.4)" }}
+          whileTap={{ scale: 0.95 }}
+          style={{ 
+            width: 56,
+            height: 56,
+            borderRadius: "50%", 
+            background: "linear-gradient(135deg, #6366f1, #8b5cf6)", 
+            border: "none",
+            color: "white",
+            boxShadow: "0 8px 24px rgba(99, 102, 241, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.3)", 
+            display: "flex", 
+            alignItems: "center", 
+            justifyContent: "center", 
+            cursor: "grab",
+            position: "absolute",
+            bottom: 0,
+            right: 0,
+            pointerEvents: "auto",
+            x: dragX,
+            y: dragY
+          }}
+          title="Hỏi freeC AI"
         >
-          {isChatOpen ? (
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-          ) : (
-            <>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path><path d="M12 7v6"></path><path d="M9 10h6"></path></svg>
-              Ask AI
-            </>
+          {/* Pulse ripple effect */}
+          {!isChatOpen && (
+            <motion.span 
+              animate={{ scale: [1, 1.15, 1], opacity: [0.6, 0, 0.6] }}
+              transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
+              style={{
+                position: "absolute",
+                inset: -3,
+                borderRadius: "50%",
+                border: "2px solid rgba(99, 102, 241, 0.3)",
+                pointerEvents: "none"
+              }} 
+            />
           )}
-        </button>
+          
+          {/* Animated icon container */}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={isChatOpen ? "close" : "spark"}
+              initial={{ rotate: -45, scale: 0.8, opacity: 0 }}
+              animate={{ rotate: 0, scale: 1, opacity: 1 }}
+              exit={{ rotate: 45, scale: 0.8, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              style={{ display: "flex", alignItems: "center", justifyContent: "center" }}
+            >
+              {isChatOpen ? (
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              ) : (
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                  <path d="M12 7v6"></path>
+                  <path d="M9 10h6"></path>
+                </svg>
+              )}
+            </motion.div>
+          </AnimatePresence>
+        </motion.button>
       </div>
 
       {/* AI CONFIGURATION MODAL */}
@@ -2974,7 +3863,7 @@ ${r.booleanSearch || "Not generated yet."}
                       background: "var(--bg-body)", 
                       overflowY: "auto" 
                     }} className="markdown-body">
-                      <ReactMarkdown>{draftResult.jobData.markdownReport || ""}</ReactMarkdown>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{draftResult.jobData.markdownReport || ""}</ReactMarkdown>
                     </div>
                   )}
                 </div>

@@ -17,11 +17,11 @@ export function Spin({size=16,color="currentColor"}: any){
   return <span style={{display:"inline-block",width:size,height:size,border:`2.5px solid ${color}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin .7s linear infinite"}}/>;
 }
 
-export function Btn({onClick,disabled,loading,children,variant="primary",icon,style={}}: any){
+export function Btn({onClick,disabled,loading,children,variant="primary",icon,style={},className=""}: any){
   const v: any={primary:{background:"linear-gradient(135deg,var(--primary),var(--primary-hover))",color:"var(--bg-card)",boxShadow:"0 4px 14px rgba(99,102,241,.35)",border:"none"},
     outline:{background:"var(--bg-card)",color:"var(--text-secondary)",border:"1.5px solid var(--border-color)"},
     ghost:{background:"transparent",color:"var(--text-muted)",border:"none"}};
-  return <button onClick={onClick} disabled={disabled}
+  return <button onClick={onClick} disabled={disabled} className={className}
     style={{cursor:disabled?"not-allowed":"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8,fontWeight:600,fontSize:14,borderRadius:12,padding:"0 22px",height:46,transition:"all .15s",opacity:disabled?.5:1,...v[variant],...style}}
     onMouseEnter={e=>{if(!disabled){e.currentTarget.style.filter="brightness(1.07)";e.currentTarget.style.transform="translateY(-1px)";}}}
     onMouseLeave={e=>{e.currentTarget.style.filter="";e.currentTarget.style.transform="";}}>
