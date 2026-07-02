@@ -6,6 +6,7 @@ import { Btn } from '../components/ui';
 import { db, auth, handleFirestoreError, OperationType } from '../lib/firebase';
 import { signInAnonymously } from 'firebase/auth';
 import { collection, doc, setDoc, deleteDoc, onSnapshot, query, getDocs } from 'firebase/firestore';
+import { UsageTracker } from '../lib/usage';
 
 // --- MOCK DATA TYPES ---
 type Client = {
@@ -531,6 +532,50 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
       setTempEndpoint(endpoint);
     }
   }, [isAiSettingsOpen]);
+
+  const getEffectiveAiDetails = () => {
+    let provider = localStorage.getItem('freec_ai_provider') || 'system';
+    let model = localStorage.getItem('freec_ai_model') || "";
+
+    if (provider === 'system') {
+      provider = localStorage.getItem("ai_provider") || "gemini";
+      if (provider === 'gemini') model = localStorage.getItem("gemini_model") || "gemini-3.5-flash";
+      else if (provider === 'openai') model = localStorage.getItem("openai_model") || "gpt-4o-mini";
+      else if (provider === 'grok') model = "grok-2-latest";
+      else if (provider === 'groq') model = localStorage.getItem("groq_model") || "llama-3.3-70b-versatile";
+      else if (provider === 'cerebras') model = localStorage.getItem("cerebras_model") || "qwen-3-235b-a22b-instruct-2507";
+      else if (provider === 'qwen') model = localStorage.getItem("qwen_model") || "qwen-plus";
+      else if (provider === 'github') model = localStorage.getItem("custom_github_model") || "openai/gpt-4o";
+    } else {
+      if (!model) {
+        if (provider === 'gemini') model = localStorage.getItem("gemini_model") || "gemini-3.5-flash";
+        else if (provider === 'openai') model = localStorage.getItem("openai_model") || "gpt-4o-mini";
+        else if (provider === 'grok') model = "grok-2-latest";
+        else if (provider === 'groq') model = localStorage.getItem("groq_model") || "llama-3.3-70b-versatile";
+        else if (provider === 'cerebras') model = localStorage.getItem("cerebras_model") || "qwen-3-235b-a22b-instruct-2507";
+        else if (provider === 'qwen') model = localStorage.getItem("qwen_model") || "qwen-plus";
+        else if (provider === 'github') model = localStorage.getItem("custom_github_model") || "openai/gpt-4o";
+      }
+    }
+    return { provider, model };
+  };
+
+  const extractUsageAndClean = (text: string) => {
+    const marker = "__USAGE__:";
+    if (text.includes(marker)) {
+      const parts = text.split(marker);
+      const usageStr = parts[parts.length - 1].trim();
+      try {
+        const usage = JSON.parse(usageStr);
+        const { provider, model } = getEffectiveAiDetails();
+        UsageTracker.logUsage(provider, model, usage.prompt_tokens || 0, usage.completion_tokens || 0);
+        return parts[0].trim();
+      } catch (e) {
+        console.error("Failed to parse usage:", e);
+      }
+    }
+    return text;
+  };
 
   const handleCopySection = (text: string, label: string) => {
     navigator.clipboard.writeText(text || "")
@@ -1063,6 +1108,10 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
 
       const step1Data = await step1Response.json();
       const companyReport = step1Data.companyReport || "";
+      if (step1Data.usage) {
+        const { provider, model } = getEffectiveAiDetails();
+        UsageTracker.logUsage(provider, model, step1Data.usage.prompt_tokens || 0, step1Data.usage.completion_tokens || 0);
+      }
 
       // Step 2: Transition to Analyzing Job Description...
       setProcessingStep(2);
@@ -1101,6 +1150,9 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
         rawResult = await step2Response.text();
         setProcessingProgress(rawResult.length);
       }
+
+      // Clean up usage data from stream and log it
+      rawResult = extractUsageAndClean(rawResult);
 
       if (rawResult.includes("ERROR_STREAMING:")) {
         const parts = rawResult.split("ERROR_STREAMING:");
@@ -1399,12 +1451,26 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
              return newMsgs;
           });
         }
+        
+        // Clean up usage data from stream and log it
+        const cleanedChatText = extractUsageAndClean(streamedText);
+        if (cleanedChatText !== streamedText) {
+          setChatMessages(prev => {
+            const newMsgs = [...prev];
+            newMsgs[newMsgs.length - 1].content = cleanedChatText;
+            return newMsgs;
+          });
+        }
       } else {
-        const text = await response.text();
+        let text = await response.text();
         if (text.includes("ERROR_STREAMING:")) {
             const parts = text.split("ERROR_STREAMING:");
             throw new Error(parts[parts.length - 1].trim() || "Failed to process chat during stream");
         }
+        
+        // Clean up usage data from stream and log it
+        text = extractUsageAndClean(text);
+        
         setChatMessages(prev => [...prev, { role: 'assistant', content: text, time: nowTime() }]);
       }
     } catch (err) {

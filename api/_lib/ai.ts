@@ -71,8 +71,20 @@ export async function* callLLMStream({
       config,
     });
     
+    let lastChunk: any = null;
     for await (const chunk of responseStream) {
+      lastChunk = chunk;
       yield chunk.text;
+    }
+
+    // Append usage data at the end of the stream for the client to track
+    if (lastChunk && lastChunk.usageMetadata) {
+      const usage = {
+        prompt_tokens: lastChunk.usageMetadata.promptTokenCount || 0,
+        completion_tokens: lastChunk.usageMetadata.candidatesTokenCount || 0,
+        total_tokens: (lastChunk.usageMetadata.promptTokenCount || 0) + (lastChunk.usageMetadata.candidatesTokenCount || 0)
+      };
+      yield `\n\n__USAGE__:${JSON.stringify(usage)}`;
     }
     return;
   }
@@ -116,9 +128,6 @@ export async function* callLLMStream({
     }
     messages.push({ role: "user", content: prompt });
 
-    // Note: openai stream does not support response_format json_schema in some old versions,
-    // but if it's just JSON object, it might work depending on provider. 
-    // We will pass response_format if responseSchema is present and provider is openai.
     let responseFormat: any = undefined;
     if (responseSchema && (provider === "openai" || provider === "deepseek" || provider === "groq")) {
        responseFormat = { type: "json_object" };
@@ -129,12 +138,16 @@ export async function* callLLMStream({
       messages: messages,
       response_format: responseFormat,
       stream: true,
+      stream_options: { include_usage: true }
     });
 
     for await (const chunk of stream) {
       const content = chunk.choices[0]?.delta?.content || "";
       if (content) {
         yield content;
+      }
+      if (chunk.usage) {
+        yield `\n\n__USAGE__:${JSON.stringify(chunk.usage)}`;
       }
     }
     return;
@@ -190,6 +203,17 @@ export async function* callLLMStream({
             if (data.type === "content_block_delta" && data.delta?.text) {
               yield data.delta.text;
             }
+            if (data.type === "message_delta" && data.usage) {
+               // Anthropic returns usage at the end
+               const usage = {
+                 prompt_tokens: data.usage.input_tokens || 0,
+                 completion_tokens: data.usage.output_tokens || 0
+               };
+               yield `\n\n__USAGE__:${JSON.stringify(usage)}`;
+            }
+            if (data.type === "message_start" && data.message?.usage) {
+                // Initial usage
+            }
           } catch (e) {
             // ignore parse errors for partial chunks
           }
@@ -201,6 +225,7 @@ export async function* callLLMStream({
 
   throw new Error(`Unsupported provider: ${provider}`);
 }
+
 export async function callLLM({
   provider,
   apiKey,
@@ -217,7 +242,7 @@ export async function callLLM({
   prompt: string;
   systemInstruction?: string;
   responseSchema?: any;
-}): Promise<string> {
+}): Promise<{ text: string, usage?: any }> {
   console.log(`callLLM triggered. Provider: ${provider}, Model: ${model || "default"}`);
 
   if (provider === "gemini") {
@@ -240,7 +265,17 @@ export async function callLLM({
       contents: prompt,
       config,
     });
-    return response.text || "";
+    
+    let usage = undefined;
+    if (response.usageMetadata) {
+      usage = {
+        prompt_tokens: response.usageMetadata.promptTokenCount || 0,
+        completion_tokens: response.usageMetadata.candidatesTokenCount || 0,
+        total_tokens: (response.usageMetadata.promptTokenCount || 0) + (response.usageMetadata.candidatesTokenCount || 0)
+      };
+    }
+    
+    return { text: response.text || "", usage };
   }
 
   if (provider === "openai" || provider === "grok" || provider === "deepseek" || provider === "custom" || provider === "groq" || provider === "cerebras" || provider === "qwen" || provider === "github") {
@@ -290,7 +325,10 @@ export async function callLLM({
       response_format: responseFormat,
     });
 
-    return chatCompletion.choices[0]?.message?.content || "";
+    return { 
+      text: chatCompletion.choices[0]?.message?.content || "", 
+      usage: chatCompletion.usage 
+    };
   }
 
   if (provider === "claude") {
@@ -323,7 +361,12 @@ export async function callLLM({
     }
 
     const data = await response.json();
-    return data.content?.[0]?.text || "";
+    const usage = data.usage ? {
+      prompt_tokens: data.usage.input_tokens || 0,
+      completion_tokens: data.usage.output_tokens || 0
+    } : undefined;
+
+    return { text: data.content?.[0]?.text || "", usage };
   }
 
   throw new Error(`Unsupported provider: ${provider}`);

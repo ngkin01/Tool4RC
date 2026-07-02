@@ -501,7 +501,7 @@ Chú ý: Hãy đưa ra các phân tích có giá trị thực chiến cho tuyể
 
     console.log(`Step 1: Running Company Research for ${clientName} using model ${model || "default"}`);
     
-    const companyReport = await callLLM({
+    const result = await callLLM({
       provider,
       apiKey,
       model,
@@ -509,7 +509,7 @@ Chú ý: Hãy đưa ra các phân tích có giá trị thực chiến cho tuyể
       prompt: finalPrompt,
     });
 
-    res.json({ companyReport });
+    res.json({ companyReport: result.text, usage: result.usage });
   } catch (error) {
     console.error("LLM Step 1 Error:", error);
     const errorMessage = error instanceof Error ? error.message : String(error);
