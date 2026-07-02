@@ -471,10 +471,10 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
   const [windowWidth, setWindowWidth] = useState(typeof window !== "undefined" ? window.innerWidth : 1200);
   const [windowHeight, setWindowHeight] = useState(typeof window !== "undefined" ? window.innerHeight : 800);
 
-  const dragX = useMotionValue(0);
-  const dragY = useMotionValue(0);
   const [draggedX, setDraggedX] = useState(0);
   const [draggedY, setDraggedY] = useState(0);
+  const dragX = useMotionValue(draggedX);
+  const dragY = useMotionValue(draggedY);
   const isDraggingRef = useRef(false);
   const dragStartPos = useRef({ x: 0, y: 0 });
 
@@ -879,42 +879,29 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
   // Handle Chat initialization and persistence
   useEffect(() => {
     if (selectedClientId && selectedClient) {
-      // Initialize greeting if history is empty for this client
-      if (!chatHistories[selectedClientId]) {
-        const greeting = { 
-          role: 'assistant' as const, 
-          content: `Hi! Mình là freeC AI. Bạn muốn hỏi điều gì về client **${selectedClient.name}** này, hay về job nào? Mình sẽ giải đáp nhé!`,
-          time: nowTime() 
-        };
-        setChatHistories(prev => ({
-          ...prev,
-          [selectedClientId]: [greeting]
-        }));
-      }
-      
-      // Auto open chat when switching clients or selecting a client
-      if (!isChatOpen) {
-        setIsChatOpen(true);
-      }
-    } else if (!selectedClientId) {
+      setChatHistories(prev => {
+        // Only set greeting if history is empty or doesn't exist for this client
+        if (!prev[selectedClientId] || prev[selectedClientId].length === 0) {
+          return {
+            ...prev,
+            [selectedClientId]: [{ 
+              role: 'assistant' as const, 
+              content: `Hi! Mình là freeC AI. Bạn muốn hỏi điều gì về client **${selectedClient.name}** này, hay về job nào? Mình sẽ giải đáp nhé!`,
+              time: nowTime() 
+            }]
+          };
+        }
+        return prev;
+      });
+    }
+  }, [selectedClientId, !!selectedClient, isChatOpen]);
+
+  // Handle auto-close chat when no client is selected
+  useEffect(() => {
+    if (!selectedClientId) {
       setIsChatOpen(false);
     }
-  }, [selectedClientId, !!selectedClient]);
-
-  // Ensure chat messages are synced when opening chat manually if history was somehow missing
-  useEffect(() => {
-    if (isChatOpen && selectedClientId && selectedClient && !chatHistories[selectedClientId]) {
-      const greeting = { 
-        role: 'assistant' as const, 
-        content: `Hi! Mình là freeC AI. Bạn muốn hỏi điều gì về client **${selectedClient.name}** này, hay về job nào? Mình sẽ giải đáp nhé!`,
-        time: nowTime() 
-      };
-      setChatHistories(prev => ({
-        ...prev,
-        [selectedClientId]: [greeting]
-      }));
-    }
-  }, [isChatOpen, selectedClientId, !!selectedClient]);
+  }, [selectedClientId]);
 
   const selectedJob = selectedClientJobs.find(j => j.id === selectedJobId);
 
@@ -3224,6 +3211,9 @@ ${r.booleanSearch || "Not generated yet."}
             top: -windowHeight + 88,
             bottom: 16
           }}
+          initial={{ x: draggedX, y: draggedY }}
+          animate={{ x: draggedX, y: draggedY }}
+          transition={{ duration: 0 }}
           onDragStart={(event, info) => {
             dragStartPos.current = { x: info.point.x, y: info.point.y };
             isDraggingRef.current = true;
