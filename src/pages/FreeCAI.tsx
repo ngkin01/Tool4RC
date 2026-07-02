@@ -475,6 +475,12 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
   const [draggedY, setDraggedY] = useState(0);
   const dragX = useMotionValue(draggedX);
   const dragY = useMotionValue(draggedY);
+
+  // Sync motion values when state changes (e.g. after remount)
+  useEffect(() => {
+    dragX.set(draggedX);
+    dragY.set(draggedY);
+  }, [draggedX, draggedY, dragX, dragY]);
   const isDraggingRef = useRef(false);
   const dragStartPos = useRef({ x: 0, y: 0 });
 
@@ -859,9 +865,21 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
 
   const [isChatOpen, setIsChatOpen] = useState(false);
   const nowTime = () => new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-  const [chatHistories, setChatHistories] = useState<Record<string, {role: 'user'|'assistant', content: string, time?: string}[]>>({});
+  const [chatHistories, setChatHistories] = useState<Record<string, {role: 'user'|'assistant', content: string, time?: string}[]>>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('freec_ai_chat_histories');
+      return saved ? JSON.parse(saved) : {};
+    }
+    return {};
+  });
+
+  // Persist chat histories to localStorage
+  useEffect(() => {
+    localStorage.setItem('freec_ai_chat_histories', JSON.stringify(chatHistories));
+  }, [chatHistories]);
   const [chatInput, setChatInput] = useState("");
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const greetedClientsRef = useRef<Set<string>>(new Set());
   
   const chatMessages = selectedClientId ? (chatHistories[selectedClientId] || []) : [];
   const setChatMessages = (updater: any) => {
@@ -878,23 +896,30 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
 
   // Handle Chat initialization and persistence
   useEffect(() => {
-    if (selectedClientId && selectedClient) {
-      setChatHistories(prev => {
-        // Only set greeting if history is empty or doesn't exist for this client
-        if (!prev[selectedClientId] || prev[selectedClientId].length === 0) {
+    if (isChatOpen && selectedClientId && selectedClient) {
+      if (!greetedClientsRef.current.has(selectedClientId)) {
+        setChatHistories(prev => {
+          const history = prev[selectedClientId] || [];
+          const greeting = { 
+            role: 'assistant' as const, 
+            content: `Hi! Mình là freeC AI. Bạn muốn hỏi điều gì về client **${selectedClient.name}** này, hay về job nào? Mình sẽ giải đáp nhé!`,
+            time: nowTime() 
+          };
+          
+          // Avoid duplicate consecutive identical greetings
+          if (history.length > 0 && history[history.length - 1].content === greeting.content) {
+            return prev;
+          }
+
           return {
             ...prev,
-            [selectedClientId]: [{ 
-              role: 'assistant' as const, 
-              content: `Hi! Mình là freeC AI. Bạn muốn hỏi điều gì về client **${selectedClient.name}** này, hay về job nào? Mình sẽ giải đáp nhé!`,
-              time: nowTime() 
-            }]
+            [selectedClientId]: [...history, greeting]
           };
-        }
-        return prev;
-      });
+        });
+        greetedClientsRef.current.add(selectedClientId);
+      }
     }
-  }, [selectedClientId, !!selectedClient, isChatOpen]);
+  }, [isChatOpen, selectedClientId, !!selectedClient]);
 
   // Handle auto-close chat when no client is selected
   useEffect(() => {
