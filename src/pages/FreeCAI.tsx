@@ -158,6 +158,72 @@ const mockClients: Client[] = [
   }
 ];
 
+function parseDateString(dateStr: string | undefined | null): Date {
+  if (!dateStr || dateStr === "Just now" || dateStr === "Updated Just now") {
+    return new Date();
+  }
+  // If it's a full ISO timestamp
+  if (dateStr.includes("T") || /^\d{4}-\d{2}-\d{2}/.test(dateStr)) {
+    return new Date(dateStr);
+  }
+  // If it's something like "29 Jun" or "20 Jun 2026"
+  const match = dateStr.match(/^(\d+)\s+([a-zA-Z]{3})/i);
+  if (match) {
+    const day = parseInt(match[1], 10);
+    const monthName = match[2].toLowerCase();
+    const months: Record<string, number> = {
+      jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
+      jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11
+    };
+    const month = months[monthName] !== undefined ? months[monthName] : 5; // default to Jun (5)
+    return new Date(2026, month, day);
+  }
+  const parsed = new Date(dateStr);
+  if (!isNaN(parsed.getTime())) {
+    return parsed;
+  }
+  return new Date(0); // very old
+}
+
+function getRelativeTime(dateStr: string | undefined | null): string {
+  if (!dateStr || dateStr === "Just now" || dateStr === "Updated Just now") {
+    return "vừa xong";
+  }
+  const date = parseDateString(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+
+  if (diffMs < 0) {
+    return "vừa xong";
+  }
+
+  const diffMins = Math.floor(diffMs / 60000);
+  if (diffMins < 1) {
+    return "vừa xong";
+  }
+  if (diffMins < 60) {
+    return `${diffMins} phút trước`;
+  }
+
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) {
+    return `${diffHours} tiếng trước`;
+  }
+
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays < 30) {
+    return `${diffDays} ngày trước`;
+  }
+
+  const diffMonths = Math.floor(diffDays / 30);
+  if (diffMonths < 12) {
+    return `${diffMonths} tháng trước`;
+  }
+
+  const diffYears = Math.floor(diffMonths / 12);
+  return `${diffYears} năm trước`;
+}
+
 const DEFAULT_COMPANY_RESEARCH_PROMPT = `Bạn là một Senior Recruitment Consultant với hơn 15 năm kinh nghiệm tại Việt Nam và APAC.
 
 Bạn KHÔNG phải là Business Analyst.
@@ -439,6 +505,15 @@ Sau khi đọc xong insights này, một Recruitment Consultant phải có thể
 - Biết nên tìm ứng viên ở đâu.
 - Biết cách pitch job.
 - Có thể mở LinkedIn và bắt đầu sourcing ngay.
+
+==================================================
+YÊU CẦU ĐẶC BIỆT: TÍCH HỢP SÂU THÔNG TIN KHÁCH HÀNG (CLIENT INSIGHTS)
+==================================================
+Bạn PHẢI sử dụng triệt để các dữ kiện thực tế và thông tin cốt lõi từ "Insights Client" ở trên (bao gồm vị thế ngành, mô hình kinh doanh, văn hóa công ty, đối thủ cạnh tranh trực tiếp/gián tiếp, địa điểm nhà máy/văn phòng/chi nhánh sản xuất...) để liên kết và phân tích sâu sắc các phần trong Báo cáo tuyển dụng cuối cùng.
+Ví dụ:
+- Trong phần "Bối cảnh Công ty (Company Context) & Văn hóa phù hợp": Phải nêu bật vị thế ngành, mô hình kinh doanh, địa điểm hoạt động/nhà máy và môi trường làm việc từ bước nghiên cứu khách hàng.
+- Trong phần "Chiến lược tuyển dụng & Sourcing (Recruitment Strategy)" và "Thấu hiểu Thị trường": Sử dụng trực tiếp danh sách các đối thủ cạnh tranh cụ thể từ Insights Client để làm mục tiêu target ứng viên (Target Companies).
+TUYỆT ĐỐI không được bỏ quên hoặc làm nhạt đi các dữ kiện thực tế quan trọng này.
 
 ==================================================
 THÔNG TIN ĐẦU VÀO
@@ -1662,11 +1737,11 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
     text = text.replace(/\\?<br\\?\s*\\?\/?>/gi, " ");
     
     // Fix old entries having literal ${companyReport} or ##
-    if (clientOverview && text.includes("\${companyReport}")) {
-      text = text.replace("\${companyReport}", clientOverview);
+    if (text.includes("\${companyReport}")) {
+      text = text.replace("\${companyReport}", clientOverview || "*(Thông tin công ty không được lưu trữ đầy đủ trong phiên bản cũ)*");
     }
-    if (clientOverview && text.includes("${companyReport}")) {
-      text = text.replace("${companyReport}", clientOverview);
+    if (text.includes("${companyReport}")) {
+      text = text.replace("${companyReport}", clientOverview || "*(Thông tin công ty không được lưu trữ đầy đủ trong phiên bản cũ)*");
     }
     // Convert ## INSIGHTS CLIENT to # INSIGHTS CLIENT for old entries to match sizes
     text = text.replace("## 🏢 INSIGHTS CLIENT", "# 🏢 INSIGHTS CLIENT");
@@ -1950,7 +2025,11 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
           id: data.id || docSnap.id
         } as Job);
       });
-      jobsList.sort((a, b) => b.id.localeCompare(a.id));
+      jobsList.sort((a, b) => {
+        const tA = parseDateString(a.updatedAt).getTime();
+        const tB = parseDateString(b.updatedAt).getTime();
+        return tB - tA;
+      });
       setSelectedClientJobs(jobsList);
     }, (err) => {
       console.error("Error fetching jobs from subcollection:", err);
@@ -2363,19 +2442,25 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
 
         const extractedFields = await extractResponse.json();
 
+        const clientOverview = selectedClient.summary?.overview || "";
+        const hasClientHeader = rawResult.includes("INSIGHTS CLIENT") || rawResult.includes("INSIGHTS VỀ KHÁCH HÀNG");
+        const finalMergedReport = (clientOverview && !hasClientHeader)
+          ? `# 🏢 INSIGHTS CLIENT (INSIGHTS VỀ KHÁCH HÀNG)\n\n${clientOverview}\n\n---\n\n${rawResult}`
+          : rawResult;
+
         const mockDraftResult = {
           hasNewJob: true,
           matchedJobId: matchedJobId,
           timelineSummary: reasoning || `Cập nhật Insight Tuyển dụng cho vị trí ${existingJob.title}.`,
           clientUpdates: {
             culture: "Chưa xác minh",
-            overview: selectedClient.summary?.overview || "Đang cập nhật thông tin...",
+            overview: clientOverview || "Đang cập nhật thông tin...",
             industry: selectedClient.summary?.industry || "N/A",
             keyInfo: selectedClient.summary?.keyInfo || []
           },
           jobData: {
             ...extractedFields,
-            markdownReport: rawResult
+            markdownReport: finalMergedReport
           }
         };
 
@@ -2662,7 +2747,7 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
         const updatedJob: Job = {
           id: targetJobId,
           title: jd.title || existingJob?.title || "New Role (Auto-detected)",
-          updatedAt: "Just now",
+          updatedAt: new Date().toISOString(),
           report: mergedReport,
           versions: updatedVersions
         };
@@ -3432,7 +3517,7 @@ ${r.booleanSearch || "Not generated yet."}
                           gap: 6
                         }}>
                           <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#22c55e", display: "inline-block" }}></span>
-                          {isMobile ? "Updated Just now" : `Updated ${selectedJob.updatedAt}`}
+                          Cập nhật: {getRelativeTime(selectedJob.updatedAt)}
                         </span>
                       </div>
                     </div>
@@ -4200,7 +4285,7 @@ ${r.booleanSearch || "Not generated yet."}
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 <label style={{ fontSize: 13, color: "#3730a3", fontWeight: 800, display: "flex", alignItems: "center", gap: 8, paddingLeft: 4 }}>
                   <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#6366f1", boxShadow: "0 0 8px rgba(99, 102, 241, 0.4)" }}></span>
-                  Tên vị trí tuyển dụng
+                  Tên job
                   <span style={{ fontSize: 10, color: "var(--text-muted)", fontWeight: 500 }}>(Không bắt buộc)</span>
                 </label>
                 <input 
@@ -4208,7 +4293,7 @@ ${r.booleanSearch || "Not generated yet."}
                   className="liquid-glass-input"
                   value={manualJobTitle}
                   onChange={e => setManualJobTitle(e.target.value)}
-                  placeholder="Ví dụ: Lead Auditor - CSR & Sustainability..."
+                  placeholder="Ví dụ: Sales Manager..."
                   style={{ 
                     width: "100%", 
                     padding: "12px 16px", 
@@ -4239,7 +4324,7 @@ ${r.booleanSearch || "Not generated yet."}
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingLeft: 4, paddingRight: 4 }}>
                   <label style={{ fontSize: 13, color: "#3730a3", fontWeight: 800, display: "flex", alignItems: "center", gap: 8 }}>
                     <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#8b5cf6", boxShadow: "0 0 8px rgba(139, 92, 246, 0.4)" }}></span>
-                    Nội dung mô tả công việc (JD)
+                    Nhập thông tin
                   </label>
                   
                   <Btn 
@@ -4283,7 +4368,7 @@ ${r.booleanSearch || "Not generated yet."}
                 <textarea 
                   value={universalInput}
                   onChange={e => setUniversalInput(e.target.value)}
-                  placeholder="Dán JD, ghi chú cuộc họp, phản hồi hoặc email yêu cầu..."
+                  placeholder="Các thông tin về job/ client/ note/ insight/..."
                   className="liquid-glass-input"
                   style={{ 
                     width: "100%", 
@@ -4378,10 +4463,10 @@ ${r.booleanSearch || "Not generated yet."}
               }}>
                 <h2 style={{ fontSize: isMobile ? 18 : 20, fontWeight: 800, margin: 0, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 10 }}>
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth="2.5"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
-                  Danh sách công việc (Jobs)
+                  Danh sách jobs
                 </h2>
                 <span style={{ fontSize: 13, color: "var(--text-muted)", fontWeight: 500 }}>
-                  {selectedClient.jobs.length} công việc
+                  {selectedClient.jobs.length} job
                 </span>
               </div>
               
@@ -4460,12 +4545,19 @@ ${r.booleanSearch || "Not generated yet."}
                       </div>
                       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                         <span style={{ fontSize: 12, color: "var(--text-muted)" }}>
-                          {isMobile ? "Cập nhật:" : "Cập nhật:"} {job.updatedAt}
+                          Cập nhật: {getRelativeTime(job.updatedAt)}
                         </span>
-                        <span style={{ width: 4, height: 4, borderRadius: "50%", background: "#10B981", display: isMobile ? "none" : "block" }}></span>
-                        <span style={{ fontSize: 11, background: "rgba(16, 185, 129, 0.1)", color: "#10B981", padding: "2px 8px", borderRadius: 12, fontWeight: 600 }}>
-                          Sẵn sàng
-                        </span>
+                        <span 
+                          style={{ 
+                            width: 8, 
+                            height: 8, 
+                            borderRadius: "50%", 
+                            background: "#10B981", 
+                            boxShadow: "0 0 8px rgba(16, 185, 129, 0.6)",
+                            display: "inline-block" 
+                          }}
+                          title="Sẵn sàng"
+                        ></span>
                       </div>
                     </div>
                     
