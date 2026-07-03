@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import rehypeRaw from 'rehype-raw';
 import { motion, AnimatePresence, useMotionValue } from 'motion/react';
 import { Btn } from '../components/ui';
 import { db, auth, handleFirestoreError, OperationType } from '../lib/firebase';
@@ -410,6 +411,14 @@ Trước khi hoàn thành báo cáo, tự hỏi — nếu tôi là consultant ch
 - Có thể bắt đầu sourcing ngay chưa?
 
 Nếu chưa, tiếp tục bổ sung insight — nhưng vẫn tuân thủ Quality over Quantity Rule (không thêm insight suy đoán chỉ để lấp đầy).
+
+Khuyến nghị định dạng:
+- KHÔNG dùng ASCII art (như vẽ mũi tên bằng dấu |, v, >, <).
+- Khi hiển thị bảng, tuyệt đối KHÔNG dùng thẻ <br> hay HTML để xuống dòng. Nếu danh sách dài, hãy tách thành danh sách gạch đầu dòng (bullet points) riêng rẽ thay vì nhét chung vào một ô bảng.
+
+Khuyến nghị định dạng:
+- KHÔNG dùng ASCII art (như vẽ mũi tên bằng dấu |, v, >, <). Nếu cần thể hiện quy trình, hãy dùng danh sách liệt kê.
+- Khi hiển thị bảng, tuyệt đối KHÔNG dùng thẻ <br> hay HTML để xuống dòng. Nếu nội dung dài, hãy sử dụng danh sách (bullet points) bên ngoài bảng.
 
 Chỉ trả về báo cáo bằng Markdown. Không giải thích. Không trả về JSON. Không thêm nội dung ngoài báo cáo.`;
 
@@ -1650,6 +1659,8 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
 
   const cleanMarkdownFences = (text: string): string => {
     if (!text) return "";
+    text = text.replace(/\\?<br\\?\s*\\?\/?>/gi, " ");
+    if (!text) return "";
     let cleaned = text.trim();
     
     // Check if the entire response is wrapped in outer code blocks
@@ -2461,7 +2472,7 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
           jobData: {
             ...extractedFields,
             markdownReport: companyReport 
-              ? `## 🏢 INSIGHTS CLIENT (INSIGHTS VỀ KHÁCH HÀNG)\n\n\${companyReport}\n\n---\n\n${rawResult}` 
+              ? `# 🏢 INSIGHTS CLIENT (INSIGHTS VỀ KHÁCH HÀNG)\n\n${companyReport}\n\n---\n\n${rawResult}` 
               : rawResult
           }
         };
@@ -3697,7 +3708,7 @@ ${r.booleanSearch || "Not generated yet."}
                     padding: "48px 56px",
                     lineHeight: "1.8"
                   }} className="markdown-body">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{cleanMarkdownFences(selectedJob.report.markdownReport)}</ReactMarkdown>
+                    <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{cleanMarkdownFences(selectedJob.report.markdownReport)}</ReactMarkdown>
                   </div>
                 </div>
               ) : (
@@ -4620,7 +4631,7 @@ ${r.booleanSearch || "Not generated yet."}
                           msg.content
                         ) : (
                           <div className="chat-bubble-markdown">
-                            <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+                            <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{msg.content}</ReactMarkdown>
                           </div>
                         )}
                       </div>
@@ -5311,7 +5322,7 @@ ${r.booleanSearch || "Not generated yet."}
                       background: "var(--bg-card)", 
                       overflowY: "auto" 
                     }} className="markdown-body">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{cleanMarkdownFences(draftResult.jobData.markdownReport || "")}</ReactMarkdown>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{cleanMarkdownFences(draftResult.jobData.markdownReport || "")}</ReactMarkdown>
                     </div>
                   )}
                 </div>
