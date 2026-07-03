@@ -1657,7 +1657,20 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
     return { provider, model };
   };
 
-  const cleanMarkdownFences = (text: string): string => {
+  const cleanMarkdownFences = (text: string, clientOverview?: string): string => {
+    if (!text) return "";
+    text = text.replace(/\\?<br\\?\s*\\?\/?>/gi, " ");
+    
+    // Fix old entries having literal ${companyReport} or ##
+    if (clientOverview && text.includes("\${companyReport}")) {
+      text = text.replace("\${companyReport}", clientOverview);
+    }
+    if (clientOverview && text.includes("${companyReport}")) {
+      text = text.replace("${companyReport}", clientOverview);
+    }
+    // Convert ## INSIGHTS CLIENT to # INSIGHTS CLIENT for old entries to match sizes
+    text = text.replace("## 🏢 INSIGHTS CLIENT", "# 🏢 INSIGHTS CLIENT");
+    
     if (!text) return "";
     text = text.replace(/\\?<br\\?\s*\\?\/?>/gi, " ");
     if (!text) return "";
@@ -3708,7 +3721,7 @@ ${r.booleanSearch || "Not generated yet."}
                     padding: "48px 56px",
                     lineHeight: "1.8"
                   }} className="markdown-body">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{cleanMarkdownFences(selectedJob.report.markdownReport)}</ReactMarkdown>
+                    <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{cleanMarkdownFences(selectedJob.report.markdownReport, selectedClient?.summary?.overview)}</ReactMarkdown>
                   </div>
                 </div>
               ) : (
@@ -5322,7 +5335,7 @@ ${r.booleanSearch || "Not generated yet."}
                       background: "var(--bg-card)", 
                       overflowY: "auto" 
                     }} className="markdown-body">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{cleanMarkdownFences(draftResult.jobData.markdownReport || "")}</ReactMarkdown>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{cleanMarkdownFences(draftResult.jobData.markdownReport || "", selectedClient?.summary?.overview)}</ReactMarkdown>
                     </div>
                   )}
                 </div>
