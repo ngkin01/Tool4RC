@@ -6,7 +6,7 @@ import { motion, AnimatePresence, useMotionValue } from 'motion/react';
 import { Btn } from '../components/ui';
 import { db, auth, handleFirestoreError, OperationType } from '../lib/firebase';
 import { signInAnonymously } from 'firebase/auth';
-import { collection, doc, setDoc, deleteDoc, onSnapshot, query, getDocs } from 'firebase/firestore';
+import { collection, doc, setDoc, getDoc, deleteDoc, onSnapshot, query, getDocs } from 'firebase/firestore';
 import { UsageTracker } from '../lib/usage';
 
 // --- MOCK DATA TYPES ---
@@ -158,15 +158,36 @@ const mockClients: Client[] = [
   }
 ];
 
-function parseDateString(dateStr: string | undefined | null): Date {
-  if (!dateStr || dateStr === "Just now" || dateStr === "Updated Just now") {
+function parseDateString(dateVal: any): Date {
+  if (!dateVal) {
+    return new Date(0); // Old default instead of current date, avoiding "vừa xong" for untimestamped data
+  }
+
+  // Handle Firestore Timestamp with toDate() function
+  if (typeof dateVal.toDate === 'function') {
+    return dateVal.toDate();
+  }
+
+  // Handle plain Firestore Timestamp object { seconds, nanoseconds }
+  if (typeof dateVal === 'object' && typeof dateVal.seconds === 'number') {
+    return new Date(dateVal.seconds * 1000);
+  }
+
+  const dateStr = String(dateVal).trim();
+
+  if (dateStr === "Just now" || dateStr === "Updated Just now" || dateStr === "vừa xong") {
     return new Date();
   }
-  // If it's a full ISO timestamp
+
+  // ISO timestamp format
   if (dateStr.includes("T") || /^\d{4}-\d{2}-\d{2}/.test(dateStr)) {
-    return new Date(dateStr);
+    const parsed = new Date(dateStr);
+    if (!isNaN(parsed.getTime())) {
+      return parsed;
+    }
   }
-  // If it's something like "29 Jun" or "20 Jun 2026"
+
+  // Format "29 Jun" or "20 Jun 2026"
   const match = dateStr.match(/^(\d+)\s+([a-zA-Z]{3})/i);
   if (match) {
     const day = parseInt(match[1], 10);
@@ -175,25 +196,39 @@ function parseDateString(dateStr: string | undefined | null): Date {
       jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
       jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11
     };
-    const month = months[monthName] !== undefined ? months[monthName] : 5; // default to Jun (5)
-    return new Date(2026, month, day);
+    const month = months[monthName] !== undefined ? months[monthName] : 5;
+    // Use the current client-side year instead of hardcoding 2026 to prevent future date offsets
+    return new Date(new Date().getFullYear(), month, day);
   }
+
   const parsed = new Date(dateStr);
   if (!isNaN(parsed.getTime())) {
     return parsed;
   }
-  return new Date(0); // very old
+
+  return new Date(0);
 }
 
-function getRelativeTime(dateStr: string | undefined | null): string {
-  if (!dateStr || dateStr === "Just now" || dateStr === "Updated Just now") {
+function getRelativeTime(dateVal: any): string {
+  if (!dateVal) {
+    return "Chưa cập nhật";
+  }
+
+  const dateStr = typeof dateVal === 'string' ? dateVal.trim() : "";
+  if (dateStr === "Just now" || dateStr === "Updated Just now" || dateStr === "vừa xong") {
     return "vừa xong";
   }
-  const date = parseDateString(dateStr);
+
+  const date = parseDateString(dateVal);
+  if (date.getTime() === 0) {
+    return "Chưa cập nhật";
+  }
+
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
 
-  if (diffMs < 0) {
+  // If time is in the future or within 10 seconds of now
+  if (diffMs < 10000) {
     return "vừa xong";
   }
 
@@ -2071,13 +2106,23 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
           
           if (Array.isArray(rawJobs) && rawJobs.length > 0) {
             for (const job of rawJobs) {
-              await setDoc(doc(db, 'clients', client.id, 'jobs', job.id), job);
+              const jobDocRef = doc(db, 'clients', client.id, 'jobs', job.id);
+              const jobDocSnap = await getDoc(jobDocRef);
+              // Only migrate if the subcollection document does not exist yet to prevent overwriting updated jobs
+              if (!jobDocSnap.exists()) {
+                await setDoc(jobDocRef, job);
+              }
             }
           }
           
           if (Array.isArray(rawTimeline) && rawTimeline.length > 0) {
             for (const item of rawTimeline) {
-              await setDoc(doc(db, 'clients', client.id, 'timeline', item.id), item);
+              const timelineDocRef = doc(db, 'clients', client.id, 'timeline', item.id);
+              const timelineDocSnap = await getDoc(timelineDocRef);
+              // Only migrate if the subcollection document does not exist yet
+              if (!timelineDocSnap.exists()) {
+                await setDoc(timelineDocRef, item);
+              }
             }
           }
           
