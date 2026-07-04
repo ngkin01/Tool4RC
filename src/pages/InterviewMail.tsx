@@ -459,20 +459,20 @@ export function InterviewMail({ toast }: any) {
           </div>
           <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
             {type === "offline" && (
-              <button onClick={handleAILocation} disabled={loadingLocation}
+              <button onClick={handleAILocation} disabled={loadingLocation} className="im-btn-enhance"
                 style={{padding:"6px 12px",border:"1.5px solid #a78bfa",borderRadius:8,background:"#f5f3ff",cursor:"pointer",fontSize:12,fontWeight:600,color:"#7c3aed",fontFamily:"'DM Sans',sans-serif",display:"flex",alignItems:"center",gap:5,opacity:loadingLocation?0.7:1}}>
                 {loadingLocation ? <Spin size={12} color="#7c3aed" /> : "🪄"}
                 {loadingLocation ? "Searching..." : "Enhance Location"}
               </button>
             )}
             {/* Edit template btn */}
-            <button onClick={()=>{setTplDraft(template);setEditingTpl(true);}}
+            <button onClick={()=>{setTplDraft(template);setEditingTpl(true);}} className="im-btn-template"
               style={{padding:"6px 12px",border:"1.5px solid var(--border-glass)",borderRadius:8,background:"var(--bg-glass)",cursor:"pointer",fontSize:12,fontWeight:600,color:"var(--primary)",fontFamily:"'DM Sans',sans-serif",display:"flex",alignItems:"center",gap:5,backdropFilter:"blur(16px)"}}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4z"/></svg>
               Template
             </button>
             {customTpls[tplKey] && (
-              <button onClick={resetTpl}
+              <button onClick={resetTpl} className="im-btn-reset"
                 style={{padding:"6px 12px",border:"1.5px solid var(--warning)",borderRadius:8,background:"var(--bg-glass)",cursor:"pointer",fontSize:12,fontWeight:600,color:"var(--warning)",fontFamily:"'DM Sans',sans-serif",backdropFilter:"blur(16px)"}}>
                 Reset
               </button>
@@ -485,7 +485,7 @@ export function InterviewMail({ toast }: any) {
           {/* Stage */}
           <div style={{display:"flex",gap:8}}>
             {STAGES.map(s=>(
-              <button key={s.id} onClick={()=>save({stage:s.id})} style={seg(stage===s.id)}
+              <button key={s.id} onClick={()=>save({stage:s.id})} style={seg(stage===s.id)} className="im-btn-stage"
                 onMouseEnter={(e: any)=>{if(stage!==s.id) e.currentTarget.style.background="var(--bg-glass-hover)";}}
                 onMouseLeave={(e: any)=>{if(stage!==s.id) e.currentTarget.style.background="var(--bg-glass)";}}
               >{s.label}</button>
@@ -497,14 +497,14 @@ export function InterviewMail({ toast }: any) {
           {/* Online/Offline */}
           <div style={{display:"flex",background:"var(--bg-glass)",backdropFilter:"blur(16px)",borderRadius:11,padding:4,gap:2,border:"1.5px solid var(--border-glass)",boxShadow:"var(--shadow-glass)"}}>
             {[["offline","Offline"],["online","Online"]].map(([v,l])=>(
-              <button key={v} onClick={()=>save({type:v})} style={{...pill(type===v), background:type===v?"var(--bg-glass-hover)":"transparent"}}>{l}</button>
+              <button key={v} onClick={()=>save({type:v})} className="im-btn-pill" style={{...pill(type===v), background:type===v?"var(--bg-glass-hover)":"transparent"}}>{l}</button>
             ))}
           </div>
 
           {/* Lang */}
           <div style={{display:"flex",background:"var(--bg-glass)",backdropFilter:"blur(16px)",borderRadius:11,padding:4,gap:2,border:"1.5px solid var(--border-glass)",boxShadow:"var(--shadow-glass)"}}>
             {["en","vi"].map(l=>(
-              <button key={l} onClick={()=>save({lang:l})} style={{...pill(lang===l), background:lang===l?"var(--bg-glass-hover)":"transparent"}}>{l.toUpperCase()}</button>
+              <button key={l} onClick={()=>save({lang:l})} className="im-btn-pill" style={{...pill(lang===l), background:lang===l?"var(--bg-glass-hover)":"transparent"}}>{l.toUpperCase()}</button>
             ))}
           </div>
         </div>
@@ -516,7 +516,7 @@ export function InterviewMail({ toast }: any) {
           <div style={{fontSize:10.5,fontWeight:700,color:"var(--primary)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:5}}>Subject (auto)</div>
           <div style={{fontSize:13,color:"var(--text-primary)",fontWeight:500,lineHeight:1.5,wordBreak:"break-all"}}>{subject}</div>
         </div>
-        <button onClick={()=>copy(subject,"sub")}
+        <button onClick={()=>copy(subject,"sub")} className={`im-btn-copy-sub ${copied==="sub"?"im-btn-copy-sub-copied":"im-btn-copy-sub-normal"}`}
           style={{flexShrink:0,padding:"5px 12px",border:"1.5px solid var(--border-glass)",borderRadius:8,cursor:"pointer",fontSize:11.5,fontWeight:600,color:copied==="sub"?"var(--success)":"var(--text-primary)",background:"var(--bg-glass)",fontFamily:"'DM Sans',sans-serif",transition:"all .15s",display:"flex",alignItems:"center",gap:5}}>
           {copied==="sub"
             ?<><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>Copied</>
@@ -532,7 +532,7 @@ export function InterviewMail({ toast }: any) {
 
       {/* ── Sticky Copy ── */}
       <div style={{position:"sticky",bottom:20,display:"flex",justifyContent:"center"}}>
-        <button onClick={()=>copy(resolve(template),"body")}
+        <button onClick={()=>copy(resolve(template),"body")} className={`im-btn-sticky-copy ${copied==="body"?"im-btn-sticky-copy-green":"im-btn-sticky-copy-purple"}`}
           style={{display:"flex",alignItems:"center",gap:9,padding:"13px 36px",borderRadius:12,border:"none",cursor:"pointer",fontWeight:700,fontSize:15,fontFamily:"'DM Sans','Noto Sans',sans-serif",
             background:copied==="body"?"#059669":"linear-gradient(135deg,#8b5cf6,#6d28d9)",
             color:"#fff",boxShadow:copied==="body"?"0 6px 20px rgba(5,150,105,.3)":"0 6px 20px rgba(139,92,246,.4)",
@@ -576,8 +576,8 @@ export function InterviewMail({ toast }: any) {
             />
           </div>
           <div style={{display:"flex",gap:8,marginTop:12}}>
-            <button onClick={saveTpl} style={{padding:"9px 22px",borderRadius:10,border:"none",cursor:"pointer",fontWeight:700,fontSize:13.5,fontFamily:"'DM Sans',sans-serif",background:"linear-gradient(135deg,#8b5cf6,#6d28d9)",color:"#fff"}}>Save</button>
-            <button onClick={()=>setEditingTpl(false)} style={{padding:"9px 16px",borderRadius:10,border:"1.5px solid #e2e8f0",cursor:"pointer",fontWeight:600,fontSize:13.5,fontFamily:"'DM Sans',sans-serif",background:"#fff",color:"#64748b",marginLeft:"auto"}}>Cancel</button>
+            <button onClick={saveTpl} className="im-btn-modal-save" style={{padding:"9px 22px",borderRadius:10,border:"none",cursor:"pointer",fontWeight:700,fontSize:13.5,fontFamily:"'DM Sans',sans-serif",background:"linear-gradient(135deg,#8b5cf6,#6d28d9)",color:"#fff"}}>Save</button>
+            <button onClick={()=>setEditingTpl(false)} className="im-btn-modal-cancel" style={{padding:"9px 16px",borderRadius:10,border:"1.5px solid #e2e8f0",cursor:"pointer",fontWeight:600,fontSize:13.5,fontFamily:"'DM Sans',sans-serif",background:"#fff",color:"#64748b",marginLeft:"auto"}}>Cancel</button>
           </div>
         </Modal>
       )}

@@ -4,7 +4,7 @@ import { gemini } from '../lib/ai';
 import { Spin, Modal, TA } from '../components/ui';
 import { LinkedInFormatter } from '../components/LinkedInFormatter';
 import { db } from '../lib/firebase';
-import { collection, addDoc, getDocs, query, orderBy, updateDoc, doc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, orderBy, updateDoc, doc, serverTimestamp, deleteDoc } from 'firebase/firestore';
 
 const contentPrompt = `You are an experienced Executive Recruiter and Recruitment Marketing Specialist.
 
@@ -433,23 +433,24 @@ Generate a ready-to-post recruitment content.`;
 
 const imagePromptRule = `You are a Creative Director and Prompt Engineer specialized in recruitment marketing visuals.
 
-Your task is to analyze a recruitment post and generate ONE English prompt for an AI image generation model.
+Your task is to analyze a recruitment social media post and generate ONE English prompt for an AI image generation model.
 
-The input is a social media recruitment content, NOT a Job Description.
+The input is a recruitment content, NOT a Job Description.
 
 ==================================================
 MISSION
 ==================================================
 
-Create an image prompt that produces a social-media recruitment poster that:
+Create an image prompt that produces a recruitment poster that:
 
 - attracts attention
 - strengthens employer branding
+- increases click-through rate
 - encourages users to read the caption
 
 The image should complement the content.
 
-It should never duplicate the content.
+The image should never repeat all information from the post.
 
 ==================================================
 STEP 1: ANALYZE THE CONTENT
@@ -486,7 +487,7 @@ STEP 2: DETERMINE VISUAL DIRECTION
 ==================================================
 
 Single Job
-→ Hero poster.
+→ Hero recruitment poster.
 
 Multiple Jobs
 → Hiring campaign poster.
@@ -512,9 +513,9 @@ The image should feel:
 - premium
 - modern
 - clean
-- professional
 - trustworthy
-- corporate
+- professional
+- social-media friendly
 
 The image is a visual hook.
 
@@ -526,17 +527,26 @@ BRAND STYLE
 
 Preferred style:
 
-- Purple and white branding
-- Soft gradient lighting
-- Premium corporate aesthetic
-- Modern startup design
-- High-end recruitment campaign
+- Purple and white color palette
+- Premium gradient lighting
+- Soft glow
+- Modern corporate aesthetic
+- High-end startup design
 - LinkedIn-friendly
 - Generous white space
 - Minimal typography
 - Professional photography
 OR
-- High quality 3D illustration
+- High-quality 3D illustration
+
+Avoid:
+
+- Cheap flyer style
+- Crowded layout
+- Too many icons
+- Traditional recruitment banner style
+- Overly colorful backgrounds
+- Generic stock posters
 
 ==================================================
 TEXT RULES
@@ -547,11 +557,12 @@ Never put:
 - Job Description
 - Requirement bullets
 - Salary
+- Benefits
 - Company information
-- Long text
-- Paragraphs
+- Contact information
+- Long paragraphs
 
-Maximum text:
+Maximum text allowed:
 
 WE ARE HIRING
 
@@ -561,13 +572,55 @@ WE'RE HIRING
 
 Optionally:
 
-Job title if it is short.
+Short job title only.
 
-If the title is long:
+No other text is allowed.
 
-Only use:
+==================================================
+TYPOGRAPHY RESTRICTIONS
+==================================================
 
-WE ARE HIRING
+Do not generate:
+
+- additional text
+- placeholder text
+- fake branding
+- random letters
+- company identities
+- extra captions
+- contact information
+- website URLs
+- email addresses
+- QR codes
+
+The poster should contain only the approved text.
+
+==================================================
+ANTI-HALLUCINATION RULES
+==================================================
+
+Never invent:
+
+- company logo
+- company name
+- brand name
+- website
+- email address
+- phone number
+- QR code
+- social media handle
+- slogan
+- location information
+
+Only include company branding if it is explicitly provided in the input.
+
+If company branding is unavailable:
+
+- do not display any logo;
+- do not create fictional brands;
+- do not generate placeholder text.
+
+The poster should look like a generic premium recruitment campaign without company identity.
 
 ==================================================
 SINGLE JOB POSTER
@@ -577,9 +630,16 @@ Create:
 
 - one professional hero person
 OR
-- one industry hero scene.
+- one industry-related hero scene.
 
-Subtle industry elements only.
+The person should look:
+
+- confident
+- approachable
+- professional
+- modern
+
+Use subtle industry elements only.
 
 The image should feel cinematic and premium.
 
@@ -594,8 +654,9 @@ Create:
 - business team
 - abstract recruitment concept
 - premium 3D illustration
+- corporate office scene
 
-Do not show job titles.
+Do not display job titles.
 
 Only display:
 
@@ -609,13 +670,13 @@ Technology
 → network, cloud, AI, cybersecurity.
 
 Manufacturing
-→ factory silhouette, engineers.
+→ factory silhouette, engineers, precision equipment.
 
 Agriculture
 → crops, greenhouse, farming.
 
 Sales
-→ city skyline, business people.
+→ city skyline, professional business people.
 
 Healthcare
 → medical environment.
@@ -635,13 +696,13 @@ ASPECT RATIO
 
 Default:
 
-1:1 square.
+1:1 square format.
 
 Optimized for:
 
-LinkedIn
-Facebook
-Social media feeds.
+- LinkedIn
+- Facebook
+- Social media feeds
 
 ==================================================
 QUALITY
@@ -665,11 +726,19 @@ Avoid:
 - infographic
 - flyer
 - brochure
-- text-heavy poster
 - powerpoint style
+- text-heavy poster
 - crowded composition
 - excessive icons
 - excessive text
+
+==================================================
+FINAL PROMPT REQUIREMENTS
+==================================================
+
+The generated prompt must always end with:
+
+without logo, without company branding, without extra text, without QR code, only approved typography.
 
 ==================================================
 OUTPUT
@@ -804,6 +873,42 @@ export function JobPostGenerator({toast}: any) {
     loadMemories();
   }, []);
 
+  const copyRichText = async (markdownText: string) => {
+    try {
+      const html = markdownText
+        .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+        .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+        .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        .replace(/\n/g, '<br>');
+
+      if (navigator.clipboard && window.ClipboardItem) {
+        const typeText = 'text/plain';
+        const typeHtml = 'text/html';
+        const blobText = new Blob([markdownText], { type: typeText });
+        const blobHtml = new Blob([html], { type: typeHtml });
+        const data = [new ClipboardItem({ [typeText]: blobText, [typeHtml]: blobHtml })];
+        await navigator.clipboard.write(data);
+      } else {
+        await navigator.clipboard.writeText(markdownText);
+      }
+    } catch (error) {
+      await navigator.clipboard.writeText(markdownText);
+    }
+  };
+
+  const handleDeleteMemory = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await deleteDoc(doc(db, "jobPosts", id));
+      setMemories(prev => prev.filter(m => m.id !== id));
+      toast("Memory deleted successfully.", "success");
+    } catch (err) {
+      toast("Error deleting memory.", "error");
+    }
+  };
+
   const currentPost = versions[activeVersion] || null;
 
   const handleGenerate = async (platId: string) => {
@@ -859,12 +964,6 @@ export function JobPostGenerator({toast}: any) {
       }
       
       const newVersion = { id: docId, text: result.trim(), platform: plat.name, platId, timestamp: Date.now() };
-      if (currentPost.id) {
-        try {
-          await updateDoc(doc(db, "jobPosts", currentPost.id), { imagePrompt: result.trim() });
-          setMemories(prev => prev.map(m => m.id === currentPost.id ? {...m, imagePrompt: result.trim()} : m));
-        } catch(e) {}
-      }
       setVersions(prev => {
         const updated = [newVersion, ...prev].slice(0, 5);
         try { localStorage.setItem(JP_VERSIONS_KEY, JSON.stringify(updated)); } catch {}
@@ -889,12 +988,19 @@ export function JobPostGenerator({toast}: any) {
         800
       );
       
+      const newImagePrompt = result.trim();
       setVersions(prev => {
         const updated = [...prev];
-        updated[activeVersion] = { ...updated[activeVersion], imagePrompt: result.trim() };
+        updated[activeVersion] = { ...updated[activeVersion], imagePrompt: newImagePrompt };
         try { localStorage.setItem(JP_VERSIONS_KEY, JSON.stringify(updated)); } catch {}
         return updated;
       });
+      if (currentPost && currentPost.id) {
+        try {
+          await updateDoc(doc(db, "jobPosts", currentPost.id), { imagePrompt: newImagePrompt });
+          setMemories(prev => prev.map(m => m.id === currentPost.id ? {...m, imagePrompt: newImagePrompt} : m));
+        } catch(e) {}
+      }
     } catch (e) {
       toast("Error generating image prompt.", "error");
     } finally {
@@ -975,10 +1081,8 @@ export function JobPostGenerator({toast}: any) {
             <TA value={jd} onChange={setJd} placeholder="Paste list of jobs or JD..." rows={7}/>
             {isURL && (
               <div style={{position:"absolute",bottom:12,right:12}}>
-                <button onClick={handleExtractURL} disabled={urlLoading}
-                  style={{padding:"8px 16px",border:"1.5px solid var(--border-glass)",borderRadius:8,background:"var(--bg-glass)",backdropFilter:"blur(16px)",fontSize:12.5,fontWeight:600,cursor:"pointer",color:"var(--text-primary)",display:"flex",alignItems:"center",gap:6,boxShadow:"var(--shadow-glass)",transition:"all .15s"}}
-                  onMouseEnter={(e: any)=>{e.currentTarget.style.borderColor="var(--success)";e.currentTarget.style.color="var(--success)";}}
-                  onMouseLeave={(e: any)=>{e.currentTarget.style.borderColor="var(--border-glass)";e.currentTarget.style.color="var(--text-primary)";}}>
+                <button onClick={handleExtractURL} disabled={urlLoading} className="jp-btn-extract"
+                  style={{padding:"8px 16px",border:"1.5px solid var(--border-glass)",borderRadius:8,background:"var(--bg-glass)",backdropFilter:"blur(16px)",fontSize:12.5,fontWeight:600,cursor:"pointer",color:"var(--text-primary)",display:"flex",alignItems:"center",gap:6,boxShadow:"var(--shadow-glass)"}}>
                   {urlLoading?<><Spin size={13}/>Extracting...</>:"Extract JD from URL"}
                 </button>
               </div>
@@ -1057,20 +1161,18 @@ export function JobPostGenerator({toast}: any) {
                     <span style={{marginLeft:4,fontSize:11,opacity:.8}}>✓</span>
                   )}
                 </button>
-                <button onClick={(e: any)=>{e.stopPropagation();setEditingPlat(p);setEditPromptText(p.prompt);}}
+                <button onClick={(e: any)=>{e.stopPropagation();setEditingPlat(p);setEditPromptText(p.prompt);}} className="jp-btn-edit-prompt-icon"
                   style={{position:"absolute",top:-6,right:-6,width:18,height:18,borderRadius:"50%",background:"var(--bg-card)",border:"1.5px solid var(--border-glass)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,color:"var(--text-muted)",zIndex:1}}
                   title="Edit prompt">✎</button>
                 {p.id.startsWith("custom_")&&(
-                  <button onClick={(e: any)=>{e.stopPropagation();handleDeletePlatform(p.id);}}
+                  <button onClick={(e: any)=>{e.stopPropagation();handleDeletePlatform(p.id);}} className="jp-btn-remove-platform-icon"
                     style={{position:"absolute",top:-6,left:-6,width:18,height:18,borderRadius:"50%",background:"var(--bg-red-50)",border:"1px solid var(--border-red-200)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,color:"var(--danger)",zIndex:1}}
                     title="Remove">×</button>
                 )}
               </div>
             ))}
-            <button onClick={()=>setShowAddModal(true)} className="jp-btn"
-              style={{display:"flex",alignItems:"center",gap:7,padding:"10px 18px",borderRadius:10,border:"1.5px dashed var(--border-glass)",cursor:"pointer",fontWeight:600,fontSize:13.5,background:"var(--bg-glass)",backdropFilter:"blur(16px)",color:"var(--text-primary)",boxShadow:"var(--shadow-glass)"}}
-              onMouseEnter={(e: any)=>{e.currentTarget.style.borderColor="var(--success)";e.currentTarget.style.color="var(--success)";e.currentTarget.style.background="var(--bg-green-50)";}}
-              onMouseLeave={(e: any)=>{e.currentTarget.style.borderColor="var(--border-glass)";e.currentTarget.style.color="var(--text-primary)";e.currentTarget.style.background="var(--bg-glass)";}}>
+            <button onClick={()=>setShowAddModal(true)} className="jp-btn jp-btn-add-platform"
+              style={{display:"flex",alignItems:"center",gap:7,padding:"10px 18px",borderRadius:10,border:"1.5px dashed var(--border-glass)",cursor:"pointer",fontWeight:600,fontSize:13.5,background:"var(--bg-glass)",backdropFilter:"blur(16px)",color:"var(--text-primary)",boxShadow:"var(--shadow-glass)"}}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               Add Platform
             </button>
@@ -1127,17 +1229,15 @@ export function JobPostGenerator({toast}: any) {
                     <div style={{fontSize:14, color:"var(--text-primary)", lineHeight: 1.6, whiteSpace: "pre-wrap", fontFamily: "var(--font-mono)"}}>
                       {currentPost.imagePrompt}
                     </div>
-                    <button onClick={async()=>{await navigator.clipboard.writeText(currentPost.imagePrompt);toast("Copied image prompt!", "success");}} 
-                      style={{marginTop: 10, padding:"6px 12px",borderRadius:6,border:"1.5px solid var(--border-glass)",cursor:"pointer",fontWeight:600,fontSize:12,background:"var(--bg-glass)",color:"var(--text-primary)", display: "flex", alignItems: "center", gap: 6, transition: "all .15s"}}
-                      onMouseEnter={(e)=>e.currentTarget.style.borderColor="var(--primary)"}
-                      onMouseLeave={(e)=>e.currentTarget.style.borderColor="var(--border-glass)"}>
+                    <button onClick={async()=>{await navigator.clipboard.writeText(currentPost.imagePrompt);toast("Copied image prompt!", "success");}} className="jp-btn-copy-image-prompt" 
+                      style={{marginTop: 10, padding:"6px 12px",borderRadius:6,border:"1.5px solid var(--border-glass)",cursor:"pointer",fontWeight:600,fontSize:12,background:"var(--bg-glass)",color:"var(--text-primary)", display: "flex", alignItems: "center", gap: 6}}>
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
                       Copy Prompt
                     </button>
                   </div>
                 ) : (
-                  <button onClick={handleGenerateImagePrompt} disabled={imagePromptLoading} className="jp-btn"
-                    style={{display:"flex",alignItems:"center",gap:7,padding:"9px 16px",borderRadius:10,border:"1.5px dashed var(--primary)",cursor:imagePromptLoading?"not-allowed":"pointer",fontWeight:600,fontSize:13.5,background:"var(--bg-glass)",color:"var(--primary)", transition:"all .15s", opacity: imagePromptLoading ? 0.5 : 1}}>
+                  <button onClick={handleGenerateImagePrompt} disabled={imagePromptLoading} className="jp-btn jp-btn-generate-image-prompt"
+                    style={{display:"flex",alignItems:"center",gap:7,padding:"9px 16px",borderRadius:10,border:"1.5px dashed var(--primary)",cursor:imagePromptLoading?"not-allowed":"pointer",fontWeight:600,fontSize:13.5,background:"var(--bg-glass)",color:"var(--primary)", opacity: imagePromptLoading ? 0.5 : 1}}>
                     {imagePromptLoading ? <><Spin size={13} color="var(--primary)"/>Generating...</> : <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>✨ Generate Image Prompt</>}
                   </button>
                 )}
@@ -1145,14 +1245,12 @@ export function JobPostGenerator({toast}: any) {
 
               {/* Action buttons */}
               <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
-                <button onClick={async()=>{await navigator.clipboard.writeText(currentPost?.text||"");setCopiedV(true);setTimeout(()=>setCopiedV(false),2000);}} className="jp-btn"
-                  style={{display:"flex",alignItems:"center",gap:7,padding:"9px 20px",borderRadius:10,border:"none",cursor:"pointer",fontWeight:700,fontSize:13.5,background:copiedV?"var(--success-hover)":"linear-gradient(135deg,var(--success),var(--success-hover))",color:"var(--bg-card)",boxShadow:copiedV?"0 2px 8px rgba(16,185,129,.2)":"0 6px 20px rgba(16,185,129,.35)",transition:"all .15s"}}>
+                <button onClick={async()=>{await copyRichText(currentPost?.text||"");setCopiedV(true);setTimeout(()=>setCopiedV(false),2000);}} className="jp-btn jp-btn-copy-post"
+                  style={{display:"flex",alignItems:"center",gap:7,padding:"9px 20px",borderRadius:10,border:"none",cursor:"pointer",fontWeight:700,fontSize:13.5,background:copiedV?"var(--success-hover)":"linear-gradient(135deg,var(--success),var(--success-hover))",color:"var(--bg-card)",boxShadow:copiedV?"0 2px 8px rgba(16,185,129,.2)":"0 6px 20px rgba(16,185,129,.35)"}}>
                   {copiedV?<><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>Copied!</>:<><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copy</>}
                 </button>
-                <button onClick={handleRegenerate} disabled={loading||!jd.trim()} className="jp-btn"
-                  style={{display:"flex",alignItems:"center",gap:7,padding:"9px 20px",borderRadius:10,border:"1.5px solid var(--border-glass)",cursor:loading?"not-allowed":"pointer",fontWeight:600,fontSize:13.5,background:"var(--bg-glass)",backdropFilter:"blur(16px)",color:"var(--text-primary)",opacity:loading?.5:1,boxShadow:"var(--shadow-glass)",transition:"all .15s"}}
-                  onMouseEnter={(e: any)=>{if(!loading){e.currentTarget.style.borderColor="var(--success)";e.currentTarget.style.color="var(--success)";e.currentTarget.style.background="var(--bg-green-50)";e.currentTarget.style.boxShadow="0 6px 16px rgba(16,185,129,.15)";}}}
-                  onMouseLeave={(e: any)=>{e.currentTarget.style.borderColor="var(--border-glass)";e.currentTarget.style.color="var(--text-primary)";e.currentTarget.style.background="var(--bg-glass)";e.currentTarget.style.boxShadow="var(--shadow-glass)";}}>
+                <button onClick={handleRegenerate} disabled={loading||!jd.trim()} className="jp-btn jp-btn-generate-another"
+                  style={{display:"flex",alignItems:"center",gap:7,padding:"9px 20px",borderRadius:10,border:"1.5px solid var(--border-glass)",cursor:loading?"not-allowed":"pointer",fontWeight:600,fontSize:13.5,background:"var(--bg-glass)",backdropFilter:"blur(16px)",color:"var(--text-primary)",opacity:loading?.5:1,boxShadow:"var(--shadow-glass)"}}>
                   {loading?<><Spin size={13}/>Generating...</>:<><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>Generate Another</>}
                 </button>
               </div>
@@ -1163,8 +1261,8 @@ export function JobPostGenerator({toast}: any) {
           {versions.length>1&&(
             <div style={{display:"flex",gap:8,marginTop:14,flexWrap:"wrap"}}>
               {versions.map((v: any,i: number)=>(
-                <button key={v.timestamp} onClick={()=>setActiveVersion(i)}
-                  style={{padding:"6px 16px",borderRadius:8,border:`1.5px solid ${activeVersion===i?"var(--success)":"var(--border-glass)"}`,cursor:"pointer",fontSize:13,fontWeight:activeVersion===i?700:500,background:activeVersion===i?"var(--bg-emerald-50)":"var(--bg-glass)",backdropFilter:activeVersion===i?"none":"blur(16px)",color:activeVersion===i?"var(--success-hover)":"var(--text-primary)",transition:"all .15s"}}>
+                <button key={v.timestamp} onClick={()=>setActiveVersion(i)} className="jp-btn-version"
+                  style={{padding:"6px 16px",borderRadius:8,border:`1.5px solid ${activeVersion===i?"var(--success)":"var(--border-glass)"}`,cursor:"pointer",fontSize:13,fontWeight:activeVersion===i?700:500,background:activeVersion===i?"var(--bg-emerald-50)":"var(--bg-glass)",backdropFilter:activeVersion===i?"none":"blur(16px)",color:activeVersion===i?"var(--success-hover)":"var(--text-primary)"}}>
                   Version {versions.length-i}
                   <span style={{fontSize:11,marginLeft:4,color:activeVersion===i?"var(--success)":"var(--text-placeholder)"}}>· {v.platform}</span>
                 </button>
@@ -1207,17 +1305,36 @@ export function JobPostGenerator({toast}: any) {
              No generated job posts found yet. Create one above!
            </div>
         ) : (
-           <div style={{display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 16}}>
-             {memories.filter(m => (m.jd||"").toLowerCase().includes(searchMem.toLowerCase()) || (m.text||"").toLowerCase().includes(searchMem.toLowerCase())).slice(0, 10).map((m: any) => (
-                <div key={m.id} style={{background: "var(--bg-card)", border: "1.5px solid var(--border-color)", borderRadius: 12, padding: 16, display: "flex", flexDirection: "column", boxShadow: "var(--shadow-sm)"}}>
-                   <div style={{display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12}}>
-                     <div style={{fontSize: 12, fontWeight: 700, color: "var(--primary)", background: "var(--bg-glass-hover)", padding: "4px 8px", borderRadius: 6}}>{m.platform}</div>
-                     <div style={{fontSize: 11, color: "var(--text-muted)"}}>
-                        {m.createdAt?.toDate ? m.createdAt.toDate().toLocaleDateString() : new Date(m.createdAt).toLocaleDateString()}
+           <div style={{maxHeight: 600, overflowY: "auto", paddingRight: 8, paddingBottom: 8}}>
+             <div style={{display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 16}}>
+               {memories.filter(m => (m.jd||"").toLowerCase().includes(searchMem.toLowerCase()) || (m.text||"").toLowerCase().includes(searchMem.toLowerCase())).map((m: any) => (
+                  <div key={m.id} className="jp-mem-card" style={{position: "relative", background: "var(--bg-card)", border: "1.5px solid var(--border-color)", borderRadius: 12, padding: 16, display: "flex", flexDirection: "column", boxShadow: "var(--shadow-sm)", transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)"}}>
+                     <button 
+                       onClick={(e) => handleDeleteMemory(m.id, e)}
+                       style={{position: "absolute", top: 12, right: 12, background: "var(--bg-glass-hover)", border: "none", borderRadius: "50%", width: 26, height: 26, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "var(--text-muted)", zIndex: 10}}
+                       title="Delete memory"
+                     >
+                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                     </button>
+                     <div style={{display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, paddingRight: 24}}>
+                       <div style={{fontSize: 12, fontWeight: 700, color: "var(--primary)", background: "var(--bg-glass-hover)", padding: "4px 8px", borderRadius: 6}}>{m.platform}</div>
+                       <div style={{fontSize: 11, color: "var(--text-muted)"}}>
+                          {m.createdAt?.toDate ? m.createdAt.toDate().toLocaleDateString() : new Date(m.createdAt).toLocaleDateString()}
+                       </div>
                      </div>
-                   </div>
-                   <div style={{fontSize: 13, color: "var(--text-primary)", marginBottom: 16, flex: 1, display: "-webkit-box", WebkitLineClamp: 4, WebkitBoxOrient: "vertical", overflow: "hidden", lineHeight: 1.6}}>
-                     {m.text}
+                   <div style={{fontSize: 13, color: "var(--text-primary)", marginBottom: 16, flex: 1, maxHeight: 150, overflow: "hidden", position: "relative", lineHeight: 1.6}}>
+                     <div style={{position: "absolute", bottom: 0, left: 0, right: 0, height: 40, background: "linear-gradient(to bottom, transparent, var(--bg-card))", pointerEvents: "none"}} />
+                     <Markdown
+                       components={{
+                         ul: ({node, ...props}) => <ul style={{listStyleType: 'disc', paddingLeft: 16, margin: '4px 0'}} {...props} />,
+                         ol: ({node, ...props}) => <ol style={{listStyleType: 'decimal', paddingLeft: 16, margin: '4px 0'}} {...props} />,
+                         li: ({node, ...props}) => <li style={{marginBottom: 2}} {...props} />,
+                         strong: ({node, ...props}) => <strong style={{fontWeight: 700, color: 'var(--text-primary)'}} {...props} />,
+                         p: ({node, ...props}) => <p style={{marginBottom: 6}} {...props} />
+                       }}
+                     >
+                       {m.text || ""}
+                     </Markdown>
                    </div>
                    {m.imagePrompt && (
                      <div style={{fontSize: 11, color: "var(--text-secondary)", marginBottom: 16, padding: "8px", background: "var(--bg-glass)", borderRadius: 6, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden"}}>
@@ -1229,19 +1346,21 @@ export function JobPostGenerator({toast}: any) {
                         setJd(m.jd || m.text || "");
                         setInstruction(m.instruction || "");
                         window.scrollTo({ top: 0, behavior: 'smooth' });
-                     }} style={{flex: 1, padding: "8px 0", borderRadius: 8, border: "1px solid var(--primary)", background: "transparent", color: "var(--primary)", fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6}}>
+                     }} className="jp-btn-restore" style={{flex: 1, padding: "8px 0", borderRadius: 8, border: "1px solid var(--primary)", background: "transparent", color: "var(--primary)", fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6}}>
                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 2v6h6"/><path d="M21 12A9 9 0 0 0 6 5.3L3 8"/><path d="M21 22v-6h-6"/><path d="M3 12a9 9 0 0 0 15 6.7l3-2.7"/></svg>
                        Restore
                      </button>
                      <button onClick={async () => {
-                        await navigator.clipboard.writeText(m.text || "");
-                     }} style={{flex: 1, padding: "8px 0", borderRadius: 8, border: "none", background: "var(--bg-glass-hover)", color: "var(--text-primary)", fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6}}>
+                        await copyRichText(m.text || "");
+                        toast("Copied post!", "success");
+                     }} className="jp-btn-copy-memory" style={{flex: 1, padding: "8px 0", borderRadius: 8, border: "none", background: "var(--bg-glass-hover)", color: "var(--text-primary)", fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6}}>
                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
                        Copy Post
                      </button>
                    </div>
                 </div>
              ))}
+           </div>
            </div>
         )}
       </div>
@@ -1266,7 +1385,7 @@ export function JobPostGenerator({toast}: any) {
             <div style={{fontSize:12,color:"var(--text-placeholder)",marginTop:6}}>The JD and any additional instructions will be appended automatically.</div>
           </div>
           <div style={{display:"flex",gap:10}}>
-            <button onClick={handleSaveEdit}
+            <button onClick={handleSaveEdit} className="jp-btn-save-edit"
               style={{padding:"10px 24px",borderRadius:10,border:"none",cursor:"pointer",fontWeight:700,fontSize:14,background:"linear-gradient(135deg,var(--success),var(--success-hover))",color:"var(--bg-card)",boxShadow:"0 4px 14px rgba(16,185,129,.3)"}}>
               Save Changes
             </button>
@@ -1274,12 +1393,12 @@ export function JobPostGenerator({toast}: any) {
               <button onClick={() => {
                 const defaultPrompt = DEFAULT_PLATFORMS.find(p => p.id === editingPlat.id)?.prompt || "";
                 setEditPromptText(defaultPrompt);
-              }}
+              }} className="jp-btn-reset-default"
                 style={{padding:"10px 24px",borderRadius:10,border:"1.5px solid var(--border-glass)",cursor:"pointer",fontWeight:600,fontSize:14,background:"var(--bg-glass)",color:"var(--primary)"}}>
                 Reset to Default
               </button>
             )}
-            <button onClick={()=>setEditingPlat(null)}
+            <button onClick={()=>setEditingPlat(null)} className="jp-btn-modal-cancel"
               style={{padding:"10px 24px",borderRadius:10,border:"1.5px solid var(--border-glass)",cursor:"pointer",fontWeight:600,fontSize:14,background:"var(--bg-glass)",color:"var(--text-primary)"}}>
               Cancel
             </button>
@@ -1305,11 +1424,11 @@ export function JobPostGenerator({toast}: any) {
               onFocus={(e: any)=>e.target.style.borderColor="var(--success)"} onBlur={(e: any)=>e.target.style.borderColor="var(--border-glass)"}/>
           </div>
           <div style={{display:"flex",gap:10}}>
-            <button onClick={handleAddPlatform} disabled={!newPlatName.trim()||!newPlatPrompt.trim()}
+            <button onClick={handleAddPlatform} disabled={!newPlatName.trim()||!newPlatPrompt.trim()} className="jp-btn-save-edit"
               style={{padding:"10px 24px",borderRadius:10,border:"none",cursor:!newPlatName.trim()||!newPlatPrompt.trim()?"not-allowed":"pointer",fontWeight:700,fontSize:14,background:"linear-gradient(135deg,var(--success),var(--success-hover))",color:"var(--bg-card)",opacity:!newPlatName.trim()||!newPlatPrompt.trim()?.5:1}}>
               Add Platform
             </button>
-            <button onClick={()=>setShowAddModal(false)}
+            <button onClick={()=>setShowAddModal(false)} className="jp-btn-modal-cancel"
               style={{padding:"10px 24px",borderRadius:10,border:"1.5px solid var(--border-glass)",cursor:"pointer",fontWeight:600,fontSize:14,background:"var(--bg-glass)",color:"var(--text-primary)"}}>
               Cancel
             </button>

@@ -195,7 +195,7 @@ export function LinkedInFormatter({ initialText = '', onCopy }: Props) {
 
           {/* Bottom Actions */}
           <div style={{ padding: '16px 20px', display: 'flex', gap: 12, borderTop: '1px solid #e5e7eb', flexWrap: 'wrap' }}>
-            <button onClick={copyToClipboard} style={{ flex: 1, minWidth: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px', background: copied ? '#dcfce7' : '#e0f2fe', color: copied ? '#166534' : '#0284c7', border: 'none', borderRadius: 6, fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s' }}>
+            <button onClick={copyToClipboard} className="lf-btn-copy" style={{ flex: 1, minWidth: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px', background: copied ? '#dcfce7' : '#e0f2fe', color: copied ? '#166534' : '#0284c7', border: 'none', borderRadius: 6, fontWeight: 600, cursor: 'pointer' }}>
               <Copy size={16} /> {copied ? 'Copied!' : 'Copy text'}
             </button>
           </div>
@@ -263,13 +263,12 @@ const ToolbarBtn = ({ icon, onClick, disabled = false, title }: any) => (
     onClick={onClick}
     disabled={disabled}
     title={title}
+    className="lf-btn-toolbar"
     style={{
       width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center',
       background: '#f3f4f6', border: 'none', borderRadius: 6, cursor: disabled ? 'not-allowed' : 'pointer',
-      color: disabled ? '#9ca3af' : '#4b5563', transition: 'all 0.15s'
+      color: disabled ? '#9ca3af' : '#4b5563'
     }}
-    onMouseEnter={(e) => !disabled && (e.currentTarget.style.background = '#e5e7eb')}
-    onMouseLeave={(e) => !disabled && (e.currentTarget.style.background = '#f3f4f6')}
   >
     {icon}
   </button>

@@ -6,7 +6,7 @@
 
 :root {
   --bg-main: #F8FAFC;
-  --bg-gradient: linear-gradient(to bottom, #ffffff 0%, #ffffff 20%, #D4C5EB 100%);
+  --bg-gradient: linear-gradient(to bottom, #ffffff 0%, #ffffff 40%, #C7B5EB 100%);
   --bg-card: #fff;
   --bg-hover: #F1F5F9;
   --bg-input: #fff;
@@ -495,9 +495,709 @@ body {
   background: rgba(30, 41, 59, 0.8);
   border-color: rgba(129, 140, 248, 0.35);
   box-shadow: 
-    0 30px 60px -15px rgba(0, 0, 0, 0.65),
+    0 30px 60px -15 rgba(0, 0, 0, 0.65),
     0 15px 30px -10px rgba(0, 0, 0, 0.45),
     inset 0 1px 1px rgba(255, 255, 255, 0.12);
 }
 
+/* ── Interview Mail Bouncy & Glowing Hover Styles ── */
+.im-btn-enhance {
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+}
+.im-btn-enhance:hover:not(:disabled) {
+  transform: translateY(-2px) scale(1.04) !important;
+  box-shadow: 0 8px 20px rgba(124, 58, 237, 0.25) !important;
+  background: #f3e8ff !important;
+  border-color: #8b5cf6 !important;
+}
+.im-btn-enhance:active:not(:disabled) {
+  transform: translateY(1px) scale(0.97) !important;
+}
 
+.im-btn-template {
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+}
+.im-btn-template:hover:not(:disabled) {
+  transform: translateY(-2px) scale(1.04) !important;
+  background: var(--bg-glass-hover) !important;
+  border-color: var(--primary) !important;
+  box-shadow: 0 8px 20px rgba(99, 102, 241, 0.25) !important;
+}
+.im-btn-template:active:not(:disabled) {
+  transform: translateY(1px) scale(0.97) !important;
+}
+
+.im-btn-reset {
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+}
+.im-btn-reset:hover:not(:disabled) {
+  transform: translateY(-2px) scale(1.04) !important;
+  background: var(--bg-glass-hover) !important;
+  border-color: var(--warning) !important;
+  box-shadow: 0 8px 20px rgba(217, 119, 6, 0.2) !important;
+}
+.im-btn-reset:active:not(:disabled) {
+  transform: translateY(1px) scale(0.97) !important;
+}
+
+.im-btn-stage {
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+}
+.im-btn-stage:hover:not(:disabled) {
+  transform: translateY(-2px) scale(1.04) !important;
+  box-shadow: 0 8px 20px rgba(99, 102, 241, 0.3) !important;
+}
+.im-btn-stage:active:not(:disabled) {
+  transform: translateY(1px) scale(0.97) !important;
+}
+
+.im-btn-pill {
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+}
+.im-btn-pill:hover:not(:disabled) {
+  transform: translateY(-1.5px) scale(1.03) !important;
+  filter: brightness(1.03);
+}
+.im-btn-pill:active:not(:disabled) {
+  transform: translateY(1px) scale(0.97) !important;
+}
+
+.im-btn-copy-sub {
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+}
+.im-btn-copy-sub:hover:not(:disabled) {
+  transform: translateY(-2px) scale(1.04) !important;
+  background: var(--bg-glass-hover) !important;
+}
+.im-btn-copy-sub:active:not(:disabled) {
+  transform: translateY(1px) scale(0.97) !important;
+}
+.im-btn-copy-sub-copied:hover:not(:disabled) {
+  box-shadow: 0 8px 20px rgba(16, 185, 129, 0.25) !important;
+}
+.im-btn-copy-sub-normal:hover:not(:disabled) {
+  box-shadow: 0 8px 20px rgba(99, 102, 241, 0.15) !important;
+}
+
+.im-btn-sticky-copy {
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+}
+.im-btn-sticky-copy:hover:not(:disabled) {
+  transform: translateY(-4px) scale(1.05) !important;
+}
+.im-btn-sticky-copy:active:not(:disabled) {
+  transform: translateY(1px) scale(0.96) !important;
+}
+.im-btn-sticky-copy-purple:hover:not(:disabled) {
+  box-shadow: 0 12px 30px rgba(139, 92, 246, 0.55) !important;
+}
+.im-btn-sticky-copy-green:hover:not(:disabled) {
+  box-shadow: 0 12px 30px rgba(16, 185, 129, 0.55) !important;
+}
+
+.im-btn-modal-save {
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+}
+.im-btn-modal-save:hover:not(:disabled) {
+  transform: translateY(-2px) scale(1.04) !important;
+  box-shadow: 0 8px 20px rgba(139, 92, 246, 0.35) !important;
+}
+.im-btn-modal-save:active:not(:disabled) {
+  transform: translateY(1px) scale(0.97) !important;
+}
+
+.im-btn-modal-cancel {
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+}
+.im-btn-modal-cancel:hover:not(:disabled) {
+  transform: translateY(-2px) scale(1.04) !important;
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.05) !important;
+}
+.im-btn-modal-cancel:active:not(:disabled) {
+  transform: translateY(1px) scale(0.97) !important;
+}
+
+.im-btn-picker-confirm {
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+}
+.im-btn-picker-confirm:hover:not(:disabled) {
+  transform: translateY(-2px) scale(1.03) !important;
+  box-shadow: 0 8px 20px rgba(139, 92, 246, 0.35) !important;
+}
+.im-btn-picker-confirm:active:not(:disabled) {
+  transform: translateY(1px) scale(0.97) !important;
+}
+
+.im-btn-picker-clear {
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+}
+.im-btn-picker-clear:hover:not(:disabled) {
+  transform: translateY(-2px) scale(1.03) !important;
+  box-shadow: 0 6px 15px rgba(244, 63, 94, 0.2) !important;
+}
+.im-btn-picker-clear:active:not(:disabled) {
+  transform: translateY(1px) scale(0.97) !important;
+}
+
+
+/* ── Candidate Tools Bouncy & Glowing Hover Styles ── */
+.ui-btn-enhance {
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+}
+.ui-btn-enhance:hover:not(:disabled) {
+  transform: translateY(-2.5px) scale(1.03) !important;
+  filter: brightness(1.08) !important;
+}
+.ui-btn-enhance:active:not(:disabled) {
+  transform: translateY(1px) scale(0.97) !important;
+}
+.ui-btn-enhance-primary:hover:not(:disabled) {
+  box-shadow: 0 10px 22px rgba(99, 102, 241, 0.45) !important;
+}
+.ui-btn-enhance-outline:hover:not(:disabled) {
+  background: var(--bg-glass-hover) !important;
+  border-color: var(--primary) !important;
+  box-shadow: 0 8px 18px rgba(99, 102, 241, 0.12) !important;
+}
+.ui-btn-enhance-ghost:hover:not(:disabled) {
+  background: var(--bg-glass-hover) !important;
+  color: var(--text-primary) !important;
+}
+
+.ct-btn-history {
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+}
+.ct-btn-history:hover {
+  transform: translateY(-3px) scale(1.05) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35) !important;
+}
+.ct-btn-history:active {
+  transform: translateY(1px) scale(0.96) !important;
+}
+
+.ct-btn-findphone {
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+}
+.ct-btn-findphone:hover {
+  transform: translateY(-2px) scale(1.04) !important;
+  border-color: var(--primary) !important;
+  color: var(--primary) !important;
+  background: var(--bg-glass-hover) !important;
+  box-shadow: 0 8px 20px rgba(99, 102, 241, 0.15) !important;
+}
+.ct-btn-findphone:active {
+  transform: translateY(1px) scale(0.97) !important;
+}
+
+.ct-btn-upload {
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+}
+.ct-btn-upload:hover {
+  transform: translateY(-2px) scale(1.04) !important;
+  border-color: var(--primary) !important;
+  color: var(--primary) !important;
+  background: var(--bg-glass-hover) !important;
+  box-shadow: 0 8px 20px rgba(99, 102, 241, 0.15) !important;
+}
+.ct-btn-upload:active {
+  transform: translateY(1px) scale(0.97) !important;
+}
+
+.ct-btn-analyze {
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+}
+.ct-btn-analyze:hover:not(:disabled) {
+  background: var(--bg-glass-hover) !important;
+  filter: brightness(1.05);
+}
+.ct-btn-analyze:active:not(:disabled) {
+  transform: scale(0.98) !important;
+}
+
+.ct-btn-lang {
+  transition: all 0.2s ease !important;
+}
+.ct-btn-lang:hover {
+  filter: brightness(1.1);
+  background: var(--bg-glass-hover) !important;
+}
+
+.ct-btn-copy-analysis {
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+}
+.ct-btn-copy-analysis:hover:not(:disabled) {
+  transform: translateY(-3px) scale(1.04) !important;
+  box-shadow: 0 10px 22px rgba(139, 92, 246, 0.4) !important;
+}
+.ct-btn-copy-analysis:active:not(:disabled) {
+  transform: translateY(1px) scale(0.97) !important;
+}
+
+.ct-btn-tab {
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+}
+.ct-btn-tab:hover {
+  transform: translateY(-1.5px) scale(1.03) !important;
+  color: var(--primary) !important;
+}
+.ct-btn-tab:active {
+  transform: translateY(0.5px) scale(0.98) !important;
+}
+
+
+/* ── Job Post Generator Bouncy & Glowing Hover Styles ── */
+.jp-btn-extract {
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+}
+.jp-btn-extract:hover:not(:disabled) {
+  transform: translateY(-2px) scale(1.03) !important;
+  border-color: var(--success) !important;
+  color: var(--success) !important;
+  box-shadow: 0 8px 18px rgba(16, 185, 129, 0.15) !important;
+}
+.jp-btn-extract:active:not(:disabled) {
+  transform: translateY(1px) scale(0.97) !important;
+}
+
+.jp-btn-add-platform {
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+}
+.jp-btn-add-platform:hover {
+  transform: translateY(-2px) scale(1.04) !important;
+  border-color: var(--success) !important;
+  color: var(--success) !important;
+  background: var(--bg-green-50) !important;
+  box-shadow: 0 8px 20px rgba(16, 185, 129, 0.15) !important;
+}
+.jp-btn-add-platform:active {
+  transform: translateY(1px) scale(0.97) !important;
+}
+
+.jp-btn-edit-prompt-icon {
+  transition: all 0.2s ease !important;
+}
+.jp-btn-edit-prompt-icon:hover {
+  transform: scale(1.15) !important;
+  border-color: var(--primary) !important;
+  color: var(--primary) !important;
+}
+
+.jp-btn-remove-platform-icon {
+  transition: all 0.2s ease !important;
+}
+.jp-btn-remove-platform-icon:hover {
+  transform: scale(1.15) !important;
+  border-color: var(--danger) !important;
+  color: var(--danger) !important;
+}
+
+.jp-btn-copy-image-prompt {
+  transition: all 0.2s ease !important;
+}
+.jp-btn-copy-image-prompt:hover {
+  border-color: var(--primary) !important;
+  color: var(--primary) !important;
+}
+
+.jp-btn-generate-image-prompt {
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+}
+.jp-btn-generate-image-prompt:hover:not(:disabled) {
+  transform: translateY(-2px) scale(1.03) !important;
+  border-color: var(--primary) !important;
+  box-shadow: 0 8px 18px rgba(99, 102, 241, 0.15) !important;
+}
+.jp-btn-generate-image-prompt:active:not(:disabled) {
+  transform: translateY(1px) scale(0.97) !important;
+}
+
+.jp-btn-copy-post {
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+}
+.jp-btn-copy-post:hover:not(:disabled) {
+  transform: translateY(-3px) scale(1.04) !important;
+}
+.jp-btn-copy-post:active:not(:disabled) {
+  transform: translateY(1px) scale(0.97) !important;
+}
+
+.jp-btn-generate-another {
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+}
+.jp-btn-generate-another:hover:not(:disabled) {
+  transform: translateY(-3px) scale(1.03) !important;
+  border-color: var(--success) !important;
+  color: var(--success) !important;
+  background: var(--bg-green-50) !important;
+  box-shadow: 0 10px 22px rgba(16, 185, 129, 0.15) !important;
+}
+.jp-btn-generate-another:active:not(:disabled) {
+  transform: translateY(1px) scale(0.97) !important;
+}
+
+.jp-btn-version {
+  transition: all 0.2s ease !important;
+}
+.jp-btn-version:hover {
+  background: var(--bg-glass-hover) !important;
+  border-color: var(--success) !important;
+}
+
+.jp-btn-restore {
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+}
+.jp-btn-restore:hover {
+  transform: translateY(-2px) scale(1.03) !important;
+  background: var(--primary) !important;
+  color: var(--bg-card) !important;
+  box-shadow: 0 6px 16px rgba(99, 102, 241, 0.3) !important;
+}
+.jp-btn-restore:active {
+  transform: translateY(1px) scale(0.97) !important;
+}
+
+.jp-btn-copy-memory {
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+}
+.jp-btn-copy-memory:hover {
+  transform: translateY(-2px) scale(1.03) !important;
+  background: var(--bg-glass-hover) !important;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08) !important;
+}
+.jp-btn-copy-memory:active {
+  transform: translateY(1px) scale(0.97) !important;
+}
+
+.jp-btn-save-edit {
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+}
+.jp-btn-save-edit:hover {
+  transform: translateY(-2.5px) scale(1.03) !important;
+  filter: brightness(1.05) !important;
+  box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4) !important;
+}
+.jp-btn-save-edit:active {
+  transform: translateY(1px) scale(0.97) !important;
+}
+
+.jp-btn-reset-default {
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+}
+.jp-btn-reset-default:hover {
+  transform: translateY(-2px) scale(1.03) !important;
+  border-color: var(--primary) !important;
+}
+.jp-btn-reset-default:active {
+  transform: translateY(1px) scale(0.97) !important;
+}
+
+.jp-btn-modal-cancel {
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+}
+.jp-btn-modal-cancel:hover {
+  transform: translateY(-2px) scale(1.03) !important;
+}
+.jp-btn-modal-cancel:active {
+  transform: translateY(1px) scale(0.97) !important;
+}
+
+/* ── LinkedIn Formatter Bouncy & Glowing Hover Styles ── */
+.lf-btn-toolbar {
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+}
+.lf-btn-toolbar:hover:not(:disabled) {
+  transform: translateY(-2px) scale(1.1) !important;
+  background: #e5e7eb !important;
+}
+.lf-btn-toolbar:active:not(:disabled) {
+  transform: translateY(1px) scale(0.9) !important;
+}
+
+.lf-btn-copy {
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+}
+.lf-btn-copy:hover {
+  transform: translateY(-2.5px) scale(1.02) !important;
+  box-shadow: 0 8px 20px rgba(2, 132, 199, 0.2) !important;
+}
+.lf-btn-copy:active {
+  transform: translateY(1px) scale(0.98) !important;
+}
+
+
+/* ── JD Hub Bouncy & Glowing Hover Styles ── */
+.jh-search-input {
+  transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+}
+.jh-search-input:hover {
+  border-color: rgba(99, 102, 241, 0.5) !important;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.06), var(--shadow-glass) !important;
+  background-color: var(--bg-hover) !important;
+}
+.jh-search-input:focus {
+  border-color: var(--primary) !important;
+  background-color: var(--bg-card) !important;
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15), 0 8px 24px rgba(99, 102, 241, 0.1), var(--shadow-glass) !important;
+}
+.jh-search-container:hover .jh-search-icon,
+.jh-search-container:focus-within .jh-search-icon {
+  color: var(--primary) !important;
+}
+
+.jd-card {
+  transition: border-color 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), 
+              background-color 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), 
+              box-shadow 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+}
+.jd-card:hover {
+  border-color: rgba(129, 140, 248, 0.45) !important;
+  background-color: var(--bg-glass-hover) !important;
+  box-shadow: 0 12px 28px -4px rgba(129, 140, 248, 0.12), 0 6px 12px -4px rgba(129, 140, 248, 0.06), var(--shadow-glass) !important;
+}
+.jd-title, .jd-client {
+  transition: color 0.25s ease !important;
+}
+.jd-card:hover .jd-title {
+  color: var(--primary) !important;
+  text-shadow: 0 0 1px rgba(99, 102, 241, 0.05);
+}
+.jd-card:hover .jd-client {
+  color: var(--text-primary) !important;
+}
+
+.jh-btn-view {
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+}
+.jh-btn-view:hover {
+  transform: translateY(-2px) scale(1.06) !important;
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.35) !important;
+  filter: brightness(1.1) !important;
+}
+.jh-btn-view:active {
+  transform: translateY(1px) scale(0.95) !important;
+}
+
+.jh-btn-copy {
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+}
+.jh-btn-copy:hover:not(.copied) {
+  transform: translateY(-2px) scale(1.06) !important;
+  box-shadow: 0 8px 18px rgba(16, 185, 129, 0.35) !important;
+  filter: brightness(1.1) !important;
+}
+.jh-btn-copy:active:not(.copied) {
+  transform: translateY(1px) scale(0.95) !important;
+}
+.jh-btn-copy.copied {
+  transform: scale(0.95) !important;
+  opacity: 0.85;
+}
+
+
+/* ── Time Buddy (Time Planner) Bouncy & Glowing Hover Styles ── */
+.tb-btn-datepicker {
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+}
+.tb-btn-datepicker:hover {
+  transform: translateY(-2px) scale(1.02) !important;
+  border-color: var(--primary) !important;
+  box-shadow: 0 6px 15px rgba(99, 102, 241, 0.12) !important;
+}
+.tb-btn-datepicker:active {
+  transform: translateY(1px) scale(0.98) !important;
+}
+
+.tb-btn-nav {
+  transition: all 0.2s ease !important;
+}
+.tb-btn-nav:hover {
+  background: var(--bg-hover) !important;
+  transform: scale(1.1) !important;
+}
+.tb-btn-nav:active {
+  transform: scale(0.9) !important;
+}
+
+.tb-btn-done {
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+}
+.tb-btn-done:hover {
+  transform: translateY(-2px) scale(1.04) !important;
+  background: var(--primary-hover) !important;
+  box-shadow: 0 6px 15px rgba(99, 102, 241, 0.25) !important;
+}
+.tb-btn-done:active {
+  transform: translateY(1px) scale(0.96) !important;
+}
+
+.tb-btn-convert {
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+}
+.tb-btn-convert:hover:not(:disabled) {
+  transform: translateY(-2.5px) scale(1.025) !important;
+  box-shadow: 0 8px 22px rgba(99, 102, 241, 0.4) !important;
+  filter: brightness(1.05) !important;
+}
+.tb-btn-convert:active:not(:disabled) {
+  transform: translateY(1px) scale(0.97) !important;
+}
+
+.tb-btn-copy {
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+}
+.tb-btn-copy:hover {
+  transform: translateY(-2.5px) scale(1.04) !important;
+  box-shadow: 0 8px 20px rgba(99, 102, 241, 0.3) !important;
+}
+.tb-btn-copy:active {
+  transform: translateY(1px) scale(0.96) !important;
+}
+.tb-btn-copy.copied:hover {
+  box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3) !important;
+}
+
+.tb-btn-add {
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+}
+.tb-btn-add:hover {
+  transform: translateY(-2px) scale(1.04) !important;
+  background: var(--bg-indigo-50) !important;
+  box-shadow: 0 8px 20px rgba(99, 102, 241, 0.15) !important;
+}
+.tb-btn-add:active {
+  transform: translateY(1px) scale(0.97) !important;
+}
+
+.tb-btn-reset {
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+}
+.tb-btn-reset:hover {
+  transform: translateY(-1.5px) scale(1.05) !important;
+  background: var(--bg-hover) !important;
+  border-color: var(--primary) !important;
+  color: var(--primary) !important;
+}
+.tb-btn-reset:active {
+  transform: translateY(1px) scale(0.95) !important;
+}
+
+.tb-btn-delete {
+  transition: all 0.2s ease !important;
+}
+.tb-btn-delete:hover {
+  transform: scale(1.15) !important;
+  background: var(--bg-red-50) !important;
+  color: var(--danger) !important;
+}
+.tb-btn-delete:active {
+  transform: scale(0.9) !important;
+}
+
+/* ── Liquid Glass Button Style ── */
+.liquid-glass-api-btn {
+  position: relative !important;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0.2) 100%) !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.65) !important;
+  border-radius: 12px !important;
+  color: var(--text-primary) !important;
+  font-weight: 600 !important;
+  font-size: 13px !important;
+  padding: 8px 16px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  cursor: pointer !important;
+  backdrop-filter: blur(14px) !important;
+  -webkit-backdrop-filter: blur(14px) !important;
+  box-shadow: 
+    inset 0 1px 1px rgba(255, 255, 255, 0.8),
+    0 4px 15px -3px rgba(0, 0, 0, 0.1),
+    0 8px 24px -4px rgba(0, 0, 0, 0.05) !important;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+  overflow: hidden !important;
+  z-index: 1 !important;
+}
+
+.liquid-glass-api-btn::before {
+  content: '' !important;
+  position: absolute !important;
+  top: -50% !important;
+  left: -50% !important;
+  width: 200% !important;
+  height: 200% !important;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0.2) 35%, rgba(255, 255, 255, 0) 70%) !important;
+  transition: all 0.6s cubic-bezier(0.165, 0.84, 0.44, 1) !important;
+  z-index: -1 !important;
+  pointer-events: none !important;
+  transform: translate(0, 0) rotate(0deg) !important;
+}
+
+.liquid-glass-api-btn:hover {
+  transform: translateY(-2px) scale(1.03) !important;
+  border-color: rgba(255, 255, 255, 0.9) !important;
+  color: var(--text-primary) !important;
+  box-shadow: 
+    inset 0 1px 2px rgba(255, 255, 255, 0.95),
+    0 12px 30px -4px rgba(0, 0, 0, 0.15),
+    0 8px 16px -4px rgba(0, 0, 0, 0.1) !important;
+}
+
+.liquid-glass-api-btn:hover::before {
+  transform: translate(12%, 12%) scale(1.15) !important;
+}
+
+.liquid-glass-api-btn:hover svg {
+  transform: rotate(25deg) scale(1.15) !important;
+  color: var(--text-primary) !important;
+}
+
+.liquid-glass-api-btn:active {
+  transform: translateY(0.5px) scale(0.97) !important;
+  box-shadow: 
+    inset 0 1px 1px rgba(255, 255, 255, 0.7),
+    0 4px 12px -2px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Dark mode specific enhancements for liquid glass button */
+.dark .liquid-glass-api-btn {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.04) 100%) !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+  color: var(--text-primary) !important;
+  box-shadow: 
+    inset 0 1px 1px rgba(255, 255, 255, 0.15),
+    0 8px 24px -4px rgba(0, 0, 0, 0.5),
+    0 4px 12px rgba(0, 0, 0, 0.3) !important;
+}
+
+.dark .liquid-glass-api-btn::before {
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 40%, rgba(0, 0, 0, 0) 70%) !important;
+}
+
+.dark .liquid-glass-api-btn:hover {
+  color: var(--text-primary) !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+  box-shadow: 
+    inset 0 1px 2px rgba(255, 255, 255, 0.25),
+    0 12px 30px -4px rgba(0, 0, 0, 0.6),
+    0 8px 20px rgba(0, 0, 0, 0.4) !important;
+}
+
+.dark .liquid-glass-api-btn:hover svg {
+  color: var(--text-primary) !important;
+}
+
+/* ── Job Post Memory Card Interaction ── */
+.jp-mem-card:hover {
+  transform: translateY(-4px) !important;
+  border-color: rgba(99, 102, 241, 0.45) !important;
+  box-shadow: 
+    0 12px 24px -4px rgba(99, 102, 241, 0.08),
+    0 8px 16px -6px rgba(99, 102, 241, 0.08) !important;
+}
+
+.dark .jp-mem-card:hover {
+  border-color: rgba(129, 140, 248, 0.4) !important;
+  box-shadow: 
+    0 16px 32px -6px rgba(0, 0, 0, 0.55),
+    0 8px 16px -8px rgba(129, 140, 248, 0.25) !important;
+}

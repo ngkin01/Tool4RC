@@ -21,10 +21,8 @@ export function Btn({onClick,disabled,loading,children,variant="primary",icon,st
   const v: any={primary:{background:"linear-gradient(135deg,var(--primary),var(--primary-hover))",color:"var(--bg-card)",boxShadow:"0 4px 14px rgba(99,102,241,.35)",border:"none"},
     outline:{background:"var(--bg-card)",color:"var(--text-secondary)",border:"1.5px solid var(--border-color)"},
     ghost:{background:"transparent",color:"var(--text-muted)",border:"none"}};
-  return <button onClick={onClick} disabled={disabled} className={className}
-    style={{cursor:disabled?"not-allowed":"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8,fontWeight:600,fontSize:14,borderRadius:12,padding:"0 22px",height:46,transition:"all .15s",opacity:disabled?.5:1,...v[variant],...style}}
-    onMouseEnter={e=>{if(!disabled){e.currentTarget.style.filter="brightness(1.07)";e.currentTarget.style.transform="translateY(-1px)";}}}
-    onMouseLeave={e=>{e.currentTarget.style.filter="";e.currentTarget.style.transform="";}}>
+  return <button onClick={onClick} disabled={disabled} className={`ui-btn-enhance ui-btn-enhance-${variant} ${className}`}
+    style={{cursor:disabled?"not-allowed":"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8,fontWeight:600,fontSize:14,borderRadius:12,padding:"0 22px",height:46,transition:"all .15s",opacity:disabled?.5:1,...v[variant],...style}}>
     {loading?<Spin size={15} color={variant==="primary"?"var(--bg-card)":"currentColor"}/>:icon}{children}
   </button>;
 }

@@ -213,7 +213,7 @@ export function AnalysisContent({analysis}: any) {
 
       {/* Copy */}
       <div style={{marginTop:12}}>
-        <button onClick={copyAll} style={{display:"flex",alignItems:"center",gap:8,padding:"9px 20px",borderRadius:10,border:"none",cursor:"pointer",fontWeight:700,fontSize:13.5,transition:"all .15s",background:copied?"var(--success-hover)":"linear-gradient(135deg,var(--primary),var(--primary-hover))",color:"var(--bg-glass)",boxShadow:copied?"0 4px 14px rgba(5,150,105,.3)":"0 4px 14px rgba(124,58,237,.35)"}}>
+        <button onClick={copyAll} className="ct-btn-copy-analysis" style={{display:"flex",alignItems:"center",gap:8,padding:"9px 20px",borderRadius:10,border:"none",cursor:"pointer",fontWeight:700,fontSize:13.5,background:copied?"var(--success-hover)":"linear-gradient(135deg,var(--primary),var(--primary-hover))",color:"var(--bg-glass)",boxShadow:copied?"0 4px 14px rgba(5,150,105,.3)":"0 4px 14px rgba(124,58,237,.35)"}}>
           {copied?<><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>Copied!</>:<><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copy Analysis</>}
         </button>
       </div>
@@ -415,8 +415,7 @@ export function CandidateTools({toast}: any){
     <HistorySidebar open={sopen} onClose={()=>setSopen(false)} sessions={sessions} onNew={clear}
       onSelect={(id: string)=>{const s=getSess(id);if(!s)return;setCv(s.cv);setJd(s.jd);setNotes(s.notes);setSum(s.result);setSopen(false);toast("Session loaded","success");}}
       onDelete={(id: string)=>{delSess(id);refresh();toast("Deleted","success");}}/>
-    <button onClick={()=>setSopen(true)} style={{position:"fixed",bottom:24,right:24,zIndex:90,background:"var(--text-primary)",border:"none",cursor:"pointer",padding:"12px 16px",borderRadius:99,color:"var(--bg-card)",display:"flex",alignItems:"center",gap:8,boxShadow:"0 4px 12px rgba(0,0,0,.15)",fontWeight:600,fontSize:13}}
-      onMouseEnter={(e: any)=>e.currentTarget.style.transform="translateY(-2px)"} onMouseLeave={(e: any)=>e.currentTarget.style.transform="none"}>
+    <button onClick={()=>setSopen(true)} className="ct-btn-history" style={{position:"fixed",bottom:24,right:24,zIndex:90,background:"var(--text-primary)",border:"none",cursor:"pointer",padding:"12px 16px",borderRadius:99,color:"var(--bg-card)",display:"flex",alignItems:"center",gap:8,boxShadow:"0 4px 12px rgba(0,0,0,.15)",fontWeight:600,fontSize:13}}>
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
       History
     </button>
@@ -430,9 +429,8 @@ export function CandidateTools({toast}: any){
           <p style={{fontSize:14,color:"var(--text-muted)"}}>Summary, email draft, and CV pre-call analysis</p>
         </div>
         <a href="https://sotel.vn/cong-cu-lay-so-dien-thoai-tu-facebook-mien-phi/" target="_blank" rel="noopener noreferrer" 
-           style={{display:"flex",alignItems:"center",gap:6,padding:"8px 14px",background:"var(--bg-glass)",backdropFilter:"blur(16px)",border:"1.5px solid var(--border-glass)",borderRadius:8,fontSize:13,fontWeight:600,color:"var(--text-secondary)",textDecoration:"none",boxShadow:"var(--shadow-glass)",transition:"all .15s",marginTop:4}} 
-           onMouseEnter={(e: any)=>{e.currentTarget.style.borderColor="var(--primary)";e.currentTarget.style.color="var(--primary)";e.currentTarget.style.background="var(--bg-glass-hover)";}} 
-           onMouseLeave={(e: any)=>{e.currentTarget.style.borderColor="var(--border-glass)";e.currentTarget.style.color="var(--text-secondary)";e.currentTarget.style.background="var(--bg-glass)";}}>
+           className="ct-btn-findphone"
+           style={{display:"flex",alignItems:"center",gap:6,padding:"8px 14px",background:"var(--bg-glass)",backdropFilter:"blur(16px)",border:"1.5px solid var(--border-glass)",borderRadius:8,fontSize:13,fontWeight:600,color:"var(--text-secondary)",textDecoration:"none",boxShadow:"var(--shadow-glass)",marginTop:4}}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
           Find Phone
         </a>
@@ -446,9 +444,8 @@ export function CandidateTools({toast}: any){
             <label style={{fontSize:14,fontWeight:700,color:"var(--text-primary)"}}>Candidate CV</label>
             <label style={{cursor:"pointer"}}>
               <input type="file" accept=".pdf,.docx,.txt" onChange={handleFile} style={{display:"none"}}/>
-              <div style={{display:"flex",alignItems:"center",gap:6,padding:"6px 14px",background:"var(--bg-glass)",backdropFilter:"blur(16px)",border:"1.5px solid var(--border-glass)",borderRadius:8,fontSize:12.5,fontWeight:600,color:"var(--text-primary)",cursor:"pointer",transition:"all .15s",boxShadow:"var(--shadow-glass)"}}
-                   onMouseEnter={(e: any)=>{e.currentTarget.style.borderColor="var(--primary)";e.currentTarget.style.color="var(--primary)";e.currentTarget.style.background="var(--bg-glass-hover)";}}
-                   onMouseLeave={(e: any)=>{e.currentTarget.style.borderColor="var(--border-glass)";e.currentTarget.style.color="var(--text-primary)";e.currentTarget.style.background="var(--bg-glass)";}}>
+              <div className="ct-btn-upload"
+                   style={{display:"flex",alignItems:"center",gap:6,padding:"6px 14px",background:"var(--bg-glass)",backdropFilter:"blur(16px)",border:"1.5px solid var(--border-glass)",borderRadius:8,fontSize:12.5,fontWeight:600,color:"var(--text-primary)",cursor:"pointer",boxShadow:"var(--shadow-glass)"}}>
                 {fileLoading?<><Spin size={13}/> Reading...</>:<><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Upload File</>}
               </div>
             </label>
@@ -493,16 +490,14 @@ export function CandidateTools({toast}: any){
           {gL?"Generating...":"Generate Summary"}
         </Btn>
         <div style={{display:"flex",alignItems:"center",borderRadius:12,border:"1.5px solid var(--primary)",overflow:"hidden",flexShrink:0,flex:"1 1 auto"}}>
-          <button onClick={handleAnalyze} disabled={aL||!hasCV}
-            style={{display:"flex",alignItems:"center",justifyContent:"center",flex:1,gap:7,padding:"0 14px",height:44,background:"var(--bg-glass)",backdropFilter:"blur(16px)",border:"none",cursor:aL||!hasCV||!jd.trim()?"not-allowed":"pointer",fontWeight:600,fontSize:14,color:"var(--primary-hover)",opacity:aL||!hasCV||!jd.trim()?.5:1}}
-            onMouseEnter={(e: any)=>{if(!aL&&hasCV&&jd.trim())e.currentTarget.style.background="var(--bg-glass-hover)";}}
-            onMouseLeave={(e: any)=>e.currentTarget.style.background="var(--bg-glass)"}>
+          <button onClick={handleAnalyze} disabled={aL||!hasCV} className="ct-btn-analyze"
+            style={{display:"flex",alignItems:"center",justifyContent:"center",flex:1,gap:7,padding:"0 14px",height:44,background:"var(--bg-glass)",backdropFilter:"blur(16px)",border:"none",cursor:aL||!hasCV||!jd.trim()?"not-allowed":"pointer",fontWeight:600,fontSize:14,color:"var(--primary-hover)",opacity:aL||!hasCV||!jd.trim()?.5:1}}>
             {aL ? <><span style={{width:14,height:14,border:"2px solid var(--primary)",borderTopColor:"transparent",borderRadius:"50%",animation:"spin .7s linear infinite",display:"inline-block",marginRight:6}}/> Analyzing...</> : <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{marginRight:4}}><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg> Analyze CV</>}
           </button>
           <div style={{display:"flex",borderLeft:"1.5px solid var(--border-glass)",height:44}}>
             {["EN","VI"].map(lang=>(
-              <button key={lang} onClick={()=>setAnalysisLang(lang.toLowerCase())}
-                style={{width:40,height:"100%",border:"none",borderLeft:lang==="VI"?"1.5px solid var(--border-glass)":"none",cursor:"pointer",fontSize:11,fontWeight:700,transition:"all .15s",background:analysisLang===lang.toLowerCase()?"var(--bg-glass-hover)":"var(--bg-glass)",backdropFilter:"blur(16px)",color:analysisLang===lang.toLowerCase()?"var(--primary-hover)":"var(--text-placeholder)"}}>
+              <button key={lang} onClick={()=>setAnalysisLang(lang.toLowerCase())} className="ct-btn-lang"
+                style={{width:40,height:"100%",border:"none",borderLeft:lang==="VI"?"1.5px solid var(--border-glass)":"none",cursor:"pointer",fontSize:11,fontWeight:700,background:analysisLang===lang.toLowerCase()?"var(--bg-glass-hover)":"var(--bg-glass)",backdropFilter:"blur(16px)",color:analysisLang===lang.toLowerCase()?"var(--primary-hover)":"var(--text-placeholder)"}}>
                 {lang}
               </button>
             ))}
@@ -525,14 +520,14 @@ export function CandidateTools({toast}: any){
           {/* Tabs */}
           <div style={{display:"flex",gap:4,marginBottom:16,borderBottom:"1.5px solid var(--border-color)",paddingBottom:0}}>
             {sum && (
-              <button onClick={()=>setActiveTab("summary")}
-                style={{padding:"8px 16px",background:"none",border:"none",cursor:"pointer",fontSize:13.5,fontWeight:activeTab==="summary"?700:500,color:activeTab==="summary"?"var(--primary)":"var(--text-muted)",borderBottom:activeTab==="summary"?"2px solid var(--primary)":"2px solid transparent",marginBottom:-1.5,transition:"all .15s"}}>
+              <button onClick={()=>setActiveTab("summary")} className="ct-btn-tab"
+                style={{padding:"8px 16px",background:"none",border:"none",cursor:"pointer",fontSize:13.5,fontWeight:activeTab==="summary"?700:500,color:activeTab==="summary"?"var(--primary)":"var(--text-muted)",borderBottom:activeTab==="summary"?"2px solid var(--primary)":"2px solid transparent",marginBottom:-1.5}}>
                 Summary
               </button>
             )}
             {analysis && (
-              <button onClick={()=>setActiveTab("analysis")}
-                style={{padding:"8px 16px",background:"none",border:"none",cursor:"pointer",fontSize:13.5,fontWeight:activeTab==="analysis"?700:500,color:activeTab==="analysis"?"var(--primary-hover)":"var(--text-muted)",borderBottom:activeTab==="analysis"?"2px solid var(--primary-hover)":"2px solid transparent",marginBottom:-1.5,transition:"all .15s",display:"flex",alignItems:"center",gap:6}}>
+              <button onClick={()=>setActiveTab("analysis")} className="ct-btn-tab"
+                style={{padding:"8px 16px",background:"none",border:"none",cursor:"pointer",fontSize:13.5,fontWeight:activeTab==="analysis"?700:500,color:activeTab==="analysis"?"var(--primary-hover)":"var(--text-muted)",borderBottom:activeTab==="analysis"?"2px solid var(--primary-hover)":"2px solid transparent",marginBottom:-1.5,display:"flex",alignItems:"center",gap:6}}>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="M11 8v3l2 2"/></svg>
                 CV Analysis
               </button>

@@ -28,8 +28,7 @@ function DatePicker({value,onChange}: any){
   const isTod=(c: any)=>c.cur&&view.year===today.getUTCFullYear()&&view.month===today.getUTCMonth()&&c.day===today.getUTCDate();
   return(
     <div style={{position:"relative",display:"inline-block"}} ref={ref}>
-      <button onClick={()=>setOpen(v=>!v)} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 14px",background:"var(--bg-glass)",border:"1.5px solid var(--border-glass)",borderRadius:10,fontSize:14,fontWeight:500,color:"var(--text-primary)",boxShadow:"0 1px 4px rgba(0,0,0,.05)",cursor:"pointer",whiteSpace:"nowrap",transition:"border-color .15s"}}
-        onMouseEnter={(e: any)=>e.currentTarget.style.borderColor="var(--primary)"} onMouseLeave={(e: any)=>e.currentTarget.style.borderColor="var(--border-color)"}>
+      <button onClick={()=>setOpen(v=>!v)} className="tb-btn-datepicker" style={{display:"flex",alignItems:"center",gap:8,padding:"8px 14px",background:"var(--bg-glass)",border:"1.5px solid var(--border-glass)",borderRadius:10,fontSize:14,fontWeight:500,color:"var(--text-primary)",boxShadow:"0 1px 4px rgba(0,0,0,.05)",cursor:"pointer",whiteSpace:"nowrap"}}>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
         {disp()}
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--text-placeholder)" strokeWidth="2"><polyline points="6 9 12 15 18 9"/></svg>
@@ -37,13 +36,11 @@ function DatePicker({value,onChange}: any){
       {open&&(
         <div style={{position:"absolute",top:"calc(100% + 8px)",left:0,zIndex:500,background:"var(--bg-card)",borderRadius:16,boxShadow:"0 12px 48px rgba(0,0,0,.18)",border:"1px solid var(--border-color)",padding:"16px",width:280,animation:"slideUp .15s ease"}}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
-            <button onClick={pm} style={{width:28,height:28,borderRadius:8,border:"1px solid var(--border-color)",background:"var(--bg-card)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}
-              onMouseEnter={(e: any)=>e.currentTarget.style.background="var(--bg-hover)"} onMouseLeave={(e: any)=>e.currentTarget.style.background="var(--bg-card)"}>
+            <button onClick={pm} className="tb-btn-nav" style={{width:28,height:28,borderRadius:8,border:"1px solid var(--border-color)",background:"var(--bg-card)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
             </button>
             <span style={{fontSize:14,fontWeight:700,color:"var(--text-primary)"}}>{MONTHS[view.month]} {view.year}</span>
-            <button onClick={nm} style={{width:28,height:28,borderRadius:8,border:"1px solid var(--border-color)",background:"var(--bg-card)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}
-              onMouseEnter={(e: any)=>e.currentTarget.style.background="var(--bg-hover)"} onMouseLeave={(e: any)=>e.currentTarget.style.background="var(--bg-card)"}>
+            <button onClick={nm} className="tb-btn-nav" style={{width:28,height:28,borderRadius:8,border:"1px solid var(--border-color)",background:"var(--bg-card)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
             </button>
           </div>
@@ -59,8 +56,7 @@ function DatePicker({value,onChange}: any){
             );})}
           </div>
           <div style={{marginTop:12,display:"flex",justifyContent:"flex-end"}}>
-            <button onClick={()=>setOpen(false)} style={{padding:"7px 20px",background:"var(--primary)",color:"var(--bg-card)",border:"none",borderRadius:8,fontSize:13,fontWeight:700,cursor:"pointer",}}
-              onMouseEnter={(e: any)=>e.currentTarget.style.background="var(--primary-hover)"} onMouseLeave={(e: any)=>e.currentTarget.style.background="var(--primary)"}>Done</button>
+            <button onClick={()=>setOpen(false)} className="tb-btn-done" style={{padding:"7px 20px",background:"var(--primary)",color:"var(--bg-card)",border:"none",borderRadius:8,fontSize:13,fontWeight:700,cursor:"pointer"}}>Done</button>
           </div>
         </div>
       )}
@@ -223,8 +219,8 @@ RULES:
               style={{...inpStyle,resize:"none",fontSize:12.5,lineHeight:1.5,background:"var(--bg-neutral-50)",padding:"8px 12px"}}
               onFocus={(e: any)=>e.target.style.borderColor="var(--primary)"} onBlur={(e: any)=>e.target.style.borderColor="var(--border-color)"}/>
           </div>
-          <button onClick={handleConvert} disabled={loading||!inputMsg.trim()||!selectedTZ}
-            style={{width:"100%",padding:"11px 0",borderRadius:10,border:"none",cursor:loading||!inputMsg.trim()||!selectedTZ?"not-allowed":"pointer",fontWeight:700,fontSize:14,transition:"all .15s",background:loading||!inputMsg.trim()||!selectedTZ?"var(--border-color)":"linear-gradient(135deg,var(--primary),var(--primary-hover))",color:loading||!inputMsg.trim()||!selectedTZ?"var(--text-placeholder)":"var(--bg-card)",boxShadow:loading||!inputMsg.trim()||!selectedTZ?"none":"0 4px 14px rgba(99,102,241,.35)",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+          <button onClick={handleConvert} disabled={loading||!inputMsg.trim()||!selectedTZ} className="tb-btn-convert"
+            style={{width:"100%",padding:"11px 0",borderRadius:10,border:"none",cursor:loading||!inputMsg.trim()||!selectedTZ?"not-allowed":"pointer",fontWeight:700,fontSize:14,background:loading||!inputMsg.trim()||!selectedTZ?"var(--border-color)":"linear-gradient(135deg,var(--primary),var(--primary-hover))",color:loading||!inputMsg.trim()||!selectedTZ?"var(--text-placeholder)":"var(--bg-card)",boxShadow:loading||!inputMsg.trim()||!selectedTZ?"none":"0 4px 14px rgba(99,102,241,.35)",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
             {loading?<><Spin size={15} color="var(--bg-card)"/> Converting...</>:<><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Convert Times</>}
           </button>
         </div>
@@ -236,8 +232,8 @@ RULES:
             <textarea value={outputMsg} readOnly rows={9} placeholder="Converted message will appear here..."
               style={{...inpStyle,resize:"none",lineHeight:1.6,fontSize:13.5,background:"var(--bg-main)",color:outputMsg?"var(--text-secondary)":"var(--text-placeholder)"}}/>
             {outputMsg&&(
-              <button onClick={async()=>{await navigator.clipboard.writeText(outputMsg);setCopied(true);setTimeout(()=>setCopied(false),2000);}}
-                style={{position:"absolute",top:10,right:10,display:"flex",alignItems:"center",gap:6,padding:"6px 12px",borderRadius:8,border:"none",cursor:"pointer",fontSize:12,fontWeight:600,transition:"all .15s",background:copied?"var(--success)":"var(--primary)",color:"var(--bg-card)"}}>
+              <button onClick={async()=>{await navigator.clipboard.writeText(outputMsg);setCopied(true);setTimeout(()=>setCopied(false),2000);}} className="tb-btn-copy"
+                style={{position:"absolute",top:10,right:10,display:"flex",alignItems:"center",gap:6,padding:"6px 12px",borderRadius:8,border:"none",cursor:"pointer",fontSize:12,fontWeight:600,background:copied?"var(--success)":"var(--primary)",color:"var(--bg-card)"}}>
                 {copied?<><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>Copied!</>:<><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copy</>}
               </button>
             )}
@@ -413,8 +409,7 @@ export function InterviewPlanner({toast}: any){
 
       {/* Add Location */}
       <div style={{position:"relative",marginBottom:16,display:"inline-block"}}>
-        <button onClick={()=>setShowAdd(v=>!v)} style={{display:"flex",alignItems:"center",gap:8,padding:"9px 18px",background:"var(--bg-card)",border:"1.5px solid var(--primary)",borderRadius:10,fontSize:14,fontWeight:600,color:"var(--primary)",cursor:"pointer",transition:"all .15s"}}
-          onMouseEnter={(e: any)=>e.currentTarget.style.background="var(--bg-indigo-50)"} onMouseLeave={(e: any)=>e.currentTarget.style.background="var(--bg-card)"}>
+        <button onClick={()=>setShowAdd(v=>!v)} className="tb-btn-add" style={{display:"flex",alignItems:"center",gap:8,padding:"9px 18px",background:"var(--bg-card)",border:"1.5px solid var(--primary)",borderRadius:10,fontSize:14,fontWeight:600,color:"var(--primary)",cursor:"pointer"}}>
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Add Location
         </button>
         {showAdd&&(
@@ -474,8 +469,7 @@ export function InterviewPlanner({toast}: any){
                   const newTime = getHCMCNow(is24);
                   setHcmcTime(newTime);
                   setLocs(p=>p.map(loc=>({...loc,start:convertTime(newTime.start,"Asia/Ho_Chi_Minh",loc.tz,date,is24),end:convertTime(newTime.end,"Asia/Ho_Chi_Minh",loc.tz,date,is24)})));
-                }} style={{background:"none",border:"1px solid var(--border-color)",borderRadius:6,padding:"2px 8px",fontSize:11,fontWeight:600,color:"var(--text-muted)",cursor:"pointer"}}
-                  onMouseEnter={(e: any)=>e.currentTarget.style.background="var(--bg-hover)"} onMouseLeave={(e: any)=>e.currentTarget.style.background="none"}>
+                }} className="tb-btn-reset" style={{background:"none",border:"1px solid var(--border-color)",borderRadius:6,padding:"2px 8px",fontSize:11,fontWeight:600,color:"var(--text-muted)",cursor:"pointer"}}>
                   Reset to Live
                 </button>
               )}
@@ -520,8 +514,7 @@ export function InterviewPlanner({toast}: any){
                 <div style={{fontSize:11,color:"var(--text-placeholder)",marginTop:3}}>{loc.tz}</div>
               </div>
               <button onClick={(e: any)=>{e.stopPropagation();const nxt=locs.filter((_,j)=>j!==i);setLocs(nxt);setSelIdx(nxt.length===0?-1:Math.max(0,selIdx-(selIdx>i?1:0)));if(nxt.length===0){setHcmcTime(getHCMCNow(is24));}}}
-                style={{background:"none",border:"none",cursor:"pointer",color:"var(--danger)",padding:4,display:"flex",borderRadius:6,flexShrink:0,transition:"background .1s"}}
-                onMouseEnter={(e: any)=>e.currentTarget.style.background="var(--bg-red-50)"} onMouseLeave={(e: any)=>e.currentTarget.style.background="none"}>
+                className="tb-btn-delete" style={{background:"none",border:"none",cursor:"pointer",color:"var(--danger)",padding:4,display:"flex",borderRadius:6,flexShrink:0}}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </button>
             </div>
@@ -540,7 +533,7 @@ export function InterviewPlanner({toast}: any){
           <div style={{fontSize:14,fontWeight:700,color:"var(--text-primary)",marginBottom:12}}>Copy result</div>
           <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
             <div style={{flex:"1 1 200px",fontSize:15,fontWeight:600,color:"var(--text-secondary)",fontFamily:"'IBM Plex Mono',monospace",padding:"11px 16px",background:"var(--bg-main)",borderRadius:10,border:"1px solid var(--border-color)"}}>{outputText}</div>
-            <button onClick={doCopy} style={{display:"flex",alignItems:"center",gap:8,padding:"11px 22px",borderRadius:10,border:"none",cursor:"pointer",fontWeight:700,fontSize:14,transition:"all .15s",flexShrink:0,background:copied?"var(--success)":"linear-gradient(135deg,var(--primary),var(--primary-hover))",color:"var(--bg-card)",boxShadow:copied?"0 4px 14px rgba(16,185,129,.35)":"0 4px 14px rgba(99,102,241,.35)"}}>
+            <button onClick={doCopy} className="tb-btn-copy" style={{display:"flex",alignItems:"center",gap:8,padding:"11px 22px",borderRadius:10,border:"none",cursor:"pointer",fontWeight:700,fontSize:14,flexShrink:0,background:copied?"var(--success)":"linear-gradient(135deg,var(--primary),var(--primary-hover))",color:"var(--bg-card)",boxShadow:copied?"0 4px 14px rgba(16,185,129,.35)":"0 4px 14px rgba(99,102,241,.35)"}}>
               {copied?<><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>Copied!</>:<><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copy</>}
             </button>
           </div>

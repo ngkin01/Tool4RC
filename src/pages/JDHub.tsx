@@ -60,24 +60,26 @@ export function JDHub({ toast }: any) {
       </div>
 
       <div style={{ display: 'flex', gap: 16, marginBottom: 24, flexWrap: 'wrap' }}>
-        <div style={{ flex: '1 1 300px', position: 'relative' }}>
-          <Search size={18} color="var(--text-placeholder)" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }} />
+        <div style={{ flex: '1 1 300px', position: 'relative' }} className="jh-search-container">
+          <Search className="jh-search-icon" size={18} color="var(--text-placeholder)" style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', transition: 'color 0.25s ease' }} />
           <input
             type="text"
             placeholder="Job title..."
             value={searchTitle}
             onChange={(e) => setSearchTitle(e.target.value)}
-            style={{ width: '100%', padding: '12px 12px 12px 40px', borderRadius: 12, border: '1.5px solid var(--border-glass)', background: 'var(--bg-glass)', color: 'var(--text-primary)', outline: 'none', fontSize: 15, boxSizing: 'border-box', backdropFilter: 'blur(16px)', boxShadow: 'var(--shadow-glass)' }}
+            className="jh-search-input"
+            style={{ width: '100%', padding: '12px 12px 12px 42px', borderRadius: 12, border: '1.5px solid var(--border-glass)', background: 'var(--bg-glass)', color: 'var(--text-primary)', outline: 'none', fontSize: 15, boxSizing: 'border-box', backdropFilter: 'blur(16px)', boxShadow: 'var(--shadow-glass)' }}
           />
         </div>
-        <div style={{ flex: '1 1 300px', position: 'relative' }}>
-          <Search size={18} color="var(--text-placeholder)" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }} />
+        <div style={{ flex: '1 1 300px', position: 'relative' }} className="jh-search-container">
+          <Search className="jh-search-icon" size={18} color="var(--text-placeholder)" style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', transition: 'color 0.25s ease' }} />
           <input
             type="text"
             placeholder="Client..."
             value={searchClient}
             onChange={(e) => setSearchClient(e.target.value)}
-            style={{ width: '100%', padding: '12px 12px 12px 40px', borderRadius: 12, border: '1.5px solid var(--border-glass)', background: 'var(--bg-glass)', color: 'var(--text-primary)', outline: 'none', fontSize: 15, boxSizing: 'border-box', backdropFilter: 'blur(16px)', boxShadow: 'var(--shadow-glass)' }}
+            className="jh-search-input"
+            style={{ width: '100%', padding: '12px 12px 12px 42px', borderRadius: 12, border: '1.5px solid var(--border-glass)', background: 'var(--bg-glass)', color: 'var(--text-primary)', outline: 'none', fontSize: 15, boxSizing: 'border-box', backdropFilter: 'blur(16px)', boxShadow: 'var(--shadow-glass)' }}
           />
         </div>
       </div>
@@ -95,20 +97,21 @@ export function JDHub({ toast }: any) {
             </div>
           ) : (
             filteredJobs.map((job, idx) => (
-              <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-glass)', backdropFilter: 'blur(16px)', padding: '14px 18px', borderRadius: 12, border: '1.5px solid var(--border-glass)', boxShadow: 'var(--shadow-glass)' }}>
+              <div key={idx} className="jd-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-glass)', backdropFilter: 'blur(16px)', padding: '14px 18px', borderRadius: 12, border: '1.5px solid var(--border-glass)', boxShadow: 'var(--shadow-glass)' }}>
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)' }}>{job.JobTitle}</div>
-                  <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>{job.ClientName}</div>
+                  <div className="jd-title" style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)' }}>{job.JobTitle}</div>
+                  <div className="jd-client" style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>{job.ClientName}</div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <a href={job.JDLink} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
-                    <button style={{ padding: '5px 8px', background: '#2563eb', color: 'white', border: 'none', borderRadius: 5, fontSize: 11, cursor: 'pointer', transition: 'all 0.2s ease' }}>
+                    <button className="jh-btn-view" style={{ padding: '5px 12px', background: '#2563eb', color: 'white', border: 'none', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
                       View
                     </button>
                   </a>
                   <button 
                     onClick={() => handleCopy(job.JDLink)}
-                    style={{ padding: '5px 8px', background: copiedLink === job.JDLink ? '#9ca3af' : '#10b981', color: 'white', border: 'none', borderRadius: 5, fontSize: 11, cursor: 'pointer', transition: 'all 0.2s ease', transform: copiedLink === job.JDLink ? 'scale(0.95)' : 'none' }}
+                    className={`jh-btn-copy ${copiedLink === job.JDLink ? 'copied' : ''}`}
+                    style={{ padding: '5px 12px', background: copiedLink === job.JDLink ? '#9ca3af' : '#10b981', color: 'white', border: 'none', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer' }}
                   >
                     {copiedLink === job.JDLink ? 'Copied ✓' : 'Copy'}
                   </button>

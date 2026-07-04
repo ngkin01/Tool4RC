@@ -288,10 +288,12 @@ export function Header({ onMenu }: any) {
           </button>
         )}
         {isLanding && (
-          <button onClick={() => setShowSettings(true)} style={{ background: "none", border: "1px solid var(--border-color)", cursor: "pointer", padding: "8px 12px", borderRadius: 8, color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600 }}
-            onMouseEnter={(e: any) => e.currentTarget.style.background = "var(--bg-main)"} onMouseLeave={(e: any) => e.currentTarget.style.background = "none"}>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
-            API Key
+          <button 
+            onClick={() => setShowSettings(true)} 
+            className="liquid-glass-api-btn"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ transition: 'transform 0.3s ease' }}><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+            <span>API Key</span>
           </button>
         )}
       </div>
