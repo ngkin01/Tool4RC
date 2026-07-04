@@ -3,8 +3,6 @@ import Markdown from 'react-markdown';
 import { gemini } from '../lib/ai';
 import { Spin, Modal, TA } from '../components/ui';
 import { LinkedInFormatter } from '../components/LinkedInFormatter';
-import { db } from '../lib/firebase';
-import { collection, addDoc, getDocs, query, orderBy, updateDoc, doc, serverTimestamp } from 'firebase/firestore';
 
 const contentPrompt = `You are an experienced Executive Recruiter and Recruitment Marketing Specialist.
 
@@ -689,62 +687,41 @@ const DEFAULT_PLATFORMS = [
     id:"linkedin", name:"LinkedIn Post",
     icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>,
     color:"#0A66C2", bg:"#EBF3FB",
-    prompt:`Audience:
-Professionals, experienced candidates, industry connections and referrals.
-Writing Style:
-- Professional and recruiter-oriented.
-- Credible and informative.
-- Easy to scan.
-- Use short paragraphs and bullet points.
-- Focus on opportunity and candidate fit.
-- Encourage professional networking and referrals.
-- Avoid excessive emojis.
-Hashtags:
-- Generate 8-15 relevant hashtags.
-Length:
-- Adapt naturally to the complexity of the role.
-- Prioritize quality over length.`
+    prompt:`Write a professional LinkedIn recruitment post based on this job description.
+- Start with a compelling hook line
+- Use short paragraphs and bullet points
+- Highlight key responsibilities and requirements
+- Mention growth opportunities and company culture
+- End with a clear call to action (apply link or contact info)
+- Add 5 relevant professional hashtags at the end
+- Keep it under 1300 characters
+- Tone: professional but engaging`
   },
   {
     id:"fb_group", name:"FB Group",
     icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>,
     color:"#1877F2", bg:"#EBF0FD",
-    prompt:`Audience:
-Active job seekers and community members.
-Writing Style:
-- Friendly and direct.
-- Get to the point quickly.
-- Highlight only the most important requirements.
-- Use moderate emojis.
-- Focus on location, experience and key qualifications.
-- Encourage inbox, referrals and sharing.
-Hashtags:
-- Use 5-10 hashtags only.
-Length:
-- Keep the content concise and highly scannable.`
+    prompt:`Write a Facebook recruitment post for a job community group.
+- Open with an attention-grabbing line
+- Keep it concise and scannable
+- Use emojis sparingly but effectively
+- Include key job details: role, location, salary range if available
+- Add a clear apply instruction
+- End with 3-5 relevant hashtags
+- Tone: friendly, direct, community-oriented`
   },
   {
     id:"fb_personal", name:"FB Profile",
     icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>,
     color:"#1877F2", bg:"#EBF0FD",
-    prompt:`Audience:
-Personal connections and extended network.
-Writing Style:
-- Personal and conversational.
-- Write like a recruiter sharing opportunities with friends.
-- First person perspective is allowed.
-Examples:
-- Mình đang hỗ trợ tuyển...
-- Hiện tại bên mình đang tìm kiếm...
-- Chia sẻ thêm một cơ hội dành cho...
-- Can occasionally ask for referrals and sharing.
-- Keep the content approachable and authentic.
-- Avoid sounding like a company advertisement.
-Hashtags:
-- Use only when appropriate.
-- Prefer 3-8 hashtags.
-Length:
-- Short and natural.`
+    prompt:`Write a personal Facebook recruitment post (as if posted on a personal profile).
+- Write in first-person, warm and personal voice
+- Start with "I'm looking for..." or "My team is hiring..."
+- Keep it conversational and authentic
+- Mention why this role/company is exciting
+- Include how to apply or reach out personally
+- End with 2-3 hashtags max
+- Tone: personal, warm, authentic`
   },
 ];
 
@@ -783,88 +760,31 @@ export function JobPostGenerator({toast}: any) {
   const [copiedV, setCopiedV] = useState(false);
   const [urlLoading, setUrlLoading] = useState(false);
   const [imagePromptLoading, setImagePromptLoading] = useState(false);
-  
-  const [memories, setMemories] = React.useState<any[]>([]);
-  const [searchMem, setSearchMem] = React.useState("");
-  const [memLoading, setMemLoading] = React.useState(false);
-
-  React.useEffect(() => {
-    const loadMemories = async () => {
-      setMemLoading(true);
-      try {
-        const q = query(collection(db, "jobPosts"), orderBy("createdAt", "desc"));
-        const snap = await getDocs(q);
-        setMemories(snap.docs.map(d => ({id: d.id, ...d.data()})));
-      } catch(e) {
-        console.error(e);
-      } finally {
-        setMemLoading(false);
-      }
-    };
-    loadMemories();
-  }, []);
 
   const currentPost = versions[activeVersion] || null;
 
   const handleGenerate = async (platId: string) => {
     if (!jd.trim()) return;
+    // AI handles invalid input via system prompt — no extra validation needed
     const plat = platforms.find((p: any) => p.id === platId);
     if (!plat) return;
     setActivePlatId(platId);
     setLoading(true);
     try {
-      let memoryContext = "";
-      try {
-        const isListJobRequest = await gemini("You are an intent analyzer. Analyze if the user wants to create a roundup/list job USING PREVIOUS/OLD JOBS FROM HISTORY. Reply 'YES' ONLY IF they explicitly ask to combine old/past jobs, OR if they ask for a list job but provide NO actual job details in the input. If they already provided a list of jobs in the input, reply 'NO'. Reply ONLY YES or NO.", `Input: ${jd}\n\nInstruction: ${instruction}\n\nReply ONLY YES or NO.`, 10);
-        if (isListJobRequest.trim().toUpperCase().includes("YES")) {
-           const q = query(collection(db, "jobPosts"), orderBy("createdAt", "desc"));
-           const querySnapshot = await getDocs(q);
-           const memoryJobs = querySnapshot.docs.map(d => d.data().jd || d.data().text).filter(t => !!t).slice(0, 5);
-           if (memoryJobs.length > 0) {
-              memoryContext = `\n\n[SYSTEM HIDDEN INFO] The user wants a roundup/list job. Here are some of the recent jobs from their memory database to include:\n` + memoryJobs.map((j, i) => `Job ${i+1}:\n${j}`).join('\n\n') + `\n\nPlease create a compelling list job post including these.\n`;
-           }
-        }
-      } catch (e) {
-        console.log("Intent check failed, skipping memory context.");
-      }
-
-      const result = await gemini(
+                  const result = await gemini(
           `${contentPrompt}`,
-          `Platform: ${plat.name}\n${plat.prompt}\n\nInput Information:\n${jd}\n${instruction.trim() ? `\nAdditional instruction: ${instruction.trim()}` : ""}${memoryContext}\n\nOutput ONLY the post content.`,
-          1500
-      );
-      
-      let docId = "";
-      try {
-        const docRef = await addDoc(collection(db, "jobPosts"), {
-          jd: jd,
-          instruction: instruction,
-          text: result.trim(),
-          platform: plat.name,
-          createdAt: serverTimestamp()
-        });
-        docId = docRef.id;
-        
-        // Update local memory list
-        setMemories(prev => [{
-            id: docId, 
-            jd, 
-            instruction, 
-            text: result.trim(), 
-            platform: plat.name, 
-            createdAt: new Date()
-        }, ...prev]);
-      } catch(e) {
-         console.error("Failed to save to memory", e);
-      }
-      
-      const newVersion = { id: docId, text: result.trim(), platform: plat.name, platId, timestamp: Date.now() };
-      if (currentPost.id) {
-        try {
-          await updateDoc(doc(db, "jobPosts", currentPost.id), { imagePrompt: result.trim() });
-          setMemories(prev => prev.map(m => m.id === currentPost.id ? {...m, imagePrompt: result.trim()} : m));
-        } catch(e) {}
-      }
+          `Platform: ${plat.name}
+${plat.prompt}
+
+Input Information:
+${jd}
+${instruction.trim() ? `
+Additional instruction: ${instruction.trim()}` : ""}
+
+Output ONLY the post content.`,
+          1200
+        );
+      const newVersion = { text: result.trim(), platform: plat.name, platId, timestamp: Date.now() };
       setVersions(prev => {
         const updated = [newVersion, ...prev].slice(0, 5);
         try { localStorage.setItem(JP_VERSIONS_KEY, JSON.stringify(updated)); } catch {}
@@ -960,7 +880,7 @@ export function JobPostGenerator({toast}: any) {
         <h1 style={{fontSize:"clamp(22px,5vw,32px)",fontWeight:800,color:"var(--text-primary)",letterSpacing:"-.02em",marginBottom:8}}>
           Generate <span style={{background:"linear-gradient(135deg,var(--success),var(--success-hover))",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>Job Post</span>
         </h1>
-        <p style={{fontSize:14,color:"var(--text-muted)"}}>Paste a single JD or a list of jobs to instantly create a social media post and an image prompt.</p>
+        <p style={{fontSize:14,color:"var(--text-muted)"}}>Nhập một hoặc danh sách nhiều công việc để tạo ngay bài đăng mạng xã hội và prompt hình ảnh chuyên nghiệp.</p>
       </div>
 
       {/* Input Section */}
@@ -972,7 +892,7 @@ export function JobPostGenerator({toast}: any) {
             <label style={{fontSize:14,fontWeight:700,color:"var(--text-primary)"}}>Input Information</label>
           </div>
           <div style={{position:"relative"}}>
-            <TA value={jd} onChange={setJd} placeholder="Paste list of jobs or JD..." rows={7}/>
+            <TA value={jd} onChange={setJd} placeholder="Nhập list job / Nhập JD..." rows={7}/>
             {isURL && (
               <div style={{position:"absolute",bottom:12,right:12}}>
                 <button onClick={handleExtractURL} disabled={urlLoading}
@@ -1138,7 +1058,7 @@ export function JobPostGenerator({toast}: any) {
                 ) : (
                   <button onClick={handleGenerateImagePrompt} disabled={imagePromptLoading} className="jp-btn"
                     style={{display:"flex",alignItems:"center",gap:7,padding:"9px 16px",borderRadius:10,border:"1.5px dashed var(--primary)",cursor:imagePromptLoading?"not-allowed":"pointer",fontWeight:600,fontSize:13.5,background:"var(--bg-glass)",color:"var(--primary)", transition:"all .15s", opacity: imagePromptLoading ? 0.5 : 1}}>
-                    {imagePromptLoading ? <><Spin size={13} color="var(--primary)"/>Generating...</> : <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>✨ Generate Image Prompt</>}
+                    {imagePromptLoading ? <><Spin size={13} color="var(--primary)"/>Generating...</> : <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>✨ Tạo Prompt Hình Ảnh</>}
                   </button>
                 )}
               </div>
@@ -1178,73 +1098,10 @@ export function JobPostGenerator({toast}: any) {
       {!loading&&versions.length===0&&(
         <div style={{textAlign:"center",padding:"40px 20px",color:"var(--text-primary)",background:"var(--bg-glass)",backdropFilter:"blur(16px)",borderRadius:14,border:"1.5px dashed var(--border-glass)",boxShadow:"var(--shadow-glass)"}}>
           <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" style={{margin:"0 auto 12px",display:"block",opacity:.6}}><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-          <div style={{fontSize:15,fontWeight:500,marginBottom:4}}>Enter job info and select a platform</div>
-          <div style={{fontSize:13}}>Select a platform above to start generating your post</div>
+          <div style={{fontSize:15,fontWeight:500,marginBottom:4}}>Nhập thông tin và chọn nền tảng</div>
+          <div style={{fontSize:13}}>Chọn một nền tảng bên trên để bắt đầu tạo bài đăng</div>
         </div>
       )}
-
-      
-      {/* Job Post Memory Section */}
-      <div style={{marginTop: 48, paddingTop: 32, borderTop: "1px solid var(--border-color)"}}>
-        <div style={{display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, flexWrap: "wrap", gap: 16}}>
-          <div>
-            <h2 style={{fontSize: 20, fontWeight: 700, color: "var(--text-primary)", margin: "0 0 8px 0"}}>Job Post Memory</h2>
-            <p style={{fontSize: 14, color: "var(--text-secondary)", margin: 0}}>Find and reuse your previously generated job posts and image prompts.</p>
-          </div>
-          <div style={{position: "relative", width: 280}}>
-            <svg style={{position: "absolute", left: 14, top: 11, color: "var(--text-muted)"}} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-            <input type="text" value={searchMem} onChange={e=>setSearchMem(e.target.value)} placeholder="Search jobs by title or content..." 
-              style={{width: "100%", padding: "10px 14px 10px 40px", borderRadius: 10, border: "1.5px solid var(--border-glass)", background: "var(--bg-glass)", color: "var(--text-primary)", fontSize: 13, outline: "none"}}
-              onFocus={(e: any)=>e.target.style.borderColor="var(--success)"} onBlur={(e: any)=>e.target.style.borderColor="var(--border-glass)"}
-            />
-          </div>
-        </div>
-        
-        {memLoading ? (
-           <div style={{textAlign: "center", padding: 40}}><Spin size={24} color="var(--success)"/></div>
-        ) : memories.length === 0 ? (
-           <div style={{textAlign: "center", padding: 40, color: "var(--text-muted)", fontSize: 14, background: "var(--bg-glass)", borderRadius: 14, border: "1.5px dashed var(--border-glass)"}}>
-             No generated job posts found yet. Create one above!
-           </div>
-        ) : (
-           <div style={{display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 16}}>
-             {memories.filter(m => (m.jd||"").toLowerCase().includes(searchMem.toLowerCase()) || (m.text||"").toLowerCase().includes(searchMem.toLowerCase())).slice(0, 10).map((m: any) => (
-                <div key={m.id} style={{background: "var(--bg-card)", border: "1.5px solid var(--border-color)", borderRadius: 12, padding: 16, display: "flex", flexDirection: "column", boxShadow: "var(--shadow-sm)"}}>
-                   <div style={{display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12}}>
-                     <div style={{fontSize: 12, fontWeight: 700, color: "var(--primary)", background: "var(--bg-glass-hover)", padding: "4px 8px", borderRadius: 6}}>{m.platform}</div>
-                     <div style={{fontSize: 11, color: "var(--text-muted)"}}>
-                        {m.createdAt?.toDate ? m.createdAt.toDate().toLocaleDateString() : new Date(m.createdAt).toLocaleDateString()}
-                     </div>
-                   </div>
-                   <div style={{fontSize: 13, color: "var(--text-primary)", marginBottom: 16, flex: 1, display: "-webkit-box", WebkitLineClamp: 4, WebkitBoxOrient: "vertical", overflow: "hidden", lineHeight: 1.6}}>
-                     {m.text}
-                   </div>
-                   {m.imagePrompt && (
-                     <div style={{fontSize: 11, color: "var(--text-secondary)", marginBottom: 16, padding: "8px", background: "var(--bg-glass)", borderRadius: 6, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden"}}>
-                       <span style={{fontWeight: 700}}>Image Prompt:</span> {m.imagePrompt}
-                     </div>
-                   )}
-                   <div style={{display: "flex", gap: 8, marginTop: "auto"}}>
-                     <button onClick={() => {
-                        setJd(m.jd || m.text || "");
-                        setInstruction(m.instruction || "");
-                        window.scrollTo({ top: 0, behavior: 'smooth' });
-                     }} style={{flex: 1, padding: "8px 0", borderRadius: 8, border: "1px solid var(--primary)", background: "transparent", color: "var(--primary)", fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6}}>
-                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 2v6h6"/><path d="M21 12A9 9 0 0 0 6 5.3L3 8"/><path d="M21 22v-6h-6"/><path d="M3 12a9 9 0 0 0 15 6.7l3-2.7"/></svg>
-                       Restore
-                     </button>
-                     <button onClick={async () => {
-                        await navigator.clipboard.writeText(m.text || "");
-                     }} style={{flex: 1, padding: "8px 0", borderRadius: 8, border: "none", background: "var(--bg-glass-hover)", color: "var(--text-primary)", fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6}}>
-                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                       Copy Post
-                     </button>
-                   </div>
-                </div>
-             ))}
-           </div>
-        )}
-      </div>
 
       {/* Standalone Text Formatter */}
       <div style={{marginTop: 48, paddingTop: 32, borderTop: "1px solid var(--border-color)"}}>
@@ -1270,15 +1127,6 @@ export function JobPostGenerator({toast}: any) {
               style={{padding:"10px 24px",borderRadius:10,border:"none",cursor:"pointer",fontWeight:700,fontSize:14,background:"linear-gradient(135deg,var(--success),var(--success-hover))",color:"var(--bg-card)",boxShadow:"0 4px 14px rgba(16,185,129,.3)"}}>
               Save Changes
             </button>
-            {DEFAULT_PLATFORMS.find(p => p.id === editingPlat.id) && (
-              <button onClick={() => {
-                const defaultPrompt = DEFAULT_PLATFORMS.find(p => p.id === editingPlat.id)?.prompt || "";
-                setEditPromptText(defaultPrompt);
-              }}
-                style={{padding:"10px 24px",borderRadius:10,border:"1.5px solid var(--border-glass)",cursor:"pointer",fontWeight:600,fontSize:14,background:"var(--bg-glass)",color:"var(--primary)"}}>
-                Reset to Default
-              </button>
-            )}
             <button onClick={()=>setEditingPlat(null)}
               style={{padding:"10px 24px",borderRadius:10,border:"1.5px solid var(--border-glass)",cursor:"pointer",fontWeight:600,fontSize:14,background:"var(--bg-glass)",color:"var(--text-primary)"}}>
               Cancel

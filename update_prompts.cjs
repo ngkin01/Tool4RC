@@ -1,5 +1,4 @@
 const fs = require('fs');
-
 const contentPrompt = `You are an experienced Executive Recruiter and Recruitment Marketing Specialist.
 
 Your job is NOT to rewrite a Job Description.
@@ -679,78 +678,30 @@ No analysis.`;
 
 let code = fs.readFileSync('src/pages/JobPostGenerator.tsx', 'utf8');
 
-// Insert variables at the top (after imports)
-if (!code.includes('const contentPrompt =')) {
-    code = code.replace(/import { LinkedInFormatter } from '\.\.\/components\/LinkedInFormatter';\n/, 
-        `import { LinkedInFormatter } from '../components/LinkedInFormatter';\n\nconst contentPrompt = \`${contentPrompt.replace(/`/g, '\\`')}\`;\n\nconst imagePromptRule = \`${imagePromptRule.replace(/`/g, '\\`')}\`;\n\n`);
-}
+// Replace the gemini call in handleGenerate
+const newGenCode = `      const [postResult, imagePromptResult] = await Promise.all([
+        gemini(
+          \`${contentPrompt.replace(/`/g, '\\`')}\`,
+          \`Platform: \${plat.name}\\n\${plat.prompt}\\n\\nInput Information:\\n\${jd}\\n\${instruction.trim() ? \`\\nAdditional instruction: \${instruction.trim()}\` : ""}\\n\\nOutput ONLY the post content.\`,
+          1200
+        ),
+        gemini(
+          \`${imagePromptRule.replace(/`/g, '\\`')}\`,
+          \`Input Information:\\n\${jd}\\n\\nOutput ONLY the image prompt.\`,
+          800
+        )
+      ]);
+      const newVersion = { text: postResult.trim(), imagePrompt: imagePromptResult.trim(), platform: plat.name, platId, timestamp: Date.now() };`;
 
-// Add state for image prompt loading
-if (!code.includes('imagePromptLoading')) {
-    code = code.replace(/const \[urlLoading, setUrlLoading\] = useState\(false\);/,
-        `const [urlLoading, setUrlLoading] = useState(false);\n  const [imagePromptLoading, setImagePromptLoading] = useState(false);`);
-}
+// Find where to inject
+const regex = /const result = await gemini\([\s\S]*?\);\s*const newVersion = { text: result\.trim\(\), platform: plat\.name, platId, timestamp: Date\.now\(\) };/m;
+code = code.replace(regex, newGenCode);
 
-// Add handleGenerateImagePrompt
-if (!code.includes('handleGenerateImagePrompt')) {
-    const handleGenImgCode = `
-  const handleGenerateImagePrompt = async () => {
-    if (!currentPost || !currentPost.text) return;
-    setImagePromptLoading(true);
-    try {
-      const result = await gemini(
-        imagePromptRule,
-        \`Input Information:\\n\${currentPost.text}\\n\\nOutput ONLY the image prompt.\`,
-        800
-      );
-      
-      setVersions(prev => {
-        const updated = [...prev];
-        updated[activeVersion] = { ...updated[activeVersion], imagePrompt: result.trim() };
-        try { localStorage.setItem(JP_VERSIONS_KEY, JSON.stringify(updated)); } catch {}
-        return updated;
-      });
-    } catch (e) {
-      toast("Error generating image prompt.", "error");
-    } finally {
-      setImagePromptLoading(false);
-    }
-  };
-`;
-    code = code.replace(/const handleRegenerate = \(\) => {/, handleGenImgCode + '\n  const handleRegenerate = () => {');
-}
-
-// Add UI for image prompt
-if (!code.includes('✨ Tạo Prompt Hình Ảnh')) {
-    const imageUI = `
-              {/* Image Prompt Generation */}
-              <div style={{marginTop:16, marginBottom: 16}}>
-                {currentPost.imagePrompt ? (
-                  <div style={{background:"var(--bg-glass-hover)",borderRadius:10,border:"1px solid var(--border-glass)",padding:"16px 18px"}}>
-                    <div style={{fontSize:13, fontWeight: 700, color:"var(--primary)", marginBottom: 8, display: "flex", alignItems: "center", gap: 6}}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                      Image Generation Prompt
-                    </div>
-                    <div style={{fontSize:14, color:"var(--text-primary)", lineHeight: 1.6, whiteSpace: "pre-wrap", fontFamily: "var(--font-mono)"}}>
-                      {currentPost.imagePrompt}
-                    </div>
-                    <button onClick={async()=>{await navigator.clipboard.writeText(currentPost.imagePrompt);toast("Copied image prompt!", "success");}} 
-                      style={{marginTop: 10, padding:"6px 12px",borderRadius:6,border:"1.5px solid var(--border-glass)",cursor:"pointer",fontWeight:600,fontSize:12,background:"var(--bg-glass)",color:"var(--text-primary)", display: "flex", alignItems: "center", gap: 6, transition: "all .15s"}}
-                      onMouseEnter={(e)=>e.currentTarget.style.borderColor="var(--primary)"}
-                      onMouseLeave={(e)=>e.currentTarget.style.borderColor="var(--border-glass)"}>
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                      Copy Prompt
-                    </button>
-                  </div>
-                ) : (
-                  <button onClick={handleGenerateImagePrompt} disabled={imagePromptLoading} className="jp-btn"
-                    style={{display:"flex",alignItems:"center",gap:7,padding:"9px 16px",borderRadius:10,border:"1.5px dashed var(--primary)",cursor:imagePromptLoading?"not-allowed":"pointer",fontWeight:600,fontSize:13.5,background:"var(--bg-glass)",color:"var(--primary)", transition:"all .15s", opacity: imagePromptLoading ? 0.5 : 1}}>
-                    {imagePromptLoading ? <><Spin size={13} color="var(--primary)"/>Generating...</> : <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>✨ Tạo Prompt Hình Ảnh</>}
-                  </button>
-                )}
-              </div>
-`;
-    code = code.replace(/\{\/\* Action buttons \*\/\}/, imageUI + '\n              {/* Action buttons */}');
-}
+// UI updates
+code = code.replace(/Job Description or Job URL/, 'Input Information');
+code = code.replace(/Paste job description\.\.\./, 'Nhập list job / Nhập JD...');
+code = code.replace(/Paste a JD and choose a platform to generate a ready-to-post update/, 'Nhập một hoặc danh sách nhiều công việc để tạo ngay bài đăng mạng xã hội và prompt hình ảnh chuyên nghiệp.');
+code = code.replace(/Paste JD and choose platform/g, 'Nhập thông tin và chọn nền tảng');
+code = code.replace(/Select a platform above to generate/g, 'Chọn một nền tảng bên trên để bắt đầu tạo bài đăng');
 
 fs.writeFileSync('src/pages/JobPostGenerator.tsx', code);

@@ -11,7 +11,7 @@ export function Landing() {
       title: "JD Hub", desc: "Store & reuse job descriptions" },
     { id: "jobpost", path: "/jobpost", iconBg: "linear-gradient(135deg,var(--success),var(--success-hover))", shadow: "rgba(16,185,129,.25)",
       icon: <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>,
-      title: "Job Post Generator", desc: "Turn JD into ready-to-post content" },
+      title: "Job Post Generator", desc: "Craft engaging recruitment content" },
     { id: "mail", path: "/mail", iconBg: "linear-gradient(135deg,var(--primary),var(--primary-hover))", shadow: "rgba(139,92,246,.25)",
       icon: <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>,
       title: "Interview Mail", desc: "Generate interview invitation emails instantly" },

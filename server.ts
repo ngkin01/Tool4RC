@@ -475,13 +475,63 @@ app.post("/api/freecai/step1-company-research", async (req, res) => {
       });
     }
 
-    const { clientName, customPrompt } = req.body;
+    const { clientName, customPrompt, existingCompanyReport, jobDescription } = req.body;
 
     if (!clientName) {
       return res.status(400).json({ error: "Missing clientName" });
     }
 
-    const promptTemplate = customPrompt && customPrompt.trim() ? customPrompt : `Bạn là một chuyên gia nghiên cứu thị trường và Chuyên viên Tư vấn Tuyển dụng Cấp cao.
+    let finalPrompt = "";
+    if (existingCompanyReport && existingCompanyReport.trim()) {
+      // Incremental / tailored company research
+      finalPrompt = `Bạn là một chuyên gia nghiên cứu thị trường và Chuyên viên Tư vấn Tuyển dụng Cấp cao.
+Nhiệm vụ của bạn là xem xét, bổ sung và tinh chỉnh Insights Công ty (Company Intelligence Profile) đã có sẵn cho đối tác sau:
+
+Tên công ty khách hàng: ${clientName}
+
+Bản mô tả công việc (Job Description) mới đang tuyển dụng:
+"""
+${jobDescription || "Chưa cung cấp mô tả chi tiết vị trí"}
+"""
+
+Thông tin Company Intelligence Profile hiện tại đang lưu trữ:
+"""
+${existingCompanyReport}
+"""
+
+HƯỚNG DẪN TINH CHỈNH & KẾT HỢP THÔNG TIN (INTELLIGENT INTEGRATION):
+1. KHÔNG PHÁ HỦY HOẶC BỎ QUA CÁC THÔNG TIN ĐÃ XÁC THỰC: Hãy tôn trọng và giữ lại các thông tin chung cốt lõi về công ty (mô hình kinh doanh tổng thể, văn hóa chung, trụ sở chính, các chi nhánh/nhà máy hiện có trong báo cáo cũ).
+2. TẬP TRUNG SÂU VÀO PHÂN KHÚC/MẢNG KINH DOANH PHÙ HỢP VỚI JOB MỚI: 
+   - Hãy phân tích xem vị trí tuyển dụng mới này thuộc mảng hoạt động/phòng ban/lĩnh vực cụ thể nào của công ty (Ví dụ: nếu công ty là tập đoàn đa ngành lớn như TUV Rheinland, mảng "Inspector - softlines" có đặc thù đối tượng khách hàng, sản phẩm, quy trình và đối thủ cạnh tranh khác hoàn toàn với mảng "CSR/ESG Auditor").
+   - Hãy tinh chỉnh và bổ sung các mô tả chuyên sâu về mảng/division đó vào profile công ty để làm nổi bật và phục vụ sát sườn nhất cho Job mới này. Tránh viết chung chung nhạt nhòa làm "loạn xạ" các mảng kinh doanh khác nhau.
+3. CẬP NHẬT ĐỐI THỦ CẠNH TRANH (COMPETITORS) VÀ TỪ KHÓA ĐẶC THÙ: Bổ sung thêm các đối thủ cạnh tranh cụ thể của mảng kinh doanh liên quan đến job mới này (sourcing targets) nếu trong profile cũ chưa có.
+4. Đầu ra của bạn phải là một bản Company Intelligence Profile hoàn thiện, được cấu trúc mạch lạc bằng Markdown bằng tiếng Việt, tích hợp hài hòa giữa bức tranh tổng thể của công ty và tiêu điểm sâu sắc về phân khúc kinh doanh phục vụ cho job đang tuyển dụng.
+
+Hãy trả về bản Company Intelligence Profile hoàn chỉnh cuối cùng đã được tinh chỉnh bằng Markdown.`;
+    } else {
+      if (jobDescription && jobDescription.trim()) {
+        finalPrompt = `Bạn là một chuyên gia nghiên cứu thị trường và Chuyên viên Tư vấn Tuyển dụng Cấp cao.
+Nhiệm vụ của bạn là nghiên cứu và xây dựng một Insights Công ty (Company Intelligence Profile) chi tiết cho khách hàng sau:
+
+Tên công ty khách hàng: ${clientName}
+
+Vị trí/Mô tả công việc hiện tại đang tuyển:
+"""
+${jobDescription}
+"""
+
+Hãy thu thập, phân tích và tổng hợp các thông tin cốt lõi sau dưới dạng Markdown trôi chảy, chuyên nghiệp bằng tiếng Việt:
+1. Tổng quan về mô hình kinh doanh, sản phẩm/dịch vụ cốt lõi, và vị thế trong ngành. Chú ý làm rõ mảng/lĩnh vực hoạt động cụ thể liên quan đến vị trí đang tuyển này (ví dụ nếu công ty hoạt động đa ngành, hãy tập trung phân tích kỹ phân khúc/phòng ban của vị trí này, tránh bị lẫn lộn giữa các mảng khác nhau).
+2. Văn hóa doanh nghiệp, phong cách làm việc và môi trường công sở dự kiến.
+3. Địa điểm hoạt động: trụ sở chính, và nếu công ty có nhà máy/chi nhánh sản xuất thì liệt kê rõ địa chỉ/khu vực của từng nhà máy (nếu tìm được thông tin).
+4. Ngành nghề kinh doanh và các đặc thù riêng của ngành/công ty này (nếu có, mục này optional - chỉ nêu khi thực sự có thông tin đáng chú ý).
+5. Các công ty đối thủ cạnh tranh trực tiếp hoặc cùng ngành nghề (ưu tiên đối thủ trong cùng mảng kinh doanh liên quan đến vị trí tuyển dụng này) - liệt kê rõ tên để recruiter dùng làm nguồn tìm kiếm ứng viên (sourcing target companies).
+6. Các tin tức nổi bật, công nghệ sử dụng, cấu trúc tổ chức chính (nếu có).
+7. Các từ khóa thông tin quan trọng nhất cần ghi nhớ khi làm việc với đối tác này.
+
+Chú ý: Hãy đưa ra các phân tích có giá trị thực chiến cho tuyển dụng. Tránh bịa đặt số liệu không có thật, nếu không tìm được thông tin cụ thể (ví dụ không có nhà máy) thì bỏ qua mục đó thay vì bịa. Viết rõ ràng bằng Markdown.`;
+      } else {
+        const promptTemplate = customPrompt && customPrompt.trim() ? customPrompt : `Bạn là một chuyên gia nghiên cứu thị trường và Chuyên viên Tư vấn Tuyển dụng Cấp cao.
 Nhiệm vụ của bạn là nghiên cứu và xây dựng một Insights Công ty (Company Intelligence Profile) chi tiết cho khách hàng sau:
 
 Tên công ty khách hàng: \${currentClientName}
@@ -496,8 +546,9 @@ Hãy thu thập, phân tích và tổng hợp các thông tin cốt lõi sau dư
 7. Các từ khóa thông tin quan trọng nhất cần ghi nhớ khi làm việc với đối tác này.
 
 Chú ý: Hãy đưa ra các phân tích có giá trị thực chiến cho tuyển dụng. Tránh bịa đặt số liệu không có thật, nếu không tìm được thông tin cụ thể (ví dụ không có nhà máy) thì bỏ qua mục đó thay vì bịa. Viết rõ ràng bằng Markdown.`;
-
-    const finalPrompt = promptTemplate.replace(/\$\{currentClientName\}/g, clientName);
+        finalPrompt = promptTemplate.replace(/\\?\$\{currentClientName\}/g, clientName);
+      }
+    }
 
     console.log(`Step 1: Running Company Research for ${clientName} using model ${model || "default"}`);
     
@@ -579,8 +630,8 @@ LƯU Ý QUAN TRỌNG:
 - Sử dụng ngôn phong tự nhiên, sắc bén, mang tính tư vấn cao của một Senior Consultant thực thụ.`;
 
     const finalPrompt = promptTemplate
-      .replace(/\$\{companyReport\}/g, companyReport)
-      .replace(/\$\{jobDescription\}/g, jobDescription);
+      .replace(/\\?\$\{companyReport\}/g, companyReport)
+      .replace(/\\?\$\{jobDescription\}/g, jobDescription);
 
     console.log(`Step 2: Generating Hiring Insights Report using model ${model || "default"}`);
 
@@ -724,8 +775,9 @@ ${input}
 Nhiệm vụ của bạn:
 Phân tích xem nội dung vừa nhập ở trên thuộc loại nào trong 3 nhóm sau:
 1. "CLIENT_UPDATE": Nội dung cập nhật thông tin chung về công ty khách hàng (ví dụ: giờ làm việc từ T2 đến T7, đổi địa chỉ văn phòng, thông tin về văn hóa doanh nghiệp, phúc lợi chung, mô tả tổng quan công ty...). Nội dung này áp dụng cho toàn bộ công ty hoặc chung cho tất cả các vị trí, chứ KHÔNG phải là bản mô tả công việc (JD) mới hay thông tin riêng của một vị trí tuyển dụng cụ thể nào.
-2. "JOB_UPDATE": Nội dung cập nhật, sửa đổi, thêm bớt thông tin, hoặc là feedback bổ sung cho MỘT VỊ TRÍ tuyển dụng ĐÃ CÓ trong danh sách "Existing Jobs" ở trên (ví dụ: "vị trí Job B cần thêm tiếng Nhật", "update cho JD tuyển dung inspector...", hoặc "vị trí kỹ sư phần mềm nâng lương lên 2000$"). Bạn phải tìm ra chính xác ID của vị trí khớp nhất trong danh sách.
-3. "NEW_JOB": Nội dung là một bản mô tả công việc (JD) cho một VỊ TRÍ TUYỂN DỤNG HOÀN TOÀN MỚI chưa có trong danh sách Existing Jobs ở trên (ví dụ: "Cần tuyển vị trí ABC với các yêu cầu...").
+2. "JOB_UPDATE": Chỉ chọn nhóm này khi nội dung của người dùng là câu lệnh, phản hồi (feedback), yêu cầu sửa đổi, cập nhật hoặc bổ sung cụ thể nhắm thẳng vào một vị trí đã có trong danh sách "Existing Jobs" ở trên (ví dụ: "vị trí j1 đổi lương thành...", "update thêm tiếng Nhật cho vị trí Sales Manager", "sửa mô tả của Inspector...", "với vị trí Sales Manager thì thêm yêu cầu bằng cấp...").
+3. "NEW_JOB": Chọn nhóm này khi nội dung là một bản mô tả công việc (JD) đầy đủ hoặc mô tả yêu cầu tuyển dụng cho một chức danh cụ thể. 
+   LƯU Ý CỰC KỲ QUAN TRỌNG: Bất kỳ khi nào người dùng cung cấp một bản JD mới hoặc yêu cầu phân tích một chức danh mới (cho dù chức danh đó có vẻ tương đồng hay liên quan đến vị trí đã có sẵn, ví dụ: "Auditor" và "Inspector", "Sales Executive" và "Sales Manager", "Senior Web Developer" và "Junior Developer"), bạn VẪN PHẢI xếp vào "NEW_JOB". Chúng là các vị trí tuyển dụng hoàn toàn độc lập, có quy trình tuyển dụng và báo cáo tuyển dụng riêng biệt! Không được gộp chúng lại.
 
 Yêu cầu đầu ra:
 Trả về kết quả JSON khớp chính xác với schema. 
@@ -734,8 +786,9 @@ Trả về kết quả JSON khớp chính xác với schema.
 - reasoning: Giải thích ngắn gọn lý do bằng tiếng Việt vì sao bạn phân loại như vậy.
 
 Quy tắc phân biệt cực kỳ quan trọng:
-- Nếu nội dung đề cập đến một chức danh cụ thể (ví dụ: Inspector, Accountant, Dev...) và các yêu cầu tuyển dụng cho vị trí đó, hãy xếp vào JOB_UPDATE (nếu đã có vị trí tương tự trong Existing Jobs) hoặc NEW_JOB (nếu chưa có).
-- Nếu nội dung mang tính chất chung cho toàn công ty (như giờ làm việc chung, quy định chung, phong cách chung, giới thiệu chung về công ty), hãy xếp vào CLIENT_UPDATE.
+- Nếu là một bản JD mới (có mô tả công việc, nhiệm vụ, yêu cầu ứng viên) hoặc mô tả yêu cầu cho một chức danh độc lập khác, kể cả khi tên chức danh gần giống với vị trí cũ, bắt buộc phải chọn "NEW_JOB".
+- Chỉ chọn "JOB_UPDATE" cho các phản hồi sửa đổi hoặc bổ sung thông tin cho chính vị trí cũ đó.
+- Nếu nội dung mang tính chất chung cho toàn công ty (như giờ làm việc chung, quy định chung, phong cách chung, giới thiệu chung về công ty), hãy xếp vào "CLIENT_UPDATE".
 `;
 
     const responseSchema = {

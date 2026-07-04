@@ -23,6 +23,8 @@ type Client = {
   };
   timeline: { id: string; date: string; content: string }[];
   jobs: Job[];
+  updatedAt?: string;
+  isPriority?: boolean;
 };
 
 type Job = {
@@ -1963,6 +1965,17 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
           id: data.id || docSnap.id
         } as Client);
       });
+      // Sort clients by priority (pinned) first, then by updatedAt descending
+      loaded.sort((a, b) => {
+        const pinA = a.isPriority ? 1 : 0;
+        const pinB = b.isPriority ? 1 : 0;
+        if (pinA !== pinB) {
+          return pinB - pinA;
+        }
+        const tA = parseDateString(a.updatedAt).getTime();
+        const tB = parseDateString(b.updatedAt).getTime();
+        return tB - tA;
+      });
       setClients(loaded);
     }, (err) => {
       handleFirestoreError(err, OperationType.LIST, 'clients');
@@ -2149,7 +2162,8 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
       await setDoc(doc(db, 'clients', clientId), { 
         name: editingNameVal,
         website: editingWebsiteVal,
-        tagline: editingTaglineVal
+        tagline: editingTaglineVal,
+        updatedAt: new Date().toISOString()
       }, { merge: true });
       toast("Client updated", "success");
     } catch (err) {
@@ -2244,7 +2258,8 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
       tagline: newClientTagline || "New Company",
       summary: { industry: "Analyzing...", culture: "Analyzing...", overview: "AI is researching company info...", keyInfo: [] },
       timeline: [],
-      jobs: []
+      jobs: [],
+      updatedAt: new Date().toISOString()
     };
     
     try {
@@ -2265,6 +2280,25 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
   const handleDeleteClient = (e: React.MouseEvent, client: Client) => {
     e.stopPropagation();
     setClientToDelete(client);
+  };
+
+  const handleTogglePriority = async (e: React.MouseEvent, client: Client) => {
+    e.stopPropagation();
+    const newPriority = !client.isPriority;
+    try {
+      await setDoc(doc(db, 'clients', client.id), {
+        isPriority: newPriority,
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+      if (newPriority) {
+        toast(`Đã ghim ưu tiên khách hàng: ${client.name}`, "success");
+      } else {
+        toast(`Đã bỏ ghim khách hàng: ${client.name}`, "success");
+      }
+    } catch (err) {
+      console.error("Lỗi khi cập nhật ghim:", err);
+      toast("Không thể cập nhật trạng thái ghim", "error");
+    }
   };
 
   const executeDeleteClient = async () => {
@@ -2316,6 +2350,10 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
     const jobId = jobToDelete.id;
     try {
       await deleteDoc(doc(db, 'clients', selectedClientId, 'jobs', jobId));
+      // Also update parent client's updatedAt timestamp
+      await setDoc(doc(db, 'clients', selectedClientId), {
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
       toast("Đã xóa job thành công!", "success");
       if (selectedJobId === jobId) {
         setSelectedJobId(null);
@@ -2521,7 +2559,9 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
           headers: getAiHeaders(),
           body: JSON.stringify({
             clientName: selectedClient.name,
-            customPrompt: companyResearchPrompt || DEFAULT_COMPANY_RESEARCH_PROMPT
+            customPrompt: companyResearchPrompt || DEFAULT_COMPANY_RESEARCH_PROMPT,
+            existingCompanyReport: selectedClient.summary?.overview || "",
+            jobDescription: universalInput
           })
         });
 
@@ -2714,7 +2754,8 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
       }
       
       await setDoc(doc(db, 'clients', selectedClient.id), cleanUndefined({
-        summary: updatedSummary
+        summary: updatedSummary,
+        updatedAt: new Date().toISOString()
       }), { merge: true });
 
       // 3. Job handling
@@ -2799,6 +2840,11 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
 
         // Save to subcollection
         await setDoc(doc(db, 'clients', selectedClient.id, 'jobs', targetJobId), cleanUndefined(updatedJob));
+        
+        // Also update parent client's updatedAt timestamp
+        await setDoc(doc(db, 'clients', selectedClient.id), {
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
         
         if (isUpdate) {
           toast(`Job Updated: ${updatedJob.title}`, "success");
@@ -3129,8 +3175,10 @@ ${r.booleanSearch || "Not generated yet."}
                   key={client.id}
                   onClick={() => { setSelectedClientId(client.id); setSelectedJobId(null); setIsCreatingClient(false); setIsEditingPrompt(false); }}
                   onMouseEnter={e => {
-                    const btn = e.currentTarget.querySelector('.delete-btn') as HTMLElement;
-                    if (btn) btn.style.opacity = '1';
+                    const delBtn = e.currentTarget.querySelector('.delete-btn') as HTMLElement;
+                    if (delBtn) delBtn.style.opacity = '1';
+                    const pinBtn = e.currentTarget.querySelector('.pin-btn') as HTMLElement;
+                    if (pinBtn) pinBtn.style.opacity = '1';
                     e.currentTarget.style.background = isSelected 
                       ? "linear-gradient(135deg, rgba(99, 102, 241, 0.14), rgba(139, 92, 246, 0.1))" 
                       : "linear-gradient(135deg, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.4))";
@@ -3139,8 +3187,10 @@ ${r.booleanSearch || "Not generated yet."}
                     e.currentTarget.style.boxShadow = "0 8px 24px rgba(99, 102, 241, 0.06), inset 0 1px 1px rgba(255, 255, 255, 0.5)";
                   }}
                   onMouseLeave={e => {
-                    const btn = e.currentTarget.querySelector('.delete-btn') as HTMLElement;
-                    if (btn) btn.style.opacity = '0';
+                    const delBtn = e.currentTarget.querySelector('.delete-btn') as HTMLElement;
+                    if (delBtn) delBtn.style.opacity = '0';
+                    const pinBtn = e.currentTarget.querySelector('.pin-btn') as HTMLElement;
+                    if (pinBtn) pinBtn.style.opacity = client.isPriority ? '0.9' : '0';
                     e.currentTarget.style.background = isSelected 
                       ? "linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(139, 92, 246, 0.08))" 
                       : "rgba(255, 255, 255, 0.25)";
@@ -3173,7 +3223,7 @@ ${r.booleanSearch || "Not generated yet."}
                   <div style={{ marginTop: 2, color: isSelected ? "#3730a3" : "var(--text-muted)", transition: "color 0.2s" }}>
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M3 21h18"></path><path d="M9 8h1"></path><path d="M9 12h1"></path><path d="M9 16h1"></path><path d="M14 8h1"></path><path d="M14 12h1"></path><path d="M14 16h1"></path><path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16"></path></svg>
                   </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ flex: 1, minWidth: 0, paddingRight: 40 }}>
                     <div style={{ 
                       fontWeight: 800, 
                       color: isSelected ? "#3730a3" : "var(--text-primary)", 
@@ -3181,8 +3231,20 @@ ${r.booleanSearch || "Not generated yet."}
                       whiteSpace: "nowrap", 
                       overflow: "hidden", 
                       textOverflow: "ellipsis",
-                      transition: "color 0.2s"
-                    }}>{client.name}</div>
+                      transition: "color 0.2s",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6
+                    }}>
+                      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{client.name}</span>
+                      {client.isPriority && (
+                        <span style={{ color: "var(--warning, #f59e0b)", flexShrink: 0, display: "inline-flex", alignItems: "center" }} title="Khách hàng ưu tiên">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2">
+                            <path d="M12 17v5M5 17h14v-1.76a2 2 0 0 0-.44-1.24l-2.78-3.5A2 2 0 0 1 15 9.24V5a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v4.24c0 .43-.14.85-.4 1.18l-2.78 3.5a2 2 0 0 0-.44 1.24z"></path>
+                          </svg>
+                        </span>
+                      )}
+                    </div>
                     <div style={{ 
                       fontSize: 12, 
                       color: isSelected ? "#3730a3" : "var(--text-secondary)", 
@@ -3195,6 +3257,29 @@ ${r.booleanSearch || "Not generated yet."}
                     }}>{client.tagline || client.summary.industry}</div>
                   </div>
                   
+                  {/* Pin / Priority button */}
+                  <button 
+                    className="pin-btn"
+                    onClick={(e) => handleTogglePriority(e, client)}
+                    style={{ 
+                      position: 'absolute', 
+                      right: 36, 
+                      top: 16, 
+                      background: 'none', 
+                      border: 'none', 
+                      color: client.isPriority ? '#eab308' : 'rgba(156, 163, 175, 0.7)', 
+                      cursor: 'pointer', 
+                      padding: 4, 
+                      opacity: client.isPriority ? 0.9 : 0, 
+                      transition: 'opacity 0.2s, transform 0.2s, color 0.2s' 
+                    }}
+                    title={client.isPriority ? "Bỏ ghim ưu tiên" : "Ghim ưu tiên"}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill={client.isPriority ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2">
+                      <path d="M12 17v5M5 17h14v-1.76a2 2 0 0 0-.44-1.24l-2.78-3.5A2 2 0 0 1 15 9.24V5a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v4.24c0 .43-.14.85-.4 1.18l-2.78 3.5a2 2 0 0 0-.44 1.24z"></path>
+                    </svg>
+                  </button>
+
                   {/* Delete button (visible on hover) */}
                   <button 
                     className="delete-btn"
