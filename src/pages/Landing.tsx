@@ -124,7 +124,7 @@ export function Landing() {
               onMouseEnter={(e: any) => { 
                 e.currentTarget.style.transform = "translateY(-6px)"; 
                 const wrapper = e.currentTarget.querySelector('.img-wrapper');
-                if (wrapper) wrapper.style.filter = "drop-shadow(0 12px 20px rgba(139, 92, 246, 0.35))";
+                if (wrapper) wrapper.style.filter = "drop-shadow(0 12px 24px rgba(139, 92, 246, 0.8))";
               }}
               onMouseLeave={(e: any) => { 
                 e.currentTarget.style.transform = "translateY(0)"; 

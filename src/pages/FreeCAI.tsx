@@ -434,7 +434,7 @@ ANTI-SUMMARIZATION RULE
 
 NỘI DUNG BÁO CÁO
 
-Trình bày dưới dạng Markdown, theo đúng cấu trúc 8 phần dưới đây.
+Trình bày dưới dạng Markdown, theo đúng cấu trúc 9 phần dưới đây.
 
 1. Company Snapshot
 
@@ -474,8 +474,23 @@ Chia thành các nhóm:
 - Companies with Transferable Talent
 - Hidden Talent Pools
 - Priority Target Companies
+- Suggested Talent Mapping
 
 Với mỗi công ty nêu: Company, Industry, Why Target, Typical Roles, Talent Relevance (High/Medium/Low). Nếu không xác định được tên công ty cụ thể, đề xuất nhóm ngành thay thế. Không được bịa tên công ty. Không nói cách pitch trong phần này.
+
+Với phần **Suggested Talent Mapping**, phân tích cho mỗi công ty mục tiêu (Priority Target Companies) theo cấu trúc:
+- Recommended Functions
+- Recommended Titles
+- Estimated Talent Relevance
+- Typical Candidate Strengths
+- Potential Gaps
+
+Ví dụ:
+ABC Company
+- Functions: Sales, Supply Chain
+- Titles: Sales Manager, BD Manager
+- Strengths: Strong network
+- Gaps: Weak process management
 
 6. Recruitment Risks & Challenges
 
@@ -500,6 +515,29 @@ Cụ thể cần trả lời:
 - Target vị trí nào trước?
 - Tránh source từ đâu?
 - Điều gì dễ khiến recruiter đi sai hướng?
+
+9. Structured Inputs for Hiring Insights
+
+Phần này đặc biệt dùng làm đầu vào cho Hiring Insights Prompt. Trình bày chính xác theo cấu trúc sau:
+
+## Company Stage
+(Start-up / Growth / Mature / Transformation / Turnaround)
+
+## Hiring Environment
+(Stable / Aggressive Growth / Cost Optimization / Expansion)
+
+## Talent Implications
+- What type of candidates usually succeed?
+- What type of candidates may struggle?
+
+## Suggested Target Companies
+(Tier 1 / Tier 2 / Tier 3)
+
+## Suggested Candidate Selling Points
+
+## Potential Candidate Objections
+
+## Risks for Recruiters
 
 ==================================================
 
@@ -722,7 +760,54 @@ Headhunt / Recruitment Strategy
 Không được lặp lại insight giữa các section. Nếu một insight đã xuất hiện, chỉ được tham chiếu ngắn gọn và bổ sung góc nhìn mới.
 
 ==================================================
-A5. QUALITY OVER QUANTITY RULE
+A5. DISCOVERY QUESTIONS RULE
+==================================================
+
+Senior Recruitment Consultants không bắt đầu sourcing ngay sau khi đọc JD.
+
+Trước tiên, họ xác định những thông tin còn thiếu có thể ảnh hưởng đến:
+
+- Candidate Persona
+- Recruitment Strategy
+- Candidate Engagement Strategy
+- Talent Market Difficulty
+- Interview Process
+- Hiring Success Rate
+- Candidate Closing Probability
+
+Nếu JD hoặc Client Insights còn thiếu thông tin quan trọng, hãy chủ động đề xuất các câu hỏi nên trao đổi thêm với client.
+
+Chỉ đặt những câu hỏi có thể thay đổi hành động của recruiter.
+
+Không hỏi chỉ để thu thập thêm thông tin.
+
+Mỗi câu hỏi phải có giá trị hành động (actionable value).
+
+Mỗi câu hỏi phải đáp ứng ít nhất một trong các điều kiện:
+
+- Thay đổi Candidate Persona.
+- Mở rộng hoặc thu hẹp Talent Pool.
+- Thay đổi Recruitment Strategy.
+- Giúp xử lý Candidate Objection.
+- Giúp đánh giá ứng viên tốt hơn.
+- Giảm rủi ro tuyển sai.
+- Làm rõ Hidden Expectations của Hiring Manager.
+
+Nếu câu hỏi không thay đổi cách recruiter sourcing, screening hoặc pitching, không nên hỏi.
+
+Nếu JD hoặc Client Insights còn sơ sài:
+
+- tăng số lượng câu hỏi;
+- ưu tiên các câu hỏi Critical.
+
+Nếu JD và Client Insights đã đầy đủ:
+
+- chỉ đưa ra các câu hỏi thực sự còn thiếu.
+
+Không hỏi lại những thông tin đã có trong JD hoặc Client Insights.
+
+==================================================
+A6. QUALITY OVER QUANTITY RULE
 ==================================================
 
 Không bắt buộc phải tạo insight cho mọi mục.
@@ -737,7 +822,7 @@ Thà có ít insight nhưng chất lượng còn hơn tạo ra insight chung chu
 Không tạo bullet chỉ để lấp đầy cấu trúc báo cáo.
 
 ==================================================
-A6. LANGUAGE & TERMINOLOGY RULES
+A7. LANGUAGE & TERMINOLOGY RULES
 ==================================================
 
 Viết bằng tiếng Việt chuyên nghiệp, tự nhiên, theo văn phong của Recruitment Consultant và Headhunter.
@@ -793,7 +878,7 @@ Tổng quan vị trí (Role Overview)
 Chân dung ứng viên (Candidate Persona)
 
 ==================================================
-A7. OVERALL WRITING STYLE
+A8. OVERALL WRITING STYLE
 ==================================================
 
 Viết theo góc nhìn của Recruitment Consultant đang tư vấn cho recruiter hoặc client.
@@ -840,7 +925,253 @@ Nếu có thể, hãy giải thích vị trí này đang nằm ở đâu trong c
 
 ---
 
-# 2. Job Insights Analysis
+# 2. Câu hỏi cần làm rõ với khách hàng (Discovery Questions for Client)
+
+Mục tiêu của phần này là giúp recruiter trả lời:
+
+> "Trước khi bắt đầu sourcing, tôi còn cần hỏi gì thêm để hiểu đúng nhu cầu tuyển dụng và tránh đi sai hướng?"
+
+Senior Recruitment Consultants không bắt đầu sourcing ngay sau khi đọc JD. Họ sẽ xác định những thông tin còn thiếu có thể ảnh hưởng đến:
+
+* Candidate Persona
+* Recruitment Strategy
+* Candidate Engagement Strategy
+* Talent Market Difficulty
+* Interview Process
+* Hiring Success Rate
+* Candidate Closing Probability
+
+Chỉ đưa ra các câu hỏi có thể thay đổi hành động của recruiter.
+
+Không hỏi chỉ để thu thập thêm thông tin.
+
+Không hỏi lại những thông tin đã có trong JD hoặc Client Insights.
+
+Không đưa ra những câu hỏi chung chung hoặc mang tính "nice conversation" nhưng không tạo ra giá trị tuyển dụng.
+
+---
+
+## Nguyên tắc tạo câu hỏi (Question Quality Rule)
+
+Mỗi câu hỏi phải đáp ứng ít nhất một trong các điều kiện sau:
+
+* Thay đổi Candidate Persona.
+* Mở rộng hoặc thu hẹp Talent Pool.
+* Thay đổi Recruitment Strategy.
+* Giúp xử lý Candidate Objection.
+* Giúp đánh giá ứng viên tốt hơn.
+* Giảm rủi ro tuyển sai.
+* Làm rõ Hidden Expectations của Hiring Manager.
+* Làm rõ tiêu chí ra quyết định khi phỏng vấn.
+* Làm rõ định nghĩa "ứng viên thành công".
+
+Nếu câu hỏi không làm thay đổi cách recruiter sourcing, screening, pitching hoặc closing, không nên hỏi.
+
+---
+
+## Quy tắc về số lượng câu hỏi
+
+Nếu JD hoặc Client Insights còn sơ sài:
+
+* Tăng số lượng câu hỏi.
+* Ưu tiên các câu hỏi có thể thay đổi Candidate Persona hoặc Recruitment Strategy.
+* Tập trung vào các thông tin có ảnh hưởng lớn nhất đến khả năng đóng job.
+
+Nếu JD và Client Insights đã đầy đủ:
+
+* Chỉ đưa ra những câu hỏi thực sự còn thiếu.
+* Không tạo câu hỏi chỉ để lấp đầy cấu trúc.
+
+---
+
+## Phân loại theo mức độ ưu tiên
+
+### CRITICAL QUESTIONS
+
+Những câu hỏi có thể thay đổi hoàn toàn hướng tuyển dụng, talent pool hoặc tiêu chí shortlist.
+
+### IMPORTANT QUESTIONS
+
+Những câu hỏi giúp tăng chất lượng shortlist, tăng khả năng closing hoặc giảm rủi ro tuyển sai.
+
+### NICE TO KNOW QUESTIONS
+
+Những câu hỏi hữu ích nhưng không ảnh hưởng đáng kể đến chiến lược tuyển dụng.
+
+---
+
+## Đối với mỗi câu hỏi, trình bày theo cấu trúc sau:
+
+**Question:** ...
+
+**Why ask this?**
+Giải thích vì sao recruiter cần thông tin này.
+
+**Impact if answered:**
+Những insight hoặc section nào sẽ thay đổi nếu có câu trả lời.
+
+Ví dụ:
+
+* Candidate Persona
+* Job Insights Analysis
+* Candidate Engagement Strategy
+* Headhunt Strategy
+* Boolean Search
+* Interview Questions
+* Target Companies
+* Talent Pool
+* Screening Criteria
+
+---
+
+## Các chủ đề nên ưu tiên làm rõ
+
+### Hiring Context
+
+* Lý do tuyển dụng.
+* Tuyển mới hay thay thế?
+* Nếu thay thế, vì sao người tiền nhiệm rời đi?
+* Vì sao vị trí này cần tuyển ngay lúc này?
+
+### Definition of Success
+
+* Ứng viên thành công sau 6–12 tháng sẽ trông như thế nào?
+* Success Metrics hoặc KPI là gì?
+* Điều gì khiến Hiring Manager nói rằng đây là một hire thành công?
+
+### Hidden Expectations
+
+* Có yêu cầu nào không được ghi trong JD?
+* Hiring Manager thực sự ưu tiên điều gì?
+* Có yêu cầu nào "bắt buộc nhưng chưa viết ra" không?
+
+### Candidate Persona
+
+* Có chấp nhận transferable background không?
+* Industry nào được ưu tiên?
+* Company nào được ưu tiên?
+* Có nhóm ứng viên nào nên tránh?
+
+### Must-have vs Nice-to-have
+
+* Yêu cầu nào là không thể thỏa hiệp?
+* Yêu cầu nào có thể đào tạo sau khi gia nhập?
+
+### Team & Organization
+
+* Team structure hiện tại như thế nào?
+* Báo cáo cho ai?
+* Quản lý bao nhiêu người?
+* Có thay đổi tổ chức nào sắp diễn ra không?
+
+### Working Style
+
+* Hiring Manager có phong cách quản lý như thế nào?
+* Môi trường thiên về process hay entrepreneurial?
+* Cần người build hay maintain?
+
+### Previous Hiring Lessons
+
+* Vì sao những ứng viên trước đây không thành công?
+* Có profile nào từng được phỏng vấn nhưng bị reject không?
+* Những điểm thường khiến ứng viên fail là gì?
+
+### Interview Process
+
+* Ai là người ra quyết định cuối cùng?
+* Tiêu chí đánh giá quan trọng nhất là gì?
+* Có bước phỏng vấn nào đặc biệt không?
+
+### Candidate Closing
+
+* Điều gì khiến ứng viên giỏi nên gia nhập công ty lúc này?
+* Điểm hấp dẫn nhất của cơ hội là gì?
+* Candidate objection nào thường gặp?
+
+### Compensation & Competitiveness
+
+* Mức lương có linh hoạt không?
+* Có thể điều chỉnh cho ứng viên rất mạnh không?
+* Position này cạnh tranh với những cơ hội nào trên thị trường?
+
+### Urgency & Hiring Risk
+
+* Nếu không tuyển được trong 3–6 tháng tới, doanh nghiệp sẽ bị ảnh hưởng như thế nào?
+* Mức độ ưu tiên thực sự của vị trí này là gì?
+
+---
+
+## Priority Questions
+
+Nếu chỉ được hỏi client **3 câu trước khi bắt đầu sourcing**, hãy xác định:
+
+1. Câu hỏi có giá trị cao nhất.
+2. Câu hỏi giúp thay đổi Candidate Persona nhiều nhất.
+3. Câu hỏi giúp thay đổi Recruitment Strategy nhiều nhất.
+
+Đây là 3 câu hỏi mà recruiter nên hỏi đầu tiên trong buổi intake meeting với client.
+
+---
+
+## Discovery Prioritization Rule
+
+Không phải mọi vị trí đều cần cùng một bộ câu hỏi.
+
+AI phải ưu tiên đặt câu hỏi dựa trên loại vị trí đang tuyển.
+
+Ví dụ:
+
+Sales / Business Development
+→ ưu tiên hỏi:
+- KPI
+- Territory
+- Hunter vs Farmer
+- Existing accounts
+- Revenue responsibility
+- Compensation structure
+
+Engineering / Manufacturing
+→ ưu tiên hỏi:
+- Production scale
+- Technology stack
+- Customer requirements
+- Audit exposure
+- Team size
+- Shift arrangement
+
+Finance / Accounting
+→ ưu tiên hỏi:
+- Reporting scope
+- Group reporting
+- ERP
+- Team structure
+- Audit requirements
+- Regional exposure
+
+HR / Recruitment
+→ ưu tiên hỏi:
+- Hiring volume
+- Strategic vs operational scope
+- Stakeholder complexity
+- Transformation agenda
+- Team maturity
+
+Senior Leadership
+→ ưu tiên hỏi:
+- Business mandate
+- Transformation expectations
+- P&L ownership
+- Succession context
+- Board expectations
+- Success definition in first 12 months.
+
+Không tạo danh sách câu hỏi giống nhau cho mọi vị trí.
+
+Câu hỏi phải được ưu tiên theo bản chất của role.
+
+---
+
+# 3. Job Insights Analysis
 
 Mục tiêu của phần Job Insights là giúp recruiter hiểu: "Điều gì thực sự đang diễn ra phía sau JD."
 
@@ -969,7 +1300,7 @@ Giải thích rõ lý do transferable.
 
 ---
 
-# 3. Chân dung ứng viên (Candidate Persona)
+# 4. Chân dung ứng viên (Candidate Persona)
 
 Mục tiêu của phần này là xác định: "Ứng viên lý tưởng cho vị trí này trông như thế nào - người nào có khả năng thành công cao nhất."
 
@@ -1119,7 +1450,7 @@ Các dấu hiệu cảnh báo khiến ứng viên khó thành công hoặc có k
 
 ---
 
-# 4. Chiến lược tiếp cận ứng viên (Candidate Engagement Strategy)
+# 5. Chiến lược tiếp cận ứng viên (Candidate Engagement Strategy)
 
 Mục tiêu của phần này là giúp recruiter trả lời: "Làm thế nào để khiến ứng viên muốn nghe tiếp về cơ hội này?"
 
@@ -1211,7 +1542,7 @@ Trả lời: "Tại sao ứng viên nên chọn cơ hội này thay vì một c�
 
 ---
 
-# 5. Chiến lược tuyển dụng (Headhunt Strategy)
+# 6. Chiến lược tuyển dụng (Headhunt Strategy)
 
 Đây là phần quan trọng thứ hai.
 
@@ -1351,7 +1682,7 @@ Dự đoán các rủi ro tuyển dụng. Ví dụ:
 
 ---
 
-# 6. Boolean Search
+# 7. Boolean Search
 
 Không viết một đoạn Boolean dài.
 
@@ -1371,7 +1702,7 @@ Mỗi Boolean nên ngắn gọn, dễ copy.
 
 ---
 
-# 7. Headhunter's Notes
+# 8. Headhunter's Notes
 
 Kết thúc bằng một mục: Headhunter's Notes.
 
