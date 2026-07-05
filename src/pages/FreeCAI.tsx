@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
+import { CollapsibleMarkdownReport } from '../components/CollapsibleMarkdownReport';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import { motion, AnimatePresence, useMotionValue } from 'motion/react';
@@ -2111,8 +2112,10 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
     if (text.includes("${companyReport}")) {
       text = text.replace("${companyReport}", clientOverview || "*(Thông tin công ty không được lưu trữ đầy đủ trong phiên bản cũ)*");
     }
-    // Convert ## INSIGHTS CLIENT to # INSIGHTS CLIENT for old entries to match sizes
-    text = text.replace("## 🏢 INSIGHTS CLIENT", "# 🏢 INSIGHTS CLIENT");
+    // Convert ## CLIENT INSIGHTS to # CLIENT INSIGHTS for old entries to match sizes
+    text = text.replace("## 🏢 INSIGHTS CLIENT", "# 🏢 CLIENT INSIGHTS");
+    text = text.replace("# 🏢 INSIGHTS CLIENT", "# 🏢 CLIENT INSIGHTS");
+    text = text.replace("## 🎯 HIRING INSIGHTS", "# 🎯 HIRING INSIGHTS");
     
     if (!text) return "";
     text = text.replace(/\\?<br\\?\s*\\?\/?>/gi, " ");
@@ -2857,9 +2860,9 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
         const extractedFields = await extractResponse.json();
 
         const clientOverview = selectedClient.summary?.overview || "";
-        const hasClientHeader = rawResult.includes("INSIGHTS CLIENT") || rawResult.includes("INSIGHTS VỀ KHÁCH HÀNG");
+        const hasClientHeader = rawResult.includes("INSIGHTS CLIENT") || rawResult.includes("CLIENT INSIGHTS");
         const finalMergedReport = (clientOverview && !hasClientHeader)
-          ? `# 🏢 INSIGHTS CLIENT (INSIGHTS VỀ KHÁCH HÀNG)\n\n${clientOverview}\n\n---\n\n${rawResult}`
+          ? `# 🏢 CLIENT INSIGHTS\n\n${clientOverview}\n\n---\n\n${rawResult}`
           : rawResult;
 
         const mockDraftResult = {
@@ -2986,7 +2989,7 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
           jobData: {
             ...extractedFields,
             markdownReport: companyReport 
-              ? `# 🏢 INSIGHTS CLIENT (INSIGHTS VỀ KHÁCH HÀNG)\n\n${companyReport}\n\n---\n\n${rawResult}` 
+              ? `# 🏢 CLIENT INSIGHTS\n\n${companyReport}\n\n---\n\n${rawResult}` 
               : rawResult
           }
         };
@@ -4267,7 +4270,7 @@ ${r.booleanSearch || "Not generated yet."}
                     padding: "48px 56px",
                     lineHeight: "1.8"
                   }} className="markdown-body">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{cleanMarkdownFences(selectedJob.report.markdownReport, selectedClient?.summary?.overview)}</ReactMarkdown>
+                    <CollapsibleMarkdownReport markdown={cleanMarkdownFences(selectedJob.report.markdownReport, selectedClient?.summary?.overview)} />
                   </div>
                 </div>
               ) : (
@@ -5888,7 +5891,7 @@ ${r.booleanSearch || "Not generated yet."}
                       background: "var(--bg-card)", 
                       overflowY: "auto" 
                     }} className="markdown-body">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{cleanMarkdownFences(draftResult.jobData.markdownReport || "", selectedClient?.summary?.overview)}</ReactMarkdown>
+                      <CollapsibleMarkdownReport markdown={cleanMarkdownFences(draftResult.jobData.markdownReport || "", selectedClient?.summary?.overview)} />
                     </div>
                   )}
                 </div>

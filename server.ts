@@ -506,6 +506,7 @@ HƯỚNG DẪN TINH CHỈNH & KẾT HỢP THÔNG TIN (INTELLIGENT INTEGRATION):
    - Hãy tinh chỉnh và bổ sung các mô tả chuyên sâu về mảng/division đó vào profile công ty để làm nổi bật và phục vụ sát sườn nhất cho Job mới này. Tránh viết chung chung nhạt nhòa làm "loạn xạ" các mảng kinh doanh khác nhau.
 3. CẬP NHẬT ĐỐI THỦ CẠNH TRANH (COMPETITORS) VÀ TỪ KHÓA ĐẶC THÙ: Bổ sung thêm các đối thủ cạnh tranh cụ thể của mảng kinh doanh liên quan đến job mới này (sourcing targets) nếu trong profile cũ chưa có.
 4. Đầu ra của bạn phải là một bản Company Intelligence Profile hoàn thiện, được cấu trúc mạch lạc bằng Markdown bằng tiếng Việt, tích hợp hài hòa giữa bức tranh tổng thể của công ty và tiêu điểm sâu sắc về phân khúc kinh doanh phục vụ cho job đang tuyển dụng.
+5. LƯU Ý QUAN TRỌNG VỀ THUẬT NGỮ: TUYỆT ĐỐI GIỮ NGUYÊN các thuật ngữ chuyên ngành và tiêu đề chính bằng tiếng Anh (ví dụ: "Client Insights", "Company Intelligence Profile", "Hiring Insights", "Competitors & Sourcing Targets", v.v.). KHÔNG DỊCH các cụm từ này sang tiếng Việt (không dùng "Hồ sơ Tình báo Doanh nghiệp" hay "Báo cáo phân tích"). Viết nội dung bằng tiếng Việt nhưng giữ các heading và từ khóa chuẩn HR bằng tiếng Anh.
 
 Hãy trả về bản Company Intelligence Profile hoàn chỉnh cuối cùng đã được tinh chỉnh bằng Markdown.`;
     } else {
@@ -529,7 +530,8 @@ Hãy thu thập, phân tích và tổng hợp các thông tin cốt lõi sau dư
 6. Các tin tức nổi bật, công nghệ sử dụng, cấu trúc tổ chức chính (nếu có).
 7. Các từ khóa thông tin quan trọng nhất cần ghi nhớ khi làm việc với đối tác này.
 
-Chú ý: Hãy đưa ra các phân tích có giá trị thực chiến cho tuyển dụng. Tránh bịa đặt số liệu không có thật, nếu không tìm được thông tin cụ thể (ví dụ không có nhà máy) thì bỏ qua mục đó thay vì bịa. Viết rõ ràng bằng Markdown.`;
+Chú ý: Hãy đưa ra các phân tích có giá trị thực chiến cho tuyển dụng. Tránh bịa đặt số liệu không có thật, nếu không tìm được thông tin cụ thể (ví dụ không có nhà máy) thì bỏ qua mục đó thay vì bịa.
+LƯU Ý QUAN TRỌNG VỀ THUẬT NGỮ: TUYỆT ĐỐI GIỮ NGUYÊN các thuật ngữ chuyên ngành và tiêu đề chính bằng tiếng Anh (ví dụ: "Client Insights", "Company Intelligence Profile", "Hiring Insights", "Competitors & Sourcing Targets", v.v.). KHÔNG DỊCH các cụm từ này sang tiếng Việt (như "Hồ sơ Tình báo..."). Viết nội dung bằng tiếng Việt nhưng giữ các heading và từ khóa chuẩn HR bằng tiếng Anh. Viết rõ ràng bằng Markdown.`;
       } else {
         const promptTemplate = customPrompt && customPrompt.trim() ? customPrompt : `Bạn là một chuyên gia nghiên cứu thị trường và Chuyên viên Tư vấn Tuyển dụng Cấp cao.
 Nhiệm vụ của bạn là nghiên cứu và xây dựng một Insights Công ty (Company Intelligence Profile) chi tiết cho khách hàng sau:
@@ -545,7 +547,8 @@ Hãy thu thập, phân tích và tổng hợp các thông tin cốt lõi sau dư
 6. Các tin tức nổi bật, công nghệ sử dụng, cấu trúc tổ chức chính (nếu có).
 7. Các từ khóa thông tin quan trọng nhất cần ghi nhớ khi làm việc với đối tác này.
 
-Chú ý: Hãy đưa ra các phân tích có giá trị thực chiến cho tuyển dụng. Tránh bịa đặt số liệu không có thật, nếu không tìm được thông tin cụ thể (ví dụ không có nhà máy) thì bỏ qua mục đó thay vì bịa. Viết rõ ràng bằng Markdown.`;
+Chú ý: Hãy đưa ra các phân tích có giá trị thực chiến cho tuyển dụng. Tránh bịa đặt số liệu không có thật, nếu không tìm được thông tin cụ thể (ví dụ không có nhà máy) thì bỏ qua mục đó thay vì bịa.
+LƯU Ý QUAN TRỌNG VỀ THUẬT NGỮ: TUYỆT ĐỐI GIỮ NGUYÊN các thuật ngữ chuyên ngành và tiêu đề chính bằng tiếng Anh (ví dụ: "Client Insights", "Company Intelligence Profile", "Hiring Insights", "Competitors & Sourcing Targets", v.v.). KHÔNG DỊCH các cụm từ này sang tiếng Việt (như "Hồ sơ Tình báo..."). Viết nội dung bằng tiếng Việt nhưng giữ các heading và từ khóa chuẩn HR bằng tiếng Anh. Viết rõ ràng bằng Markdown.`;
         finalPrompt = promptTemplate.replace(/\\?\$\{currentClientName\}/g, clientName);
       }
     }
@@ -625,6 +628,8 @@ Hãy tạo một bộ Insight Tuyển dụng toàn diện dưới dạng Markdow
 8. Gợi ý bài đăng tuyển dụng thu hút (Social Post / JD tóm tắt) & Bộ câu hỏi phỏng vấn gợi ý cho Consultant (Interview Questions / Questions for Client).
 
 LƯU Ý QUAN TRỌNG:
+- TUYỆT ĐỐI GIỮ NGUYÊN các thuật ngữ chuyên ngành và tiêu đề chính bằng tiếng Anh (Ví dụ: "Hiring Insights", "Client Insights", "Company Intelligence Profile", "Competitors & Sourcing Targets", "Recruitment Strategy", v.v.). KHÔNG DỊCH các thuật ngữ/tiêu đề này sang tiếng Việt (như "Hồ sơ Tình báo Doanh nghiệp" hay "Insight Tuyển dụng"). Nội dung chi tiết viết bằng tiếng Việt nhưng giữ các heading chuẩn HR bằng tiếng Anh.
+- BẮT BUỘC BẮT ĐẦU BÁO CÁO BẰNG TIÊU ĐỀ: "# 🎯 HIRING INSIGHTS" để tạo sự nhất quán về cấu trúc hiển thị.
 - Trình bày toàn bộ tài liệu bằng định dạng Markdown đẹp mắt, có tiêu đề (Headings), danh sách (Bullet points), bảng biểu hoặc định dạng đậm nhạt rõ ràng.
 - KHÔNG trả về định dạng JSON hay bất cứ thông tin thừa nào khác ngoài nội dung Markdown.
 - Sử dụng ngôn phong tự nhiên, sắc bén, mang tính tư vấn cao của một Senior Consultant thực thụ.`;
