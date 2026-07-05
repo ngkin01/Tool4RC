@@ -629,7 +629,6 @@ Hãy tạo một bộ Insight Tuyển dụng toàn diện dưới dạng Markdow
 
 LƯU Ý QUAN TRỌNG:
 - TUYỆT ĐỐI GIỮ NGUYÊN các thuật ngữ chuyên ngành và tiêu đề chính bằng tiếng Anh (Ví dụ: "Hiring Insights", "Client Insights", "Company Intelligence Profile", "Competitors & Sourcing Targets", "Recruitment Strategy", v.v.). KHÔNG DỊCH các thuật ngữ/tiêu đề này sang tiếng Việt (như "Hồ sơ Tình báo Doanh nghiệp" hay "Insight Tuyển dụng"). Nội dung chi tiết viết bằng tiếng Việt nhưng giữ các heading chuẩn HR bằng tiếng Anh.
-- BẮT BUỘC BẮT ĐẦU BÁO CÁO BẰNG TIÊU ĐỀ: "# 🎯 HIRING INSIGHTS" để tạo sự nhất quán về cấu trúc hiển thị.
 - Trình bày toàn bộ tài liệu bằng định dạng Markdown đẹp mắt, có tiêu đề (Headings), danh sách (Bullet points), bảng biểu hoặc định dạng đậm nhạt rõ ràng.
 - KHÔNG trả về định dạng JSON hay bất cứ thông tin thừa nào khác ngoài nội dung Markdown.
 - Sử dụng ngôn phong tự nhiên, sắc bén, mang tính tư vấn cao của một Senior Consultant thực thụ.`;

@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { CollapsibleMarkdownReport } from '../components/CollapsibleMarkdownReport';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import { motion, AnimatePresence, useMotionValue } from 'motion/react';
@@ -2115,7 +2114,6 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
     // Convert ## CLIENT INSIGHTS to # CLIENT INSIGHTS for old entries to match sizes
     text = text.replace("## 🏢 INSIGHTS CLIENT", "# 🏢 CLIENT INSIGHTS");
     text = text.replace("# 🏢 INSIGHTS CLIENT", "# 🏢 CLIENT INSIGHTS");
-    text = text.replace("## 🎯 HIRING INSIGHTS", "# 🎯 HIRING INSIGHTS");
     
     if (!text) return "";
     text = text.replace(/\\?<br\\?\s*\\?\/?>/gi, " ");
@@ -4270,7 +4268,7 @@ ${r.booleanSearch || "Not generated yet."}
                     padding: "48px 56px",
                     lineHeight: "1.8"
                   }} className="markdown-body">
-                    <CollapsibleMarkdownReport markdown={cleanMarkdownFences(selectedJob.report.markdownReport, selectedClient?.summary?.overview)} />
+                    <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{cleanMarkdownFences(selectedJob.report.markdownReport, selectedClient?.summary?.overview)}</ReactMarkdown>
                   </div>
                 </div>
               ) : (
@@ -5891,7 +5889,7 @@ ${r.booleanSearch || "Not generated yet."}
                       background: "var(--bg-card)", 
                       overflowY: "auto" 
                     }} className="markdown-body">
-                      <CollapsibleMarkdownReport markdown={cleanMarkdownFences(draftResult.jobData.markdownReport || "", selectedClient?.summary?.overview)} />
+                      <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{cleanMarkdownFences(draftResult.jobData.markdownReport || "", selectedClient?.summary?.overview)}</ReactMarkdown>
                     </div>
                   )}
                 </div>
