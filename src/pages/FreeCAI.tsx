@@ -3092,22 +3092,8 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
           throw new Error(parts[parts.length - 1].trim() || "Failed to stream job update merge");
         }
 
-        setProcessingStep(4); // Translates to "Step 4: Cấu trúc hóa dữ liệu thông minh..."
-        console.log("Extracting structured fields from merged job report...");
-        
-        const extractResponse = await fetchWithRetry('/api/freecai/extract-structured-fields', {
-          method: 'POST',
-          headers: {
-            ...getAiHeaders(),
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            markdownReport: rawResult,
-            title: existingJob.title
-          })
-        });
-
-        const extractedFields = await extractResponse.json();
+        setProcessingStep(4); // Step 4: Finalizing Data Insights
+        console.log("Finalizing merged job report layout...");
 
         const clientOverview = selectedClient.summary?.overview || "";
         const hasClientHeader = rawResult.includes("INSIGHTS CLIENT") || rawResult.includes("CLIENT INSIGHTS");
@@ -3126,7 +3112,7 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
             keyInfo: selectedClient.summary?.keyInfo || []
           },
           jobData: {
-            ...extractedFields,
+            title: existingJob.title,
             markdownReport: finalMergedReport
           }
         };
@@ -3197,22 +3183,8 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
         // Extract a clean title from the generated Markdown
         const extractedTitle = manualJobTitle.trim() || extractJobTitle(rawResult, universalInput);
 
-        setProcessingStep(4); // Translates to "Step 4: Cấu trúc hóa dữ liệu thông minh..."
-        console.log("Extracting structured fields from generated new job report...");
-        
-        const extractResponse = await fetchWithRetry('/api/freecai/extract-structured-fields', {
-          method: 'POST',
-          headers: {
-            ...getAiHeaders(),
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            markdownReport: rawResult,
-            title: extractedTitle
-          })
-        });
-
-        const extractedFields = await extractResponse.json();
+        setProcessingStep(4); // Step 4: Finalizing Data Insights
+        console.log("Finalizing generated new job report layout...");
 
         const mockDraftResult = {
           hasNewJob: true,
@@ -3225,7 +3197,7 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
             keyInfo: selectedClient.summary?.keyInfo || []
           },
           jobData: {
-            ...extractedFields,
+            title: extractedTitle,
             markdownReport: companyReport 
               ? `# 🏢 CLIENT INSIGHTS\n\n${companyReport}\n\n---\n\n${rawResult}` 
               : rawResult
