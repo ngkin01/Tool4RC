@@ -2007,6 +2007,52 @@ const cleanUndefined = (obj: any): any => {
   return obj;
 };
 
+export const extractTextFromReactNode = (node: React.ReactNode): string => {
+  if (!node) return "";
+  if (typeof node === "string" || typeof node === "number") {
+    return String(node);
+  }
+  if (Array.isArray(node)) {
+    return node.map(extractTextFromReactNode).join("");
+  }
+  if (typeof node === "object" && "props" in node) {
+    return extractTextFromReactNode((node.props as any).children);
+  }
+  return "";
+};
+
+export const generateHeadingId = (text: string) => {
+  return "heading-" + text
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // Remove tone marks
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "d")
+    .replace(/[^a-z0-9\s-]/g, "") // Keep alphanumeric, space, hyphen
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-");
+};
+
+export const parseHeadingsFromMarkdown = (markdownText: string) => {
+  if (!markdownText) return [];
+  const lines = markdownText.split('\n');
+  const headings: { id: string; text: string; level: number }[] = [];
+  
+  lines.forEach(line => {
+    const match = line.match(/^(#{1,3})\s+(.+)$/);
+    if (match) {
+      const hashes = match[1];
+      const text = match[2].trim();
+      let cleanText = text.replace(/\*\*|__/g, '').replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
+      const id = generateHeadingId(cleanText);
+      headings.push({ id, text: cleanText, level: hashes.length });
+    }
+  });
+  
+  return headings;
+};
+
 export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error') => void }) {
   const [clients, setClients] = useState<Client[]>([]);
   const [windowWidth, setWindowWidth] = useState(typeof window !== "undefined" ? window.innerWidth : 1200);
@@ -2360,6 +2406,13 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
   const [selectedVersionIndex, setSelectedVersionIndex] = useState<number | null>(null);
   const [isJobMenuOpen, setIsJobMenuOpen] = useState(false);
 
+  // Scroll and Quick Navigation States
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const reportWrapperRef = useRef<HTMLDivElement>(null);
+  const [headings, setHeadings] = useState<{ id: string; text: string; level: number }[]>([]);
+  const [activeId, setActiveId] = useState<string>('');
+  const [quickNavPos, setQuickNavPos] = useState<{ left: number; top: number; visible: boolean }>({ left: 0, top: 0, visible: false });
+
   const [searchQuery, setSearchQuery] = useState("");
   const [isCreatingClient, setIsCreatingClient] = useState(false);
   const [newClientName, setNewClientName] = useState("");
@@ -2578,6 +2631,93 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
   }, [selectedClientId]);
 
   const selectedJob = selectedClientJobs.find(j => j.id === selectedJobId);
+
+  // Update headings when report changes
+  useEffect(() => {
+    if (selectedJob?.report?.markdownReport) {
+      const list = parseHeadingsFromMarkdown(selectedJob.report.markdownReport);
+      setHeadings(list);
+    } else {
+      setHeadings([]);
+    }
+  }, [selectedJob?.report?.markdownReport]);
+
+  // Setup IntersectionObserver to highlight active section on scroll
+  useEffect(() => {
+    if (headings.length === 0) return;
+
+    let observer: IntersectionObserver;
+
+    const setupObserver = () => {
+      observer = new IntersectionObserver(
+        (entries) => {
+          const visible = entries.filter((entry) => entry.isIntersecting);
+          if (visible.length > 0) {
+            const sorted = visible.sort((a, b) => {
+              return Math.abs(a.boundingClientRect.top - window.innerHeight * 0.3) - Math.abs(b.boundingClientRect.top - window.innerHeight * 0.3);
+            });
+            setActiveId(sorted[0].target.id);
+          }
+        },
+        {
+          root: scrollContainerRef.current,
+          rootMargin: '-30% 0px -60% 0px',
+        }
+      );
+
+      headings.forEach((h) => {
+        const el = document.getElementById(h.id);
+        if (el) {
+          observer.observe(el);
+        }
+      });
+    };
+
+    const timer = setTimeout(setupObserver, 200);
+
+    return () => {
+      clearTimeout(timer);
+      if (observer) {
+        observer.disconnect();
+      }
+    };
+  }, [headings, activeJobTab]);
+
+  // Compute the real on-screen position for the floating Quick Nav sidebar,
+  // so it sits right beside the report card instead of being clipped by
+  // any ancestor's overflow rules.
+  useEffect(() => {
+    if (headings.length === 0) return;
+
+    const NAV_WIDTH = 260;
+    const GAP = 16;
+    const MIN_MARGIN = 16; // minimum breathing room from the browser edge
+
+    const updatePos = () => {
+      const wrapperEl = reportWrapperRef.current;
+      if (!wrapperEl) return;
+      const rect = wrapperEl.getBoundingClientRect();
+      const left = rect.left - GAP - NAV_WIDTH;
+      const fits = left >= MIN_MARGIN;
+      setQuickNavPos({
+        left: fits ? left : MIN_MARGIN,
+        top: Math.max(rect.top, 140),
+        visible: fits,
+      });
+    };
+
+    updatePos();
+    window.addEventListener('resize', updatePos);
+    const scrollEl = scrollContainerRef.current;
+    scrollEl?.addEventListener('scroll', updatePos);
+    const timer = setTimeout(updatePos, 250); // after layout settles
+
+    return () => {
+      window.removeEventListener('resize', updatePos);
+      scrollEl?.removeEventListener('scroll', updatePos);
+      clearTimeout(timer);
+    };
+  }, [headings, activeJobTab]);
 
   const filteredClients = clients.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
@@ -3907,7 +4047,7 @@ ${r.booleanSearch || "Not generated yet."}
           </div>
         ) : selectedClient ? (
           selectedJob ? (
-            <div style={{ display: "flex", flexDirection: "column", width: "100%", height: "100%", overflowY: "auto", position: "relative" }}>
+            <div ref={scrollContainerRef} style={{ display: "flex", flexDirection: "column", width: "100%", height: "100%", overflowY: "auto", position: "relative" }}>
               
               {/* Static Header */}
               <div style={{ 
@@ -4138,7 +4278,7 @@ ${r.booleanSearch || "Not generated yet."}
                 </div>
               </div>
 
-              <div style={{ display: "flex", flexDirection: "column", paddingTop: 32, paddingBottom: 120 }}>
+              <div style={{ display: "flex", flexDirection: "column", paddingTop: 24, paddingBottom: 96 }}>
                 {activeJobTab === 'history' ? (
                   <div style={{ display: "flex", gap: 24, padding: "0 32px", maxWidth: 1200, margin: "0 auto", width: "100%" }}>
                     {/* Left list of versions */}
@@ -4258,17 +4398,74 @@ ${r.booleanSearch || "Not generated yet."}
                 </div>
               ) : selectedJob.report.markdownReport ? (
                 /* Beautiful Markdown Report View */
-                <div style={{ maxWidth: 1000, margin: "0 auto", width: "100%", padding: "0 24px" }}>
-                  <div style={{
-                    color: "var(--text-primary)",
-                    background: "var(--bg-card)",
-                    border: "1px solid var(--border-color)",
-                    boxShadow: "0 10px 30px -10px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.02)",
-                    borderRadius: "16px",
-                    padding: "48px 56px",
-                    lineHeight: "1.8"
-                  }} className="markdown-body">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{cleanMarkdownFences(selectedJob.report.markdownReport, selectedClient?.summary?.overview)}</ReactMarkdown>
+                <div className="report-wrapper" ref={reportWrapperRef}>
+                  {/* Quick Navigation Sidebar */}
+                  {headings.length > 0 && quickNavPos.visible && (
+                    <div
+                      className="quick-nav-container"
+                      style={{
+                        position: 'fixed',
+                        left: quickNavPos.left,
+                        top: quickNavPos.top,
+                        bottom: 'auto',
+                      }}
+                    >
+                      <div className="quick-nav">
+                        <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12, paddingLeft: 8 }}>
+                          Quick Navigation
+                        </div>
+                        <div style={{ display: "flex", flexDirection: "column" }}>
+                          {headings.map((h, i) => {
+                            const isActive = activeId === h.id;
+                            return (
+                              <div
+                                key={i}
+                                className={`quick-nav-item level-${h.level} ${isActive ? 'active' : ''}`}
+                                onClick={() => {
+                                  const el = document.getElementById(h.id);
+                                  if (el) {
+                                    el.scrollIntoView({
+                                      behavior: 'smooth',
+                                      block: 'start'
+                                    });
+                                  }
+                                }}
+                              >
+                                {h.text}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="report-container">
+                    <div className="report-card report-content markdown-body">
+                      <ReactMarkdown 
+                        remarkPlugins={[remarkGfm]} 
+                        rehypePlugins={[rehypeRaw]}
+                        components={{
+                          h1: ({ children }) => {
+                            const text = extractTextFromReactNode(children);
+                            const id = generateHeadingId(text);
+                            return <h1 id={id}>{children}</h1>;
+                          },
+                          h2: ({ children }) => {
+                            const text = extractTextFromReactNode(children);
+                            const id = generateHeadingId(text);
+                            return <h2 id={id}>{children}</h2>;
+                          },
+                          h3: ({ children }) => {
+                            const text = extractTextFromReactNode(children);
+                            const id = generateHeadingId(text);
+                            return <h3 id={id}>{children}</h3>;
+                          }
+                        }}
+                      >
+                        {cleanMarkdownFences(selectedJob.report.markdownReport, selectedClient?.summary?.overview)}
+                      </ReactMarkdown>
+                    </div>
                   </div>
                 </div>
               ) : (
@@ -5888,7 +6085,7 @@ ${r.booleanSearch || "Not generated yet."}
                       border: "1px solid var(--border-color)", 
                       background: "var(--bg-card)", 
                       overflowY: "auto" 
-                    }} className="markdown-body">
+                    }} className="markdown-body report-content">
                       <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{cleanMarkdownFences(draftResult.jobData.markdownReport || "", selectedClient?.summary?.overview)}</ReactMarkdown>
                     </div>
                   )}

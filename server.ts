@@ -1284,20 +1284,90 @@ app.post("/api/freecai/extract-structured-fields", async (req, res) => {
       return res.status(400).json({ error: "Missing markdownReport" });
     }
 
-    const prompt = `Bạn là một AI data extractor chuyên nghiệp. Nhiệm vụ của bạn là đọc Báo cáo Insight Tuyển dụng (Hiring Insights) dạng Markdown dưới đây, bóc tách và phân tích các thông tin để điền vào cấu trúc dữ liệu JSON chính xác.
+    const systemInstruction = `You are an expert recruitment intelligence extraction engine.
 
-Báo cáo Markdown:
+Your task is to read a markdown hiring report and convert the information into a predefined structured JSON format.
+
+Important rules:
+
+1. Extract information semantically, not by relying on exact section titles or headings.
+
+2. The report structure may change over time:
+- section names may be renamed;
+- sections may move;
+- new sections may appear;
+- some sections may be removed.
+
+3. Infer the correct destination field based on meaning and context.
+
+4. Never invent information that is not explicitly stated or strongly implied by the report.
+
+5. If multiple sections contain relevant information for the same field, merge them intelligently and remove duplicates.
+
+6. If information is unavailable, return empty strings or empty arrays according to the schema.
+
+7. Candidate persona information may appear under headings such as:
+- Candidate Persona
+- Ideal Candidate
+- Target Candidate
+- Hiring Profile
+- Talent Profile
+- Candidate Requirements
+  or similar variations.
+
+8. Company information may appear under headings such as:
+- Company Overview
+- Business Context
+- Employer Intelligence
+- Organization Profile
+  or similar variations.
+
+9. Discovery questions may appear under headings such as:
+- Questions to Ask Client
+- Discovery Questions
+- Clarification Questions
+- Client Alignment Questions
+  or similar variations.
+
+10. Sourcing strategies may appear under headings such as:
+- Recruitment Strategy
+- Headhunt Strategy
+- Talent Mapping
+- Candidate Engagement
+  or similar variations.
+
+11. Position intelligence may appear under headings such as:
+- Job Insights
+- Nature of the Role
+- Hidden Expectations
+- Day-to-Day Challenges
+- Business Problems
+  or similar variations.
+
+12. Competitor companies may appear as:
+- Competitors
+- Target Companies
+- Source Companies
+- Talent Pools
+- Benchmark Companies
+  or similar variations.
+
+13. Prioritize semantic understanding over document structure.
+
+14. Preserve factual accuracy.
+
+15. Return only data that fits the provided JSON schema.
+
+16. Never generate commentary outside the JSON response.`;
+
+    const prompt = `Báo cáo Insight Tuyển dụng (Hiring Insights) dạng Markdown cần trích xuất:
 """
 ${markdownReport}
 """
 
 Tiêu đề vị trí (nếu có): "${title || ""}"
 
-Hãy phân tích báo cáo và điền đầy đủ các trường JSON sau theo đúng schema yêu cầu. 
-Lưu ý:
-- Nếu một thông tin không xuất hiện trong báo cáo, hãy điền giá trị mặc định hợp lý (ví dụ "TBD", "Thỏa thuận", hoặc mảng rỗng []).
-- Đảm bảo đầu ra khớp hoàn hảo với cấu trúc JSON định nghĩa sẵn. Không tự ý bịa thêm thông tin ngoài những gì có trong báo cáo hoặc thông tin có thể suy luận trực tiếp một cách logic.
-`;
+Hãy phân tích báo cáo trên và trích xuất dữ liệu JSON có cấu trúc chính xác theo đúng schema yêu cầu.`;
 
     const responseSchema = {
       type: Type.OBJECT,
@@ -1327,7 +1397,10 @@ Lưu ý:
             directCompetitors: { type: Type.ARRAY, items: { type: Type.STRING } },
             similarBusinessModels: { type: Type.ARRAY, items: { type: Type.STRING } },
             transferableTalent: { type: Type.ARRAY, items: { type: Type.STRING } },
-            whyTheseCompanies: { type: Type.STRING }
+            whyTheseCompanies: { type: Type.STRING },
+            category: { type: Type.STRING },
+            targetTitles: { type: Type.ARRAY, items: { type: Type.STRING } },
+            targetReason: { type: Type.STRING }
           },
           required: ["directCompetitors", "similarBusinessModels", "transferableTalent", "whyTheseCompanies"]
         },
@@ -1335,12 +1408,34 @@ Lưu ý:
           type: Type.OBJECT,
           properties: {
             natureOfRole: { type: Type.STRING },
-            dayToDayChallenges: { type: Type.ARRAY, items: { type: Type.STRING } },
-            hiddenExpectations: { type: Type.ARRAY, items: { type: Type.STRING } },
-            keySuccessFactors: { type: Type.ARRAY, items: { type: Type.STRING } },
+            dayToDayChallenges: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING },
+              description: "Major daily operational challenges"
+            },
+            hiddenExpectations: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING },
+              description: "Implicit expectations from hiring managers or company culture"
+            },
+            keySuccessFactors: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING },
+              description: "Critical success factors for high performance"
+            },
             commonCandidateBackgrounds: { type: Type.ARRAY, items: { type: Type.STRING } },
             commonReasonsCandidatesFail: { type: Type.ARRAY, items: { type: Type.STRING } },
-            transferableBackgrounds: { type: Type.ARRAY, items: { type: Type.STRING } }
+            transferableBackgrounds: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING },
+              description: "Alternative backgrounds that could transition into this role"
+            },
+            businessProblemToSolve: { type: Type.STRING },
+            commonFailureReasons: { type: Type.ARRAY, items: { type: Type.STRING } },
+            roleNature: {
+              type: Type.STRING,
+              description: "Nature of the role and actual day-to-day responsibilities"
+            }
           },
           required: ["natureOfRole", "dayToDayChallenges", "hiddenExpectations", "keySuccessFactors", "commonCandidateBackgrounds", "commonReasonsCandidatesFail", "transferableBackgrounds"]
         },
@@ -1386,6 +1481,72 @@ Lưu ý:
             japanese: { type: Type.STRING }
           },
           required: ["linkedin", "cvDb", "xray", "industry", "japanese"]
+        },
+        companyInsights: {
+          type: Type.OBJECT,
+          properties: {
+            companyName: { type: Type.STRING },
+            industry: { type: Type.STRING },
+            businessModel: { type: Type.STRING },
+            companyStage: { type: Type.STRING },
+            cultureHighlights: { type: Type.ARRAY, items: { type: Type.STRING } },
+            employeeValueProposition: { type: Type.ARRAY, items: { type: Type.STRING } }
+          }
+        },
+        candidatePersona: {
+          type: Type.OBJECT,
+          properties: {
+            targetAge: { type: Type.STRING },
+            targetGender: { type: Type.STRING },
+            experience: { type: Type.STRING },
+            industries: { type: Type.ARRAY, items: { type: Type.STRING } },
+            languages: { type: Type.ARRAY, items: { type: Type.STRING } },
+            certifications: { type: Type.ARRAY, items: { type: Type.STRING } },
+            technicalSkills: { type: Type.ARRAY, items: { type: Type.STRING } },
+            personalityTraits: { type: Type.ARRAY, items: { type: Type.STRING } },
+            dealBreakers: { type: Type.ARRAY, items: { type: Type.STRING } }
+          }
+        },
+        discoveryQuestions: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              question: { type: Type.STRING },
+              priority: { type: Type.STRING },
+              whyAsk: { type: Type.STRING },
+              impact: { type: Type.STRING },
+              category: {
+                type: Type.STRING,
+                description: "Priority Questions, Critical Questions, Important Questions, Nice To Know Questions"
+              }
+            }
+          }
+        },
+        sourcingStrategy: {
+          type: Type.OBJECT,
+          properties: {
+            priorityCompanies: { type: Type.ARRAY, items: { type: Type.STRING } },
+            booleanSearchQueries: { type: Type.ARRAY, items: { type: Type.STRING } },
+            pitchingStrategies: { type: Type.ARRAY, items: { type: Type.STRING } },
+            objectionHandling: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  objection: { type: Type.STRING },
+                  handling: { type: Type.STRING }
+                }
+              }
+            },
+            headhunterNotes: { type: Type.ARRAY, items: { type: Type.STRING } }
+          }
+        },
+        socialMediaPost: {
+          type: Type.OBJECT,
+          properties: {
+            facebookPost: { type: Type.STRING }
+          }
         }
       },
       required: ["title", "roleOverview", "companyContext", "idealPersona", "mustHave", "niceToHave", "questionsForClient", "booleanSearch", "socialPost", "interviewQuestions", "competitorCompanies", "positionIntelligence", "candidatePersonaObj", "talentMarketInsight", "candidateSellingPoints", "recruitmentStrategy", "booleanSearchQueries"]
@@ -1397,11 +1558,168 @@ Lưu ý:
       model,
       customEndpoint,
       prompt,
+      systemInstruction,
       responseSchema,
     });
 
     const parsed = safeParseJson(result.text);
-    console.log("Structured fields extraction result:", parsed);
+    console.log("Structured fields extraction result before normalization:", parsed);
+
+    // Normalize newly added optional fields to prevent null values or empty properties
+    if (parsed && typeof parsed === "object") {
+      // 1. positionIntelligence fields
+      if (parsed.positionIntelligence && typeof parsed.positionIntelligence === "object") {
+        parsed.positionIntelligence.roleNature = parsed.positionIntelligence.roleNature || "";
+        parsed.positionIntelligence.dayToDayChallenges = parsed.positionIntelligence.dayToDayChallenges || [];
+        parsed.positionIntelligence.hiddenExpectations = parsed.positionIntelligence.hiddenExpectations || [];
+        parsed.positionIntelligence.keySuccessFactors = parsed.positionIntelligence.keySuccessFactors || [];
+        parsed.positionIntelligence.transferableBackgrounds = parsed.positionIntelligence.transferableBackgrounds || [];
+        parsed.positionIntelligence.businessProblemToSolve = parsed.positionIntelligence.businessProblemToSolve || "";
+        parsed.positionIntelligence.commonFailureReasons = parsed.positionIntelligence.commonFailureReasons || [];
+      } else {
+        parsed.positionIntelligence = {
+          natureOfRole: "",
+          dayToDayChallenges: [],
+          hiddenExpectations: [],
+          keySuccessFactors: [],
+          commonCandidateBackgrounds: [],
+          commonReasonsCandidatesFail: [],
+          transferableBackgrounds: [],
+          businessProblemToSolve: "",
+          commonFailureReasons: [],
+          roleNature: ""
+        };
+      }
+
+      // 2. discoveryQuestions fields
+      if (Array.isArray(parsed.discoveryQuestions)) {
+        parsed.discoveryQuestions = parsed.discoveryQuestions.map((q: any) => {
+          if (q && typeof q === "object") {
+            return {
+              question: q.question || "",
+              priority: q.priority || "",
+              whyAsk: q.whyAsk || "",
+              impact: q.impact || "",
+              category: q.category || ""
+            };
+          }
+          return { question: "", priority: "", whyAsk: "", impact: "", category: "" };
+        });
+      } else {
+        parsed.discoveryQuestions = [];
+      }
+
+      // 3. companyInsights
+      if (parsed.companyInsights && typeof parsed.companyInsights === "object") {
+        parsed.companyInsights.companyName = parsed.companyInsights.companyName || "";
+        parsed.companyInsights.industry = parsed.companyInsights.industry || "";
+        parsed.companyInsights.businessModel = parsed.companyInsights.businessModel || "";
+        parsed.companyInsights.companyStage = parsed.companyInsights.companyStage || "";
+        parsed.companyInsights.cultureHighlights = parsed.companyInsights.cultureHighlights || [];
+        parsed.companyInsights.employeeValueProposition = parsed.companyInsights.employeeValueProposition || [];
+      } else {
+        parsed.companyInsights = {
+          companyName: "",
+          industry: "",
+          businessModel: "",
+          companyStage: "",
+          cultureHighlights: [],
+          employeeValueProposition: []
+        };
+      }
+
+      // 4. candidatePersona
+      if (parsed.candidatePersona && typeof parsed.candidatePersona === "object") {
+        parsed.candidatePersona.targetAge = parsed.candidatePersona.targetAge || "";
+        parsed.candidatePersona.targetGender = parsed.candidatePersona.targetGender || "";
+        parsed.candidatePersona.experience = parsed.candidatePersona.experience || "";
+        parsed.candidatePersona.industries = parsed.candidatePersona.industries || [];
+        parsed.candidatePersona.languages = parsed.candidatePersona.languages || [];
+        parsed.candidatePersona.certifications = parsed.candidatePersona.certifications || [];
+        parsed.candidatePersona.technicalSkills = parsed.candidatePersona.technicalSkills || [];
+        parsed.candidatePersona.personalityTraits = parsed.candidatePersona.personalityTraits || [];
+        parsed.candidatePersona.dealBreakers = parsed.candidatePersona.dealBreakers || [];
+      } else {
+        parsed.candidatePersona = {
+          targetAge: "",
+          targetGender: "",
+          experience: "",
+          industries: [],
+          languages: [],
+          certifications: [],
+          technicalSkills: [],
+          personalityTraits: [],
+          dealBreakers: []
+        };
+      }
+
+      // 5. sourcingStrategy
+      if (parsed.sourcingStrategy && typeof parsed.sourcingStrategy === "object") {
+        parsed.sourcingStrategy.priorityCompanies = parsed.sourcingStrategy.priorityCompanies || [];
+        parsed.sourcingStrategy.booleanSearchQueries = parsed.sourcingStrategy.booleanSearchQueries || [];
+        parsed.sourcingStrategy.pitchingStrategies = parsed.sourcingStrategy.pitchingStrategies || [];
+        if (Array.isArray(parsed.sourcingStrategy.objectionHandling)) {
+          parsed.sourcingStrategy.objectionHandling = parsed.sourcingStrategy.objectionHandling.map((o: any) => ({
+            objection: o?.objection || "",
+            handling: o?.handling || ""
+          }));
+        } else {
+          parsed.sourcingStrategy.objectionHandling = [];
+        }
+        parsed.sourcingStrategy.headhunterNotes = parsed.sourcingStrategy.headhunterNotes || [];
+      } else {
+        parsed.sourcingStrategy = {
+          priorityCompanies: [],
+          booleanSearchQueries: [],
+          pitchingStrategies: [],
+          objectionHandling: [],
+          headhunterNotes: []
+        };
+      }
+
+      // 6. socialMediaPost
+      if (parsed.socialMediaPost && typeof parsed.socialMediaPost === "object") {
+        parsed.socialMediaPost.facebookPost = parsed.socialMediaPost.facebookPost || "";
+      } else {
+        parsed.socialMediaPost = {
+          facebookPost: ""
+        };
+      }
+
+      // 7. competitorCompanies extra properties
+      if (parsed.competitorCompanies && typeof parsed.competitorCompanies === "object") {
+        parsed.competitorCompanies.category = parsed.competitorCompanies.category || "";
+        parsed.competitorCompanies.targetTitles = parsed.competitorCompanies.targetTitles || [];
+        parsed.competitorCompanies.targetReason = parsed.competitorCompanies.targetReason || "";
+      } else {
+        parsed.competitorCompanies = {
+          directCompetitors: [],
+          similarBusinessModels: [],
+          transferableTalent: [],
+          whyTheseCompanies: "",
+          category: "",
+          targetTitles: [],
+          targetReason: ""
+        };
+      }
+
+      // 8. talentMarketInsight extra properties
+      if (parsed.talentMarketInsight && typeof parsed.talentMarketInsight === "object") {
+        parsed.talentMarketInsight.salaryCompetitiveness = parsed.talentMarketInsight.salaryCompetitiveness || "";
+        parsed.talentMarketInsight.counterOfferRisk = parsed.talentMarketInsight.counterOfferRisk || "";
+        parsed.talentMarketInsight.noticePeriodRisk = parsed.talentMarketInsight.noticePeriodRisk || "";
+      } else {
+        parsed.talentMarketInsight = {
+          talentPoolDifficulty: "",
+          hiringChallenges: [],
+          counterOfferRisk: "",
+          salaryCompetitiveness: "",
+          noticePeriodRisk: ""
+        };
+      }
+    }
+
+    console.log("Structured fields extraction result after normalization:", parsed);
     res.json(parsed);
 
   } catch (error) {
