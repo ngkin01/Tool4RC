@@ -2375,6 +2375,48 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
     };
   };
 
+  const fetchWithRetry = async (url: string, options: RequestInit, retries = 3, delay = 1000): Promise<Response> => {
+    try {
+      const response = await fetch(url, options);
+      if (response.ok) {
+        return response;
+      }
+
+      const transientStatuses = [429, 502, 503, 504];
+      if (transientStatuses.includes(response.status) && retries > 0) {
+        console.warn(`Gặp lỗi tạm thời ${response.status} khi gọi ${url}. Đang thử lại sau ${delay}ms... (Còn ${retries} lần thử)`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return fetchWithRetry(url, options, retries - 1, delay * 2);
+      }
+
+      let errorMessage = `Yêu cầu thất bại (Status ${response.status}): ${response.statusText}`;
+      try {
+        const errText = await response.text();
+        try {
+          const errJson = JSON.parse(errText);
+          errorMessage = errJson.error || errJson.message || errText;
+        } catch {
+          if (errText && errText.trim().length < 500) {
+            errorMessage = errText.trim();
+          }
+        }
+      } catch (_) {}
+      
+      throw new Error(errorMessage);
+    } catch (error: any) {
+      const isTransientMessage = error.message?.includes("UNAVAILABLE") || 
+                                 error.message?.includes("fetch") || 
+                                 error.message?.includes("network") || 
+                                 error.message?.includes("Failed to fetch");
+      if (retries > 0 && isTransientMessage) {
+        console.warn(`Lỗi mạng hoặc lỗi tạm thời: ${error.message}. Đang thử lại sau ${delay}ms... (Còn ${retries} lần thử)`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return fetchWithRetry(url, options, retries - 1, delay * 2);
+      }
+      throw error;
+    }
+  };
+
   const handleSaveApiSettings = (provider: string, key: string, model: string, endpoint: string) => {
     localStorage.setItem('freec_ai_provider', provider);
     localStorage.setItem('freec_ai_api_key', key.trim());
@@ -2948,7 +2990,7 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
     try {
       // 1. Analyze user intent
       console.log("Analyzing user intent...");
-      const analyzeResponse = await fetch('/api/freecai/analyze-intent', {
+      const analyzeResponse = await fetchWithRetry('/api/freecai/analyze-intent', {
         method: 'POST',
         headers: {
           ...getAiHeaders(),
@@ -2962,15 +3004,10 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
         })
       });
 
-      if (!analyzeResponse.ok) {
-        throw new Error(`Failed to analyze input intent: ${analyzeResponse.statusText}`);
-      }
-
       const { intentType, matchedJobId, reasoning } = await analyzeResponse.json();
       console.log(`Intent analyzed: type=${intentType}, matchedId=${matchedJobId}`);
 
       setRawInputUsed(universalInput);
-      setManualJobTitle(""); // Reset for next use
 
       // Branch out depending on the analyzed intent:
       if (intentType === "CLIENT_UPDATE") {
@@ -2978,7 +3015,7 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
         setProcessingStep(2); // Translates to "Step 2: Cập nhật thông tin chung công ty..."
         console.log("Processing client-level updates...");
         
-        const clientUpdateResponse = await fetch('/api/freecai/process-client-update', {
+        const clientUpdateResponse = await fetchWithRetry('/api/freecai/process-client-update', {
           method: 'POST',
           headers: {
             ...getAiHeaders(),
@@ -2990,10 +3027,6 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
             clientSummary: selectedClient.summary || {}
           })
         });
-
-        if (!clientUpdateResponse.ok) {
-          throw new Error(`Failed to process client-level update: ${clientUpdateResponse.statusText}`);
-        }
 
         const clientUpdateData = await clientUpdateResponse.json();
 
@@ -3023,7 +3056,7 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
         setProcessingStep(3); // Translates to "Step 3: Soạn thảo Insights Tuyển dụng..."
         console.log(`Starting job update streaming merge for job: ${existingJob.title}`);
         
-        const jobUpdateResponse = await fetch('/api/freecai/process-job-update', {
+        const jobUpdateResponse = await fetchWithRetry('/api/freecai/process-job-update', {
           method: 'POST',
           headers: {
             ...getAiHeaders(),
@@ -3035,10 +3068,6 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
             existingJobReport: existingJob.report
           })
         });
-
-        if (!jobUpdateResponse.ok) {
-          throw new Error(`Failed to merge job updates: ${jobUpdateResponse.statusText}`);
-        }
 
         let rawResult = "";
         const reader = jobUpdateResponse.body?.getReader();
@@ -3066,7 +3095,7 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
         setProcessingStep(4); // Translates to "Step 4: Cấu trúc hóa dữ liệu thông minh..."
         console.log("Extracting structured fields from merged job report...");
         
-        const extractResponse = await fetch('/api/freecai/extract-structured-fields', {
+        const extractResponse = await fetchWithRetry('/api/freecai/extract-structured-fields', {
           method: 'POST',
           headers: {
             ...getAiHeaders(),
@@ -3077,10 +3106,6 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
             title: existingJob.title
           })
         });
-
-        if (!extractResponse.ok) {
-          throw new Error(`Failed to extract structured fields: ${extractResponse.statusText}`);
-        }
 
         const extractedFields = await extractResponse.json();
 
@@ -3113,7 +3138,7 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
       } else {
         // NEW_JOB Flow (Default/Fallback)
         console.log("Step 1: Starting Company Research...");
-        const step1Response = await fetch('/api/freecai/step1-company-research', {
+        const step1Response = await fetchWithRetry('/api/freecai/step1-company-research', {
           method: 'POST',
           headers: getAiHeaders(),
           body: JSON.stringify({
@@ -3123,10 +3148,6 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
             jobDescription: universalInput
           })
         });
-
-        if (!step1Response.ok) {
-          throw new Error(`Step 1 (Company Research) failed: ${step1Response.statusText}`);
-        }
 
         const step1Data = await step1Response.json();
         const companyReport = step1Data.companyReport || "";
@@ -3140,7 +3161,7 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
 
         setProcessingStep(3); // Translates to "Step 3: Soạn thảo Insights Tuyển dụng..."
         console.log("Step 2: Starting Hiring Insights...");
-        const step2Response = await fetch('/api/freecai/step2-recruitment-intelligence', {
+        const step2Response = await fetchWithRetry('/api/freecai/step2-recruitment-intelligence', {
           method: 'POST',
           headers: getAiHeaders(),
           body: JSON.stringify({
@@ -3149,10 +3170,6 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
             customPrompt: hiringInsightsPrompt || DEFAULT_HIRING_INSIGHTS_PROMPT
           })
         });
-
-        if (!step2Response.ok) {
-          throw new Error(`Step 2 (Hiring Insights) failed: ${step2Response.statusText}`);
-        }
 
         let rawResult = "";
         const reader = step2Response.body?.getReader();
@@ -3183,7 +3200,7 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
         setProcessingStep(4); // Translates to "Step 4: Cấu trúc hóa dữ liệu thông minh..."
         console.log("Extracting structured fields from generated new job report...");
         
-        const extractResponse = await fetch('/api/freecai/extract-structured-fields', {
+        const extractResponse = await fetchWithRetry('/api/freecai/extract-structured-fields', {
           method: 'POST',
           headers: {
             ...getAiHeaders(),
@@ -3194,10 +3211,6 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
             title: extractedTitle
           })
         });
-
-        if (!extractResponse.ok) {
-          throw new Error(`Failed to extract structured fields: ${extractResponse.statusText}`);
-        }
 
         const extractedFields = await extractResponse.json();
 
@@ -3415,6 +3428,7 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
       }
 
       setUniversalInput("");
+      setManualJobTitle("");
       setDraftResult(null);
       setIsReviewingDraft(false);
     } catch (err: any) {
@@ -3430,7 +3444,7 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
     setChatInput("");
     
     try {
-      const response = await fetch('/api/freecai/chat', {
+      const response = await fetchWithRetry('/api/freecai/chat', {
         method: 'POST',
         headers: getAiHeaders(),
         body: JSON.stringify({
@@ -3438,22 +3452,6 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
           clientData: selectedClient
         })
       });
-
-      if (!response.ok) {
-        let errMsg = "";
-        try {
-          const errText = await response.text();
-          try {
-            const errJson = JSON.parse(errText);
-            errMsg = errJson.error || errJson.message || errText;
-          } catch {
-            errMsg = errText || `HTTP Error ${response.status}`;
-          }
-        } catch {
-          errMsg = "Network error or server unreachable";
-        }
-        throw new Error(errMsg || "Failed to chat");
-      }
 
       const reader = response.body?.getReader();
       if (reader) {
