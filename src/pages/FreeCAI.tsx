@@ -36,6 +36,7 @@ type Job = {
 };
 
 type JobReport = {
+  schemaVersion?: string;
   markdownReport?: string;
   roleOverview: { title: string; dept: string; reportTo: string; salary: string; location: string; teamSize: string; };
   companyContext: string[];
@@ -53,6 +54,9 @@ type JobReport = {
     similarBusinessModels?: string[];
     transferableTalent?: string[];
     whyTheseCompanies?: string;
+    category?: string;
+    targetTitles?: string[];
+    targetReason?: string;
   };
   positionIntelligence?: {
     natureOfRole?: string;
@@ -62,6 +66,9 @@ type JobReport = {
     commonCandidateBackgrounds?: string[];
     commonReasonsCandidatesFail?: string[];
     transferableBackgrounds?: string[];
+    businessProblemToSolve?: string;
+    commonFailureReasons?: string[];
+    roleNature?: string;
   };
   candidatePersonaObj?: {
     yearsOfExperience?: string;
@@ -90,6 +97,51 @@ type JobReport = {
     industry?: string;
     japanese?: string;
   };
+  companyInsights?: {
+    companyName?: string;
+    industry?: string;
+    businessModel?: string;
+    companyStage?: string;
+    cultureHighlights?: string[];
+    employeeValueProposition?: string[];
+  };
+  candidatePersona?: {
+    targetAge?: string;
+    targetGender?: string;
+    experience?: string;
+    industries?: string[];
+    languages?: string[];
+    certifications?: string[];
+    technicalSkills?: string[];
+    personalityTraits?: string[];
+    dealBreakers?: string[];
+  };
+  discoveryQuestions?: {
+    question?: string;
+    priority?: string;
+    whyAsk?: string;
+    impact?: string;
+    category?: string;
+  }[];
+  sourcingStrategy?: {
+    priorityCompanies?: string[];
+    booleanSearchQueries?: string[];
+    pitchingStrategies?: string[];
+    objectionHandling?: {
+      objection?: string;
+      handling?: string;
+    }[];
+    headhunterNotes?: string[];
+  };
+  socialMediaPost?: {
+    facebookPost?: string;
+  };
+  dynamicSections?: {
+    id?: string;
+    title: string;
+    category?: string;
+    content: string;
+  }[];
 };
 
 const mockClients: Client[] = [
@@ -2053,6 +2105,36 @@ export const parseHeadingsFromMarkdown = (markdownText: string) => {
   return headings;
 };
 
+class SafeMarkdown extends React.Component<{ children: string }, { hasError: boolean }> {
+  constructor(props: { children: string }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: any, errorInfo: any) {
+    console.error("Markdown rendering failed, falling back to plain text:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ whiteSpace: "pre-wrap", fontFamily: "inherit" }}>
+          {this.props.children}
+        </div>
+      );
+    }
+    return (
+      <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+        {this.props.children}
+      </ReactMarkdown>
+    );
+  }
+}
+
 export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error') => void }) {
   const [clients, setClients] = useState<Client[]>([]);
   const [windowWidth, setWindowWidth] = useState(typeof window !== "undefined" ? window.innerWidth : 1200);
@@ -2390,6 +2472,11 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
 
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+  const [showAllDynamicSections, setShowAllDynamicSections] = useState(false);
+
+  useEffect(() => {
+    setShowAllDynamicSections(false);
+  }, [selectedJobId]);
   
   const [selectedClientJobs, setSelectedClientJobs] = useState<Job[]>([]);
   const [selectedClientTimeline, setSelectedClientTimeline] = useState<{ id: string; date: string; content: string; rawInput?: string }[]>([]);
@@ -4483,35 +4570,152 @@ ${r.booleanSearch || "Not generated yet."}
                     </div>
                   </div>
 
-                  {/* 2 & 3: Context and Persona */}
-                  <>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-                      <h3 style={{ fontSize: 30, fontWeight: 700, margin: 0, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>Company Context</h3>
-                      <ul style={{ margin: 0, paddingLeft: 24, fontSize: 17, lineHeight: 1.8, color: "var(--text-primary)" }}>
-                        {selectedJob.report.companyContext.length > 0 ? selectedJob.report.companyContext.map((item, i) => <li key={i} style={{ marginBottom: 12 }}>{item}</li>) : <li>Not available</li>}
-                      </ul>
-                    </div>
-                    
-                    {selectedJob.report.candidatePersonaObj ? (
-                    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-                      <h3 style={{ fontSize: 30, fontWeight: 700, margin: 0, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>Candidate Persona</h3>
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 32, fontSize: 17, lineHeight: 1.8, color: "var(--text-primary)" }}>
-                        <div><strong style={{ color: "var(--text-secondary)" }}>Experience:</strong> <br/>{selectedJob.report.candidatePersonaObj.yearsOfExperience}</div>
-                        <div><strong style={{ color: "var(--text-secondary)" }}>Industry:</strong> <br/>{selectedJob.report.candidatePersonaObj.industryBackground}</div>
-                        <div><strong style={{ color: "var(--text-secondary)" }}>Function:</strong> <br/>{selectedJob.report.candidatePersonaObj.functionalBackground}</div>
-                        <div><strong style={{ color: "var(--text-secondary)" }}>Language:</strong> <br/>{selectedJob.report.candidatePersonaObj.languageRequirements}</div>
-                        <div style={{ gridColumn: "1 / -1", marginTop: 8 }}>
-                          <strong style={{ color: "var(--text-secondary)" }}>Traits:</strong> <br/>{selectedJob.report.candidatePersonaObj.personalityTraits?.join(", ")}
+                  {/* 2. Company Context & Insights */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
+                    {selectedJob.report.companyContext && selectedJob.report.companyContext.length > 0 && (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+                        <h3 style={{ fontSize: 30, fontWeight: 700, margin: 0, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>Company Context</h3>
+                        <ul style={{ margin: 0, paddingLeft: 24, fontSize: 17, lineHeight: 1.8, color: "var(--text-primary)" }}>
+                          {selectedJob.report.companyContext.map((item, i) => <li key={i} style={{ marginBottom: 12 }}>{item}</li>)}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Extended Company Insights */}
+                    {selectedJob.report.companyInsights && (
+                      selectedJob.report.companyInsights.companyName ||
+                      selectedJob.report.companyInsights.industry ||
+                      selectedJob.report.companyInsights.businessModel ||
+                      selectedJob.report.companyInsights.companyStage ||
+                      (selectedJob.report.companyInsights.cultureHighlights && selectedJob.report.companyInsights.cultureHighlights.length > 0) ||
+                      (selectedJob.report.companyInsights.employeeValueProposition && selectedJob.report.companyInsights.employeeValueProposition.length > 0)
+                    ) && (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 24, padding: 28, background: "rgba(99, 102, 241, 0.03)", borderRadius: 16, border: "1px solid rgba(99, 102, 241, 0.1)" }}>
+                        <h4 style={{ fontSize: 20, fontWeight: 700, margin: 0, color: "#4f46e5", letterSpacing: "-0.01em", display: "flex", alignItems: "center", gap: 8 }}>
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="2" y="10" width="20" height="12" rx="2" ry="2"></rect><path d="M12 22V10"></path><path d="M12 10a4 4 0 0 1-4-4V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2a4 4 0 0 1-4 4z"></path></svg>
+                          Company Insights
+                        </h4>
+                        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 24 }}>
+                          {selectedJob.report.companyInsights.companyName && (
+                            <div><strong style={{ color: "var(--text-secondary)" }}>Company Name:</strong> <br/><span style={{ color: "var(--text-primary)", fontSize: 16, fontWeight: 500 }}>{selectedJob.report.companyInsights.companyName}</span></div>
+                          )}
+                          {selectedJob.report.companyInsights.industry && (
+                            <div><strong style={{ color: "var(--text-secondary)" }}>Industry:</strong> <br/><span style={{ color: "var(--text-primary)", fontSize: 16, fontWeight: 500 }}>{selectedJob.report.companyInsights.industry}</span></div>
+                          )}
+                          {selectedJob.report.companyInsights.businessModel && (
+                            <div><strong style={{ color: "var(--text-secondary)" }}>Business Model:</strong> <br/><span style={{ color: "var(--text-primary)", fontSize: 16, fontWeight: 500 }}>{selectedJob.report.companyInsights.businessModel}</span></div>
+                          )}
+                          {selectedJob.report.companyInsights.companyStage && (
+                            <div><strong style={{ color: "var(--text-secondary)" }}>Company Stage:</strong> <br/><span style={{ color: "var(--text-primary)", fontSize: 16, fontWeight: 500 }}>{selectedJob.report.companyInsights.companyStage}</span></div>
+                          )}
+                          {selectedJob.report.companyInsights.cultureHighlights && selectedJob.report.companyInsights.cultureHighlights.length > 0 && (
+                            <div style={{ gridColumn: isMobile ? "auto" : "1 / -1", marginTop: 8 }}>
+                              <strong style={{ color: "var(--text-secondary)" }}>Culture Highlights:</strong>
+                              <ul style={{ margin: "8px 0 0", paddingLeft: 20, fontSize: 15, lineHeight: 1.7, color: "var(--text-primary)" }}>
+                                {selectedJob.report.companyInsights.cultureHighlights.map((item, i) => <li key={i} style={{ marginBottom: 6 }}>{item}</li>)}
+                              </ul>
+                            </div>
+                          )}
+                          {selectedJob.report.companyInsights.employeeValueProposition && selectedJob.report.companyInsights.employeeValueProposition.length > 0 && (
+                            <div style={{ gridColumn: isMobile ? "auto" : "1 / -1", marginTop: 8 }}>
+                              <strong style={{ color: "var(--text-secondary)" }}>Employee Value Proposition (EVP):</strong>
+                              <ul style={{ margin: "8px 0 0", paddingLeft: 20, fontSize: 15, lineHeight: 1.7, color: "var(--text-primary)" }}>
+                                {selectedJob.report.companyInsights.employeeValueProposition.map((item, i) => <li key={i} style={{ marginBottom: 6 }}>{item}</li>)}
+                              </ul>
+                            </div>
+                          )}
                         </div>
                       </div>
-                    </div>
+                    )}
+                  </div>
+
+                  {/* 3. Candidate Persona */}
+                  <>
+                    {selectedJob.report.candidatePersona && (
+                      selectedJob.report.candidatePersona.experience ||
+                      selectedJob.report.candidatePersona.targetAge ||
+                      selectedJob.report.candidatePersona.targetGender ||
+                      (selectedJob.report.candidatePersona.industries && selectedJob.report.candidatePersona.industries.length > 0) ||
+                      (selectedJob.report.candidatePersona.languages && selectedJob.report.candidatePersona.languages.length > 0) ||
+                      (selectedJob.report.candidatePersona.certifications && selectedJob.report.candidatePersona.certifications.length > 0) ||
+                      (selectedJob.report.candidatePersona.technicalSkills && selectedJob.report.candidatePersona.technicalSkills.length > 0) ||
+                      (selectedJob.report.candidatePersona.personalityTraits && selectedJob.report.candidatePersona.personalityTraits.length > 0) ||
+                      (selectedJob.report.candidatePersona.dealBreakers && selectedJob.report.candidatePersona.dealBreakers.length > 0)
+                    ) ? (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+                        <h3 style={{ fontSize: 30, fontWeight: 700, margin: 0, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>Target Candidate Persona</h3>
+                        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 32, fontSize: 16, lineHeight: 1.8, color: "var(--text-primary)" }}>
+                          {selectedJob.report.candidatePersona.experience && (
+                            <div><strong style={{ color: "var(--text-secondary)" }}>Experience Requirement:</strong> <br/>{selectedJob.report.candidatePersona.experience}</div>
+                          )}
+                          {selectedJob.report.candidatePersona.targetAge && (
+                            <div><strong style={{ color: "var(--text-secondary)" }}>Target Age Range:</strong> <br/>{selectedJob.report.candidatePersona.targetAge}</div>
+                          )}
+                          {selectedJob.report.candidatePersona.targetGender && (
+                            <div><strong style={{ color: "var(--text-secondary)" }}>Target Gender:</strong> <br/>{selectedJob.report.candidatePersona.targetGender}</div>
+                          )}
+                          {selectedJob.report.candidatePersona.industries && selectedJob.report.candidatePersona.industries.length > 0 && (
+                            <div><strong style={{ color: "var(--text-secondary)" }}>Target Industries:</strong> <br/>{selectedJob.report.candidatePersona.industries.join(", ")}</div>
+                          )}
+                          {selectedJob.report.candidatePersona.languages && selectedJob.report.candidatePersona.languages.length > 0 && (
+                            <div><strong style={{ color: "var(--text-secondary)" }}>Languages:</strong> <br/>{selectedJob.report.candidatePersona.languages.join(", ")}</div>
+                          )}
+                          {selectedJob.report.candidatePersona.certifications && selectedJob.report.candidatePersona.certifications.length > 0 && (
+                            <div><strong style={{ color: "var(--text-secondary)" }}>Certifications:</strong> <br/>{selectedJob.report.candidatePersona.certifications.join(", ")}</div>
+                          )}
+                          {selectedJob.report.candidatePersona.technicalSkills && selectedJob.report.candidatePersona.technicalSkills.length > 0 && (
+                            <div style={{ gridColumn: isMobile ? "auto" : "1 / -1" }}>
+                              <strong style={{ color: "var(--text-secondary)" }}>Technical Skills:</strong>
+                              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 10 }}>
+                                {selectedJob.report.candidatePersona.technicalSkills.map((s, i) => (
+                                  <span key={i} style={{ background: "rgba(99, 102, 241, 0.06)", color: "#4f46e5", padding: "4px 12px", borderRadius: 8, fontSize: 13, fontWeight: 600, border: "1px solid rgba(99, 102, 241, 0.1)" }}>{s}</span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {selectedJob.report.candidatePersona.personalityTraits && selectedJob.report.candidatePersona.personalityTraits.length > 0 && (
+                            <div style={{ gridColumn: isMobile ? "auto" : "1 / -1" }}>
+                              <strong style={{ color: "var(--text-secondary)" }}>Personality Traits:</strong>
+                              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 10 }}>
+                                {selectedJob.report.candidatePersona.personalityTraits.map((t, i) => (
+                                  <span key={i} style={{ background: "rgba(139, 92, 246, 0.06)", color: "#8b5cf6", padding: "4px 12px", borderRadius: 8, fontSize: 13, fontWeight: 600, border: "1px solid rgba(139, 92, 246, 0.1)" }}>{t}</span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {selectedJob.report.candidatePersona.dealBreakers && selectedJob.report.candidatePersona.dealBreakers.length > 0 && (
+                            <div style={{ gridColumn: isMobile ? "auto" : "1 / -1", background: "rgba(239, 68, 68, 0.03)", padding: 20, borderRadius: 12, border: "1px solid rgba(239, 68, 68, 0.1)" }}>
+                              <strong style={{ color: "#ef4444", fontSize: 16, display: "flex", alignItems: "center", gap: 6 }}>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
+                                Deal Breakers
+                              </strong>
+                              <ul style={{ margin: "10px 0 0", paddingLeft: 20, color: "var(--text-primary)", fontSize: 15 }}>
+                                {selectedJob.report.candidatePersona.dealBreakers.map((dbItem, i) => <li key={i} style={{ marginBottom: 6 }}>{dbItem}</li>)}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ) : selectedJob.report.candidatePersonaObj ? (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+                        <h3 style={{ fontSize: 30, fontWeight: 700, margin: 0, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>Candidate Persona</h3>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 32, fontSize: 17, lineHeight: 1.8, color: "var(--text-primary)" }}>
+                          <div><strong style={{ color: "var(--text-secondary)" }}>Experience:</strong> <br/>{selectedJob.report.candidatePersonaObj.yearsOfExperience}</div>
+                          <div><strong style={{ color: "var(--text-secondary)" }}>Industry:</strong> <br/>{selectedJob.report.candidatePersonaObj.industryBackground}</div>
+                          <div><strong style={{ color: "var(--text-secondary)" }}>Function:</strong> <br/>{selectedJob.report.candidatePersonaObj.functionalBackground}</div>
+                          <div><strong style={{ color: "var(--text-secondary)" }}>Language:</strong> <br/>{selectedJob.report.candidatePersonaObj.languageRequirements}</div>
+                          <div style={{ gridColumn: "1 / -1", marginTop: 8 }}>
+                            <strong style={{ color: "var(--text-secondary)" }}>Traits:</strong> <br/>{selectedJob.report.candidatePersonaObj.personalityTraits?.join(", ")}
+                          </div>
+                        </div>
+                      </div>
                     ) : (
-                    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-                      <h3 style={{ fontSize: isMobile ? 22 : 30, fontWeight: 700, margin: 0, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>Ideal Persona</h3>
-                      <ul style={{ margin: 0, paddingLeft: 24, fontSize: isMobile ? 15 : 17, lineHeight: 1.8, color: "var(--text-primary)" }}>
-                        {selectedJob.report.idealPersona.length > 0 ? selectedJob.report.idealPersona.map((item, i) => <li key={i} style={{ marginBottom: 12 }}>{item}</li>) : <li>Not available</li>}
-                      </ul>
-                    </div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+                        <h3 style={{ fontSize: isMobile ? 22 : 30, fontWeight: 700, margin: 0, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>Ideal Persona</h3>
+                        <ul style={{ margin: 0, paddingLeft: 24, fontSize: isMobile ? 15 : 17, lineHeight: 1.8, color: "var(--text-primary)" }}>
+                          {selectedJob.report.idealPersona.length > 0 ? selectedJob.report.idealPersona.map((item, i) => <li key={i} style={{ marginBottom: 12 }}>{item}</li>) : <li>Not available</li>}
+                        </ul>
+                      </div>
                     )}
                   </>
 
@@ -4519,29 +4723,59 @@ ${r.booleanSearch || "Not generated yet."}
                   {selectedJob.report.competitorCompanies && (
                   <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
                     <h3 style={{ fontSize: isMobile ? 22 : 30, fontWeight: 700, margin: 0, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>Competitor Companies</h3>
+                    
+                    {selectedJob.report.competitorCompanies.category && (
+                      <div style={{ marginBottom: 8 }}>
+                        <span style={{ fontSize: 16, fontWeight: 600, color: "var(--text-secondary)" }}>Category: </span>
+                        <span style={{ fontSize: 16, color: "var(--text-primary)", fontWeight: 500 }}>{selectedJob.report.competitorCompanies.category}</span>
+                      </div>
+                    )}
+
                     <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: isMobile ? 24 : 32 }}>
-                      <div>
-                        <div style={{ fontSize: isMobile ? 18 : 24, fontWeight: 600, color: "var(--text-primary)", letterSpacing: "-0.01em", marginBottom: 16 }}>Direct Competitors</div>
-                        <ul style={{ margin: 0, paddingLeft: 24, fontSize: isMobile ? 15 : 17, lineHeight: 1.8, color: "var(--text-primary)" }}>
-                          {selectedJob.report.competitorCompanies.directCompetitors?.map((c,i)=><li key={i} style={{ marginBottom: 12 }}>{c}</li>)}
-                        </ul>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: 24, fontWeight: 600, color: "var(--text-primary)", letterSpacing: "-0.01em", marginBottom: 16 }}>Similar Business Models</div>
-                        <ul style={{ margin: 0, paddingLeft: 24, fontSize: 17, lineHeight: 1.8, color: "var(--text-primary)" }}>
-                          {selectedJob.report.competitorCompanies.similarBusinessModels?.map((c,i)=><li key={i} style={{ marginBottom: 12 }}>{c}</li>)}
-                        </ul>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: 24, fontWeight: 600, color: "var(--text-primary)", letterSpacing: "-0.01em", marginBottom: 16 }}>Transferable Talent</div>
-                        <ul style={{ margin: 0, paddingLeft: 24, fontSize: 17, lineHeight: 1.8, color: "var(--text-primary)" }}>
-                          {selectedJob.report.competitorCompanies.transferableTalent?.map((c,i)=><li key={i} style={{ marginBottom: 12 }}>{c}</li>)}
-                        </ul>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: 24, fontWeight: 600, color: "var(--text-primary)", letterSpacing: "-0.01em", marginBottom: 16 }}>Why These Companies</div>
-                        <div style={{ fontSize: 17, lineHeight: 1.8, color: "var(--text-primary)" }}>{selectedJob.report.competitorCompanies.whyTheseCompanies}</div>
-                      </div>
+                      {selectedJob.report.competitorCompanies.directCompetitors && selectedJob.report.competitorCompanies.directCompetitors.length > 0 && (
+                        <div>
+                          <div style={{ fontSize: isMobile ? 18 : 24, fontWeight: 600, color: "var(--text-primary)", letterSpacing: "-0.01em", marginBottom: 16 }}>Direct Competitors</div>
+                          <ul style={{ margin: 0, paddingLeft: 24, fontSize: isMobile ? 15 : 17, lineHeight: 1.8, color: "var(--text-primary)" }}>
+                            {selectedJob.report.competitorCompanies.directCompetitors.map((c,i)=><li key={i} style={{ marginBottom: 12 }}>{c}</li>)}
+                          </ul>
+                        </div>
+                      )}
+                      {selectedJob.report.competitorCompanies.similarBusinessModels && selectedJob.report.competitorCompanies.similarBusinessModels.length > 0 && (
+                        <div>
+                          <div style={{ fontSize: 24, fontWeight: 600, color: "var(--text-primary)", letterSpacing: "-0.01em", marginBottom: 16 }}>Similar Business Models</div>
+                          <ul style={{ margin: 0, paddingLeft: 24, fontSize: 17, lineHeight: 1.8, color: "var(--text-primary)" }}>
+                            {selectedJob.report.competitorCompanies.similarBusinessModels.map((c,i)=><li key={i} style={{ marginBottom: 12 }}>{c}</li>)}
+                          </ul>
+                        </div>
+                      )}
+                      {selectedJob.report.competitorCompanies.transferableTalent && selectedJob.report.competitorCompanies.transferableTalent.length > 0 && (
+                        <div>
+                          <div style={{ fontSize: 24, fontWeight: 600, color: "var(--text-primary)", letterSpacing: "-0.01em", marginBottom: 16 }}>Transferable Talent</div>
+                          <ul style={{ margin: 0, paddingLeft: 24, fontSize: 17, lineHeight: 1.8, color: "var(--text-primary)" }}>
+                            {selectedJob.report.competitorCompanies.transferableTalent.map((c,i)=><li key={i} style={{ marginBottom: 12 }}>{c}</li>)}
+                          </ul>
+                        </div>
+                      )}
+                      {selectedJob.report.competitorCompanies.targetTitles && selectedJob.report.competitorCompanies.targetTitles.length > 0 && (
+                        <div>
+                          <div style={{ fontSize: 24, fontWeight: 600, color: "var(--text-primary)", letterSpacing: "-0.01em", marginBottom: 16 }}>Target Titles</div>
+                          <ul style={{ margin: 0, paddingLeft: 24, fontSize: 17, lineHeight: 1.8, color: "var(--text-primary)" }}>
+                            {selectedJob.report.competitorCompanies.targetTitles.map((t,i)=><li key={i} style={{ marginBottom: 12 }}>{t}</li>)}
+                          </ul>
+                        </div>
+                      )}
+                      {selectedJob.report.competitorCompanies.whyTheseCompanies && (
+                        <div>
+                          <div style={{ fontSize: 24, fontWeight: 600, color: "var(--text-primary)", letterSpacing: "-0.01em", marginBottom: 16 }}>Why These Companies</div>
+                          <div style={{ fontSize: 17, lineHeight: 1.8, color: "var(--text-primary)" }}>{selectedJob.report.competitorCompanies.whyTheseCompanies}</div>
+                        </div>
+                      )}
+                      {selectedJob.report.competitorCompanies.targetReason && (
+                        <div>
+                          <div style={{ fontSize: 24, fontWeight: 600, color: "var(--text-primary)", letterSpacing: "-0.01em", marginBottom: 16 }}>Target Reason</div>
+                          <div style={{ fontSize: 17, lineHeight: 1.8, color: "var(--text-primary)" }}>{selectedJob.report.competitorCompanies.targetReason}</div>
+                        </div>
+                      )}
                     </div>
                   </div>
                   )}
@@ -4550,27 +4784,59 @@ ${r.booleanSearch || "Not generated yet."}
                   {selectedJob.report.positionIntelligence && (
                   <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
                     <h3 style={{ fontSize: isMobile ? 22 : 30, fontWeight: 700, margin: 0, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>Position Intelligence</h3>
-                    <div style={{ marginBottom: 8 }}>
-                      <span style={{ fontSize: isMobile ? 15 : 17, fontWeight: 600, color: "var(--text-secondary)" }}>Nature of Role: </span>
-                      <span style={{ fontSize: isMobile ? 15 : 17, color: "var(--text-primary)", lineHeight: 1.8 }}>{selectedJob.report.positionIntelligence.natureOfRole}</span>
-                    </div>
+                    
+                    {selectedJob.report.positionIntelligence.roleNature && (
+                      <div style={{ marginBottom: 8 }}>
+                        <span style={{ fontSize: isMobile ? 15 : 17, fontWeight: 600, color: "var(--text-secondary)" }}>Role Nature: </span>
+                        <span style={{ fontSize: isMobile ? 15 : 17, color: "var(--text-primary)", lineHeight: 1.8 }}>{selectedJob.report.positionIntelligence.roleNature}</span>
+                      </div>
+                    )}
+
+                    {!selectedJob.report.positionIntelligence.roleNature && selectedJob.report.positionIntelligence.natureOfRole && (
+                      <div style={{ marginBottom: 8 }}>
+                        <span style={{ fontSize: isMobile ? 15 : 17, fontWeight: 600, color: "var(--text-secondary)" }}>Nature of Role: </span>
+                        <span style={{ fontSize: isMobile ? 15 : 17, color: "var(--text-primary)", lineHeight: 1.8 }}>{selectedJob.report.positionIntelligence.natureOfRole}</span>
+                      </div>
+                    )}
+
+                    {selectedJob.report.positionIntelligence.businessProblemToSolve && (
+                      <div style={{ marginBottom: 8, padding: 18, background: "rgba(99, 102, 241, 0.02)", borderRadius: 12, border: "1px dashed rgba(99, 102, 241, 0.2)" }}>
+                        <span style={{ fontSize: isMobile ? 15 : 17, fontWeight: 700, color: "#4f46e5" }}>Business Problem to Solve: </span> <br/>
+                        <span style={{ fontSize: isMobile ? 15 : 17, color: "var(--text-primary)", lineHeight: 1.8 }}>{selectedJob.report.positionIntelligence.businessProblemToSolve}</span>
+                      </div>
+                    )}
+
                     <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: isMobile ? 24 : 32 }}>
-                      <div>
-                        <div style={{ fontSize: isMobile ? 18 : 24, fontWeight: 600, color: "var(--text-primary)", letterSpacing: "-0.01em", marginBottom: 16 }}>Day-to-day Challenges</div>
-                        <ul style={{ margin: 0, paddingLeft: 24, fontSize: isMobile ? 15 : 17, lineHeight: 1.8, color: "var(--text-primary)" }}>{selectedJob.report.positionIntelligence.dayToDayChallenges?.map((c,i)=><li key={i} style={{ marginBottom: 12 }}>{c}</li>)}</ul>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: isMobile ? 18 : 24, fontWeight: 600, color: "var(--text-primary)", letterSpacing: "-0.01em", marginBottom: 16 }}>Hidden Expectations</div>
-                        <ul style={{ margin: 0, paddingLeft: 24, fontSize: isMobile ? 15 : 17, lineHeight: 1.8, color: "var(--text-primary)" }}>{selectedJob.report.positionIntelligence.hiddenExpectations?.map((c,i)=><li key={i} style={{ marginBottom: 12 }}>{c}</li>)}</ul>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: isMobile ? 18 : 24, fontWeight: 600, color: "var(--text-primary)", letterSpacing: "-0.01em", marginBottom: 16 }}>Key Success Factors</div>
-                        <ul style={{ margin: 0, paddingLeft: 24, fontSize: isMobile ? 15 : 17, lineHeight: 1.8, color: "var(--text-primary)" }}>{selectedJob.report.positionIntelligence.keySuccessFactors?.map((c,i)=><li key={i} style={{ marginBottom: 12 }}>{c}</li>)}</ul>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: isMobile ? 18 : 24, fontWeight: 600, color: "var(--text-primary)", letterSpacing: "-0.01em", marginBottom: 16 }}>Reasons Candidates Fail</div>
-                        <ul style={{ margin: 0, paddingLeft: 24, fontSize: isMobile ? 15 : 17, lineHeight: 1.8, color: "var(--text-primary)" }}>{selectedJob.report.positionIntelligence.commonReasonsCandidatesFail?.map((c,i)=><li key={i} style={{ marginBottom: 12 }}>{c}</li>)}</ul>
-                      </div>
+                      {selectedJob.report.positionIntelligence.dayToDayChallenges && selectedJob.report.positionIntelligence.dayToDayChallenges.length > 0 && (
+                        <div>
+                          <div style={{ fontSize: isMobile ? 18 : 24, fontWeight: 600, color: "var(--text-primary)", letterSpacing: "-0.01em", marginBottom: 16 }}>Day-to-day Challenges</div>
+                          <ul style={{ margin: 0, paddingLeft: 24, fontSize: isMobile ? 15 : 17, lineHeight: 1.8, color: "var(--text-primary)" }}>{selectedJob.report.positionIntelligence.dayToDayChallenges.map((c,i)=><li key={i} style={{ marginBottom: 12 }}>{c}</li>)}</ul>
+                        </div>
+                      )}
+                      {selectedJob.report.positionIntelligence.hiddenExpectations && selectedJob.report.positionIntelligence.hiddenExpectations.length > 0 && (
+                        <div>
+                          <div style={{ fontSize: isMobile ? 18 : 24, fontWeight: 600, color: "var(--text-primary)", letterSpacing: "-0.01em", marginBottom: 16 }}>Hidden Expectations</div>
+                          <ul style={{ margin: 0, paddingLeft: 24, fontSize: isMobile ? 15 : 17, lineHeight: 1.8, color: "var(--text-primary)" }}>{selectedJob.report.positionIntelligence.hiddenExpectations.map((c,i)=><li key={i} style={{ marginBottom: 12 }}>{c}</li>)}</ul>
+                        </div>
+                      )}
+                      {selectedJob.report.positionIntelligence.keySuccessFactors && selectedJob.report.positionIntelligence.keySuccessFactors.length > 0 && (
+                        <div>
+                          <div style={{ fontSize: isMobile ? 18 : 24, fontWeight: 600, color: "var(--text-primary)", letterSpacing: "-0.01em", marginBottom: 16 }}>Key Success Factors</div>
+                          <ul style={{ margin: 0, paddingLeft: 24, fontSize: isMobile ? 15 : 17, lineHeight: 1.8, color: "var(--text-primary)" }}>{selectedJob.report.positionIntelligence.keySuccessFactors.map((c,i)=><li key={i} style={{ marginBottom: 12 }}>{c}</li>)}</ul>
+                        </div>
+                      )}
+                      {selectedJob.report.positionIntelligence.commonFailureReasons && selectedJob.report.positionIntelligence.commonFailureReasons.length > 0 && (
+                        <div>
+                          <div style={{ fontSize: isMobile ? 18 : 24, fontWeight: 600, color: "var(--text-primary)", letterSpacing: "-0.01em", marginBottom: 16 }}>Common Failure Reasons</div>
+                          <ul style={{ margin: 0, paddingLeft: 24, fontSize: isMobile ? 15 : 17, lineHeight: 1.8, color: "var(--text-primary)" }}>{selectedJob.report.positionIntelligence.commonFailureReasons.map((c,i)=><li key={i} style={{ marginBottom: 12 }}>{c}</li>)}</ul>
+                        </div>
+                      )}
+                      {!selectedJob.report.positionIntelligence.commonFailureReasons && selectedJob.report.positionIntelligence.commonReasonsCandidatesFail && selectedJob.report.positionIntelligence.commonReasonsCandidatesFail.length > 0 && (
+                        <div>
+                          <div style={{ fontSize: isMobile ? 18 : 24, fontWeight: 600, color: "var(--text-primary)", letterSpacing: "-0.01em", marginBottom: 16 }}>Reasons Candidates Fail</div>
+                          <ul style={{ margin: 0, paddingLeft: 24, fontSize: isMobile ? 15 : 17, lineHeight: 1.8, color: "var(--text-primary)" }}>{selectedJob.report.positionIntelligence.commonReasonsCandidatesFail.map((c,i)=><li key={i} style={{ marginBottom: 12 }}>{c}</li>)}</ul>
+                        </div>
+                      )}
                     </div>
                   </div>
                   )}
@@ -4582,14 +4848,24 @@ ${r.booleanSearch || "Not generated yet."}
                     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
                       <h3 style={{ fontSize: isMobile ? 22 : 30, fontWeight: 700, margin: 0, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>Talent Market Insight</h3>
                       <div style={{ display: "flex", flexDirection: "column", gap: 16, fontSize: isMobile ? 15 : 17, lineHeight: 1.8, color: "var(--text-primary)" }}>
-                        <div><strong style={{ color: "var(--text-secondary)" }}>Talent Pool Difficulty:</strong> {selectedJob.report.talentMarketInsight.talentPoolDifficulty}</div>
-                        <div><strong style={{ color: "var(--text-secondary)" }}>Counter Offer Risk:</strong> {selectedJob.report.talentMarketInsight.counterOfferRisk}</div>
-                        <div><strong style={{ color: "var(--text-secondary)" }}>Salary Competitiveness:</strong> {selectedJob.report.talentMarketInsight.salaryCompetitiveness}</div>
-                        <div><strong style={{ color: "var(--text-secondary)" }}>Notice Period Risk:</strong> {selectedJob.report.talentMarketInsight.noticePeriodRisk}</div>
-                        <div>
-                          <strong style={{ color: "var(--text-secondary)" }}>Hiring Challenges:</strong> 
-                          <ul style={{ margin: "8px 0 0", paddingLeft: 24 }}>{selectedJob.report.talentMarketInsight.hiringChallenges?.map((c,i)=><li key={i} style={{ marginBottom: 12 }}>{c}</li>)}</ul>
-                        </div>
+                        {selectedJob.report.talentMarketInsight.talentPoolDifficulty && (
+                          <div><strong style={{ color: "var(--text-secondary)" }}>Talent Pool Difficulty:</strong> {selectedJob.report.talentMarketInsight.talentPoolDifficulty}</div>
+                        )}
+                        {selectedJob.report.talentMarketInsight.counterOfferRisk && (
+                          <div><strong style={{ color: "var(--text-secondary)" }}>Counter Offer Risk:</strong> {selectedJob.report.talentMarketInsight.counterOfferRisk}</div>
+                        )}
+                        {selectedJob.report.talentMarketInsight.salaryCompetitiveness && (
+                          <div><strong style={{ color: "var(--text-secondary)" }}>Salary Competitiveness:</strong> {selectedJob.report.talentMarketInsight.salaryCompetitiveness}</div>
+                        )}
+                        {selectedJob.report.talentMarketInsight.noticePeriodRisk && (
+                          <div><strong style={{ color: "var(--text-secondary)" }}>Notice Period Risk:</strong> {selectedJob.report.talentMarketInsight.noticePeriodRisk}</div>
+                        )}
+                        {selectedJob.report.talentMarketInsight.hiringChallenges && selectedJob.report.talentMarketInsight.hiringChallenges.length > 0 && (
+                          <div>
+                            <strong style={{ color: "var(--text-secondary)" }}>Hiring Challenges:</strong> 
+                            <ul style={{ margin: "8px 0 0", paddingLeft: 24 }}>{selectedJob.report.talentMarketInsight.hiringChallenges.map((c,i)=><li key={i} style={{ marginBottom: 12 }}>{c}</li>)}</ul>
+                          </div>
+                        )}
                       </div>
                     </div>
                     )}
@@ -4604,7 +4880,7 @@ ${r.booleanSearch || "Not generated yet."}
                       </div>
                     </div>
                     )}
-                    {selectedJob.report.candidateSellingPoints && (
+                    {selectedJob.report.candidateSellingPoints && selectedJob.report.candidateSellingPoints.length > 0 && (
                     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
                       <h3 style={{ fontSize: isMobile ? 22 : 30, fontWeight: 700, margin: 0, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>Selling Points</h3>
                       <ul style={{ margin: 0, paddingLeft: 24, fontSize: isMobile ? 15 : 17, lineHeight: 1.8, color: "var(--text-primary)" }}>
@@ -4631,29 +4907,198 @@ ${r.booleanSearch || "Not generated yet."}
                     </div>
                   </div>
 
-                  {/* 7. Social Post */}
+                  {/* Extended Discovery Questions */}
+                  {selectedJob.report.discoveryQuestions && selectedJob.report.discoveryQuestions.length > 0 && (
                   <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <h3 style={{ fontSize: isMobile ? 22 : 30, fontWeight: 700, margin: 0, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>Social Post</h3>
-                      <button 
-                        onClick={() => handleCopySection(selectedJob.report.socialPost || "", "Social Post")}
-                        style={{ 
-                          display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", 
-                          background: "transparent", border: "1px solid var(--border-color)", 
-                          borderRadius: 6, fontSize: 13, color: "var(--text-primary)", cursor: "pointer",
-                          fontWeight: 500, transition: "all 0.2s"
-                        }}
-                        onMouseEnter={e => e.currentTarget.style.background = "rgba(0,0,0,0.03)"}
-                        onMouseLeave={e => e.currentTarget.style.background = "transparent"}
-                      >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                        Copy
-                      </button>
-                    </div>
-                    <div style={{ fontFamily: "var(--font-mono)", color: "var(--text-primary)", fontSize: 15, lineHeight: 1.8, whiteSpace: "pre-wrap", background: "rgba(0,0,0,0.02)", padding: 24, borderRadius: 12 }}>
-                      {selectedJob.report.socialPost || "Not generated yet."}
+                    <h3 style={{ fontSize: 30, fontWeight: 700, margin: 0, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>Discovery Questions</h3>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+                      {selectedJob.report.discoveryQuestions.map((dq, idx) => (
+                        <div key={idx} style={{ padding: 24, background: "var(--bg-glass)", border: "1px solid var(--border-color)", borderRadius: 16, display: "flex", flexDirection: "column", gap: 16 }}>
+                          <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+                            <div style={{ fontSize: 18, fontWeight: 700, color: "var(--text-primary)" }}>
+                              {idx + 1}. {dq.question}
+                            </div>
+                            <div style={{ display: "flex", gap: 8 }}>
+                              {dq.priority && (
+                                <span style={{ 
+                                  background: dq.priority.toLowerCase().includes("high") ? "rgba(239, 68, 68, 0.08)" : "rgba(99, 102, 241, 0.08)",
+                                  color: dq.priority.toLowerCase().includes("high") ? "#ef4444" : "#6366f1",
+                                  padding: "4px 12px", borderRadius: 100, fontSize: 12, fontWeight: 600
+                                }}>
+                                  Priority: {dq.priority}
+                                </span>
+                              )}
+                              {dq.category && (
+                                <span style={{ background: "rgba(139, 92, 246, 0.08)", color: "#8b5cf6", padding: "4px 12px", borderRadius: 100, fontSize: 12, fontWeight: 600 }}>
+                                  {dq.category}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16, fontSize: 14 }}>
+                            {dq.whyAsk && (
+                              <div>
+                                <strong style={{ color: "var(--text-secondary)", display: "block", marginBottom: 4 }}>Why we ask this:</strong>
+                                <span style={{ color: "var(--text-primary)", lineHeight: 1.6 }}>{dq.whyAsk}</span>
+                              </div>
+                            )}
+                            {dq.impact && (
+                              <div>
+                                <strong style={{ color: "var(--text-secondary)", display: "block", marginBottom: 4 }}>Impact on search:</strong>
+                                <span style={{ color: "var(--text-primary)", lineHeight: 1.6 }}>{dq.impact}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
+                  )}
+
+                  {/* Extended Sourcing & Pitching Strategy */}
+                  {selectedJob.report.sourcingStrategy && (
+                    (selectedJob.report.sourcingStrategy.priorityCompanies && selectedJob.report.sourcingStrategy.priorityCompanies.length > 0) ||
+                    (selectedJob.report.sourcingStrategy.booleanSearchQueries && selectedJob.report.sourcingStrategy.booleanSearchQueries.length > 0) ||
+                    (selectedJob.report.sourcingStrategy.pitchingStrategies && selectedJob.report.sourcingStrategy.pitchingStrategies.length > 0) ||
+                    (selectedJob.report.sourcingStrategy.objectionHandling && selectedJob.report.sourcingStrategy.objectionHandling.length > 0) ||
+                    (selectedJob.report.sourcingStrategy.headhunterNotes && selectedJob.report.sourcingStrategy.headhunterNotes.length > 0)
+                  ) && (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+                      <h3 style={{ fontSize: isMobile ? 22 : 30, fontWeight: 700, margin: 0, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>Sourcing & Pitching Strategy</h3>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
+                        
+                        {selectedJob.report.sourcingStrategy.priorityCompanies && selectedJob.report.sourcingStrategy.priorityCompanies.length > 0 && (
+                          <div>
+                            <div style={{ fontSize: 18, fontWeight: 600, color: "var(--text-primary)", marginBottom: 12 }}>Priority Target Companies</div>
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                              {selectedJob.report.sourcingStrategy.priorityCompanies.map((c, i) => (
+                                <span key={i} style={{ background: "rgba(99, 102, 241, 0.05)", color: "#4f46e5", padding: "6px 12px", borderRadius: 8, fontSize: 14, fontWeight: 500, border: "1px solid rgba(99, 102, 241, 0.1)" }}>{c}</span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {selectedJob.report.sourcingStrategy.booleanSearchQueries && selectedJob.report.sourcingStrategy.booleanSearchQueries.length > 0 && (
+                          <div>
+                            <div style={{ fontSize: 18, fontWeight: 600, color: "var(--text-primary)", marginBottom: 12 }}>Sourcing Boolean Queries</div>
+                            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                              {selectedJob.report.sourcingStrategy.booleanSearchQueries.map((q, i) => (
+                                <div key={i} style={{ display: "flex", gap: 12, alignItems: "stretch" }}>
+                                  <div style={{ flex: 1, fontFamily: "var(--font-mono)", color: "var(--text-primary)", fontSize: 14, background: "rgba(0,0,0,0.02)", padding: "12px 16px", borderRadius: 8, border: "1px solid var(--border-color)", lineHeight: 1.6 }}>{q}</div>
+                                  <button 
+                                    onClick={() => handleCopySection(q, `Query ${i + 1}`)} 
+                                    style={{ 
+                                      padding: "0 16px", background: "transparent", border: "1px solid var(--border-color)", 
+                                      borderRadius: 8, fontSize: 13, color: "var(--text-primary)", cursor: "pointer", 
+                                      fontWeight: 500, display: "flex", alignItems: "center", transition: "all 0.2s" 
+                                    }}
+                                    onMouseEnter={e => e.currentTarget.style.background = "rgba(0,0,0,0.03)"}
+                                    onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                                  >
+                                    Copy
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {selectedJob.report.sourcingStrategy.pitchingStrategies && selectedJob.report.sourcingStrategy.pitchingStrategies.length > 0 && (
+                          <div>
+                            <div style={{ fontSize: 18, fontWeight: 600, color: "var(--text-primary)", marginBottom: 12 }}>Pitching Strategies & Hooks</div>
+                            <ul style={{ margin: 0, paddingLeft: 24, fontSize: 16, lineHeight: 1.8, color: "var(--text-primary)" }}>
+                              {selectedJob.report.sourcingStrategy.pitchingStrategies.map((item, i) => <li key={i} style={{ marginBottom: 8 }}>{item}</li>)}
+                            </ul>
+                          </div>
+                        )}
+
+                        {selectedJob.report.sourcingStrategy.objectionHandling && selectedJob.report.sourcingStrategy.objectionHandling.length > 0 && (
+                          <div>
+                            <div style={{ fontSize: 18, fontWeight: 600, color: "var(--text-primary)", marginBottom: 16 }}>Objection Handling</div>
+                            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                              {selectedJob.report.sourcingStrategy.objectionHandling.map((oh, i) => (
+                                <div key={i} style={{ padding: 16, background: "rgba(245, 158, 11, 0.02)", border: "1px solid rgba(245, 158, 11, 0.15)", borderRadius: 12 }}>
+                                  <div style={{ fontWeight: 700, color: "#d97706", marginBottom: 6, display: "flex", alignItems: "center", gap: 6 }}>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                                    Objection: {oh.objection}
+                                  </div>
+                                  <div style={{ fontSize: 15, color: "var(--text-primary)", lineHeight: 1.6, paddingLeft: 20 }}>{oh.handling}</div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {selectedJob.report.sourcingStrategy.headhunterNotes && selectedJob.report.sourcingStrategy.headhunterNotes.length > 0 && (
+                          <div style={{ background: "rgba(16, 185, 129, 0.02)", border: "1.5px solid rgba(16, 185, 129, 0.12)", borderRadius: 16, padding: 24 }}>
+                            <div style={{ fontSize: 18, fontWeight: 700, color: "#059669", marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
+                              <span style={{ display: "inline-block", width: 8, height: 8, background: "#10b981", borderRadius: "50%" }}></span>
+                              Internal Recruiter/Headhunter Notes
+                            </div>
+                            <ul style={{ margin: 0, paddingLeft: 20, fontSize: 15, lineHeight: 1.7, color: "var(--text-primary)" }}>
+                              {selectedJob.report.sourcingStrategy.headhunterNotes.map((item, i) => <li key={i} style={{ marginBottom: 8 }}>{item}</li>)}
+                            </ul>
+                          </div>
+                        )}
+
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 7. Social Outreach Posts */}
+                  {(selectedJob.report.socialPost || (selectedJob.report.socialMediaPost && selectedJob.report.socialMediaPost.facebookPost)) && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+                    <h3 style={{ fontSize: isMobile ? 22 : 30, fontWeight: 700, margin: 0, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>Social Media Outreach Posts</h3>
+                    
+                    {selectedJob.report.socialPost && (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <span style={{ fontSize: 16, fontWeight: 600, color: "var(--text-secondary)" }}>LinkedIn / Standard Outreach Post</span>
+                          <button 
+                            onClick={() => handleCopySection(selectedJob.report.socialPost || "", "Outreach Post")}
+                            style={{ 
+                              display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", 
+                              background: "transparent", border: "1px solid var(--border-color)", 
+                              borderRadius: 6, fontSize: 13, color: "var(--text-primary)", cursor: "pointer",
+                              fontWeight: 500, transition: "all 0.2s"
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.background = "rgba(0,0,0,0.03)"}
+                            onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                          >
+                            Copy
+                          </button>
+                        </div>
+                        <div style={{ fontFamily: "var(--font-mono)", color: "var(--text-primary)", fontSize: 14, lineHeight: 1.8, whiteSpace: "pre-wrap", background: "rgba(0,0,0,0.02)", padding: 20, borderRadius: 12, border: "1px solid var(--border-color)" }}>
+                          {selectedJob.report.socialPost}
+                        </div>
+                      </div>
+                    )}
+
+                    {selectedJob.report.socialMediaPost && selectedJob.report.socialMediaPost.facebookPost && (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 12 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <span style={{ fontSize: 16, fontWeight: 600, color: "var(--text-secondary)" }}>Facebook Outreach Post</span>
+                          <button 
+                            onClick={() => handleCopySection(selectedJob.report.socialMediaPost?.facebookPost || "", "Facebook Post")}
+                            style={{ 
+                              display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", 
+                              background: "transparent", border: "1px solid var(--border-color)", 
+                              borderRadius: 6, fontSize: 13, color: "var(--text-primary)", cursor: "pointer",
+                              fontWeight: 500, transition: "all 0.2s"
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.background = "rgba(0,0,0,0.03)"}
+                            onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                          >
+                            Copy
+                          </button>
+                        </div>
+                        <div style={{ fontFamily: "var(--font-mono)", color: "var(--text-primary)", fontSize: 14, lineHeight: 1.8, whiteSpace: "pre-wrap", background: "rgba(0,0,0,0.02)", padding: 20, borderRadius: 12, border: "1px solid var(--border-color)" }}>
+                          {selectedJob.report.socialMediaPost.facebookPost}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  )}
 
                   {/* 8. Boolean Search */}
                   {selectedJob.report.booleanSearchQueries ? (
@@ -4773,6 +5218,162 @@ ${r.booleanSearch || "Not generated yet."}
                       </ul>
                     </div>
                   </div>
+
+                  {/* Dynamic Sections */}
+                  {(() => {
+                    /*
+                     * Schema Version History:
+                     * - v1: Original schema with basic fixed recruitment report fields
+                     * - v2: Extended schema with more detailed insights (e.g. competitorCompanies, positionIntelligence, talentMarketInsight, etc.)
+                     * - v3: Dynamic Sections support (unmapped markdown sections parsed as custom cards)
+                     * - v4+: Reserved for future custom fields and user configurations
+                     */
+                    const reportSchemaVersion = selectedJob.report.schemaVersion || "v1";
+
+                    // Dynamic sections should only render when version is "v3" OR dynamicSections is an array
+                    const shouldRenderDynamicSections = reportSchemaVersion === "v3" || Array.isArray(selectedJob.report.dynamicSections);
+                    if (!shouldRenderDynamicSections) return null;
+
+                    const existingSectionTitles = [
+                      "role overview",
+                      "company context",
+                      "candidate persona",
+                      "competitor companies",
+                      "position intelligence",
+                      "talent market insight",
+                      "recruitment strategy",
+                      "selling points",
+                      "must have",
+                      "nice to have",
+                      "discovery questions",
+                      "sourcing & pitching strategy",
+                      "social media outreach posts",
+                      "boolean search",
+                      "questions for client",
+                      "interview questions"
+                    ];
+
+                    const validDynamicSections = (selectedJob.report.dynamicSections || []).filter((section: any) => {
+                      if (!section) return false;
+                      // 4. Do not render empty cards: title empty AND content empty -> skip.
+                      if (!section.title?.trim() && !section.content?.trim()) return false;
+                      // 8. Do not duplicate sections already rendered elsewhere.
+                      const lowerTitle = section.title?.trim().toLowerCase();
+                      if (existingSectionTitles.includes(lowerTitle)) return false;
+                      return true;
+                    });
+
+                    if (validDynamicSections.length === 0) return null;
+
+                    const sectionsToRender = showAllDynamicSections ? validDynamicSections : validDynamicSections.slice(0, 5);
+
+                    return (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 24, marginTop: 16 }}>
+                        {/* 2. Create a dedicated section: # Additional Insights */}
+                        <div style={{ borderTop: "1px solid var(--border-color)", paddingTop: 32 }}>
+                          <h3 id="additional-insights" style={{ fontSize: 30, fontWeight: 700, margin: "0 0 24px 0", color: "var(--text-primary)", letterSpacing: "-0.01em" }}>
+                            Additional Insights
+                          </h3>
+                          
+                          {/* 7. Preserve existing Bento Grid layout and responsive design */}
+                          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: isMobile ? 24 : 32 }}>
+                            {sectionsToRender.map((section: any, sIdx: number) => (
+                              <div 
+                                // 6. Use stable React key: section.id || section.title || index
+                                key={section.id || section.title || sIdx} 
+                                style={{ 
+                                  display: "flex", 
+                                  flexDirection: "column", 
+                                  gap: 20, 
+                                  padding: 28, 
+                                  background: "var(--bg-glass, rgba(255,255,255,0.015))", 
+                                  borderRadius: 16, 
+                                  border: "1px solid var(--border-color)" 
+                                }}
+                              >
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+                                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                                    {/* 3. Each card should display title (large heading) */}
+                                    <h4 style={{ fontSize: 22, fontWeight: 700, margin: 0, color: "var(--text-primary)", letterSpacing: "-0.01em", lineHeight: 1.3 }}>
+                                      {section.title || "Untitled Insight"}
+                                    </h4>
+                                    
+                                    {/* 3. Optional category badge (if category exists) */}
+                                    {/* 5. Support backward compatibility: title, category, id, content */}
+                                    {section.category && (
+                                      <span style={{ 
+                                        alignSelf: "flex-start",
+                                        background: "rgba(99, 102, 241, 0.08)", 
+                                        color: "#6366f1", 
+                                        padding: "4px 12px", 
+                                        borderRadius: 100, 
+                                        fontSize: 12, 
+                                        fontWeight: 600,
+                                        marginTop: 4
+                                      }}>
+                                        {section.category}
+                                      </span>
+                                    )}
+                                  </div>
+                                  
+                                  <button 
+                                    onClick={() => handleCopySection(section.content || "", section.title || "Insight")}
+                                    style={{ 
+                                      display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", 
+                                      background: "transparent", border: "1px solid var(--border-color)", 
+                                      borderRadius: 6, fontSize: 13, color: "var(--text-primary)", cursor: "pointer",
+                                      fontWeight: 500, transition: "all 0.2s", flexShrink: 0
+                                    }}
+                                    onMouseEnter={e => e.currentTarget.style.background = "rgba(0,0,0,0.03)"}
+                                    onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                                  >
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                                    Copy
+                                  </button>
+                                </div>
+                                
+                                {/* 3. markdown content rendered properly inside SafeMarkdown */}
+                                <div className="markdown-body" style={{ fontSize: 16, lineHeight: 1.7, color: "var(--text-primary)" }}>
+                                  <SafeMarkdown>
+                                    {section.content || ""}
+                                  </SafeMarkdown>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* 9. If there are more than 5 dynamic sections: collapse them behind a "Show More" button */}
+                          {validDynamicSections.length > 5 && (
+                            <div style={{ display: "flex", justifyContent: "center", marginTop: 32 }}>
+                              <button
+                                onClick={() => setShowAllDynamicSections(!showAllDynamicSections)}
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 8,
+                                  padding: "10px 24px",
+                                  background: "var(--primary-color, #6366f1)",
+                                  color: "white",
+                                  border: "none",
+                                  borderRadius: 10,
+                                  fontSize: 15,
+                                  fontWeight: 600,
+                                  cursor: "pointer",
+                                  boxShadow: "0 4px 10px rgba(99, 102, 241, 0.2)",
+                                  transition: "all 0.2s"
+                                }}
+                                onMouseEnter={e => e.currentTarget.style.background = "#4f46e5"}
+                                onMouseLeave={e => e.currentTarget.style.background = "var(--primary-color, #6366f1)"}
+                              >
+                                {showAllDynamicSections ? "Show Less" : `Show More (${validDynamicSections.length - 5} sections hidden)`}
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
                 </div>
               )}
               </div>

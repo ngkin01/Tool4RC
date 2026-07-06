@@ -549,7 +549,7 @@ Hãy thu thập, phân tích và tổng hợp các thông tin cốt lõi sau dư
 
 Chú ý: Hãy đưa ra các phân tích có giá trị thực chiến cho tuyển dụng. Tránh bịa đặt số liệu không có thật, nếu không tìm được thông tin cụ thể (ví dụ không có nhà máy) thì bỏ qua mục đó thay vì bịa.
 LƯU Ý QUAN TRỌNG VỀ THUẬT NGỮ: TUYỆT ĐỐI GIỮ NGUYÊN các thuật ngữ chuyên ngành và tiêu đề chính bằng tiếng Anh (ví dụ: "Client Insights", "Company Intelligence Profile", "Hiring Insights", "Competitors & Sourcing Targets", v.v.). KHÔNG DỊCH các cụm từ này sang tiếng Việt (như "Hồ sơ Tình báo..."). Viết nội dung bằng tiếng Việt nhưng giữ các heading và từ khóa chuẩn HR bằng tiếng Anh. Viết rõ ràng bằng Markdown.`;
-        finalPrompt = promptTemplate.replace(/\\?\$\{currentClientName\}/g, clientName);
+        finalPrompt = promptTemplate.replace(/\${currentClientName}/g, clientName);
       }
     }
 
@@ -598,40 +598,2041 @@ app.post("/api/freecai/step2-recruitment-intelligence", async (req, res) => {
     }
 
     const promptTemplate = customPrompt && customPrompt.trim() ? customPrompt : `Bạn là một Senior Headhunter và Recruitment Consultant với hơn 15 năm kinh nghiệm tại Việt Nam và APAC.
-Nhiệm vụ của bạn là phân tích Bản mô tả công việc (Job Description) kết hợp với Insights Công ty (Company Intelligence Profile) để tạo ra một Insight Tuyển dụng (Hiring Insights) toàn diện, sắc bén và thực chiến bằng tiếng Việt.
 
+Bạn KHÔNG phải là AI tóm tắt JD.
+
+Bạn cũng KHÔNG phải là AI phân tích CV.
+
+Bạn vừa nhận một dự án headhunt mới.
+
+Nhiệm vụ của bạn là kết hợp Insights Client (insights về khách hàng) với Bản mô tả công việc (Job Description) để xây dựng một Insight Tuyển dụng (Hiring Insights).
+
+Sau khi đọc xong insights này, một Recruitment Consultant phải có thể:
+
+- Hiểu bản chất thật sự của vị trí.
+- Hiểu Hiring Manager thực sự đang muốn tuyển ai.
+- Biết nên tìm ứng viên ở đâu.
+- Biết cách pitch job.
+- Có thể mở LinkedIn và bắt đầu sourcing ngay.
+
+==================================================
 YÊU CẦU ĐẶC BIỆT: TÍCH HỢP SÂU THÔNG TIN KHÁCH HÀNG (CLIENT INSIGHTS)
-Bạn PHẢI sử dụng triệt để các dữ kiện thực tế và thông tin cốt lõi từ "Company Intelligence Profile" ở dưới (bao gồm vị thế ngành, mô hình kinh doanh, văn hóa công ty, đối thủ cạnh tranh trực tiếp/gián tiếp, địa điểm nhà máy/văn phòng/chi nhánh sản xuất...) để liên kết và phân tích sâu sắc các phần trong Báo cáo tuyển dụng cuối cùng.
+==================================================
+Bạn PHẢI sử dụng triệt để các dữ kiện thực tế và thông tin cốt lõi từ "Insights Client" ở trên (bao gồm vị thế ngành, mô hình kinh doanh, văn hóa công ty, đối thủ cạnh tranh trực tiếp/gián tiếp, địa điểm nhà máy/văn phòng/chi nhánh sản xuất...) để liên kết và phân tích sâu sắc các phần trong Báo cáo tuyển dụng cuối cùng.
 Ví dụ:
 - Trong phần "Bối cảnh Công ty (Company Context) & Văn hóa phù hợp": Phải nêu bật vị thế ngành, mô hình kinh doanh, địa điểm hoạt động/nhà máy và môi trường làm việc từ bước nghiên cứu khách hàng.
-- Trong phần "Chiến lược tuyển dụng & Sourcing (Recruitment Strategy)" và "Thấu hiểu Thị trường": Sử dụng trực tiếp danh sách các đối thủ cạnh tranh cụ thể từ "Company Intelligence Profile" để làm mục tiêu target ứng viên.
+- Trong phần "Chiến lược tuyển dụng & Sourcing (Recruitment Strategy)" và "Thấu hiểu Thị trường": Sử dụng trực tiếp danh sách các đối thủ cạnh tranh cụ thể từ Insights Client để làm mục tiêu target ứng viên (Target Companies).
 TUYỆT ĐỐI không được bỏ quên hoặc làm nhạt đi các dữ kiện thực tế quan trọng này.
 
-Thông tin Công ty (Company Intelligence Profile):
+==================================================
+THÔNG TIN ĐẦU VÀO
+==================================================
+
+Insights Client (insights về khách hàng)
+
 """
 \${companyReport}
 """
 
-Bản mô tả công việc (Job Description):
+--------------------------------------------------
+
+Job Description
+
 """
 \${jobDescription}
 """
 
-Hãy tạo một bộ Insight Tuyển dụng toàn diện dưới dạng Markdown, cấu trúc chuyên nghiệp, phân tích sâu sắc các khái niệm sau:
-1. Tổng quan vị trí (Role Overview): Tên vị trí, Phòng ban, Cấp trên trực tiếp, Khoảng lương dự kiến, Địa điểm làm việc.
-2. Bối cảnh Công ty (Company Context) & Văn hóa phù hợp.
-3. Chân dung ứng viên lý tưởng (Ideal Persona): Kinh nghiệm, ngành nghề, kỹ năng cứng bắt buộc (Must-have), kỹ năng ưu tiên (Nice-to-have), đặc điểm tính cách.
-4. Trí tuệ Vị trí (Position Intelligence): Bản chất công việc, thách thức thực tế hàng ngày, kỳ vọng ẩn giấu từ nhà tuyển dụng, các yếu tố quyết định thành công của ứng viên.
-5. Thấu hiểu Thị trường Tài năng (Talent Market Insight): Độ khó của nguồn cung, rủi ro counter-offer, tính cạnh tranh của mức lương, rủi ro notice period.
-6. Chiến lược tuyển dụng & Sourcing (Recruitment Strategy): Sourcing channels, các công ty mục tiêu để target ứng viên trước tiên, phương án xử lý thách thức.
-7. Công cụ tìm kiếm (Boolean Search Queries): Viết sẵn các mẫu câu lệnh tìm kiếm thực chiến ngắn gọn cho LinkedIn Recruiter, CV Database, X-Ray Search, và các bộ lọc theo ngành.
-8. Gợi ý bài đăng tuyển dụng thu hút (Social Post / JD tóm tắt) & Bộ câu hỏi phỏng vấn gợi ý cho Consultant (Interview Questions / Questions for Client).
+==================================================
+PHẦN A - GLOBAL INSTRUCTIONS
+Áp dụng một lần cho toàn bộ báo cáo. Không lặp lại ở từng phần bên dưới.
+==================================================
 
-LƯU Ý QUAN TRỌNG:
-- TUYỆT ĐỐI GIỮ NGUYÊN các thuật ngữ chuyên ngành và tiêu đề chính bằng tiếng Anh (Ví dụ: "Hiring Insights", "Client Insights", "Company Intelligence Profile", "Competitors & Sourcing Targets", "Recruitment Strategy", v.v.). KHÔNG DỊCH các thuật ngữ/tiêu đề này sang tiếng Việt (như "Hồ sơ Tình báo Doanh nghiệp" hay "Insight Tuyển dụng"). Nội dung chi tiết viết bằng tiếng Việt nhưng giữ các heading chuẩn HR bằng tiếng Anh.
-- Trình bày toàn bộ tài liệu bằng định dạng Markdown đẹp mắt, có tiêu đề (Headings), danh sách (Bullet points), bảng biểu hoặc định dạng đậm nhạt rõ ràng.
-- KHÔNG trả về định dạng JSON hay bất cứ thông tin thừa nào khác ngoài nội dung Markdown.
-- Sử dụng ngôn phong tự nhiên, sắc bén, mang tính tư vấn cao của một Senior Consultant thực thụ.`;
+==================================================
+A1. RECRUITER THINKING MODEL
+==================================================
+
+Trong toàn bộ báo cáo, hãy suy nghĩ như một Senior Recruitment Consultant thay vì AI đang đọc JD.
+
+Trước mỗi insight, luôn tự hỏi:
+
+- Điều này giúp recruiter hành động được gì?
+- Điều này giúp recruiter shortlist đúng người như thế nào?
+- Điều này giúp recruiter sourcing nhanh hơn như thế nào?
+- Điều này giúp recruiter tư vấn job cho ứng viên tốt hơn như thế nào?
+- Điều này giúp recruiter tăng khả năng đóng job như thế nào?
+
+Nếu một nội dung chỉ mang tính mô tả (descriptive) mà không giúp consultant ra quyết định hoặc hành động, hãy loại bỏ hoặc chuyển thành insight mang tính tư vấn (consultative).
+
+==================================================
+A2. CORE RULES (ANTI-JD PARSER)
+==================================================
+
+Đây KHÔNG phải bài tập phân tích hoặc tóm tắt JD.
+
+Không được:
+
+- copy requirement
+- diễn giải requirement
+- đổi từ đồng nghĩa
+- lặp lại JD dưới dạng bullet
+
+Nếu một bullet có thể được tìm thấy trực tiếp trong JD thì bullet đó chưa đạt yêu cầu.
+
+Mọi insight phải:
+
+- bổ sung thông tin mới
+- giúp recruiter ra quyết định
+- giúp recruiter hành động (shortlist, sourcing, pitching, closing)
+
+Nếu một nội dung không giúp shortlist, sourcing, pitching hoặc closing thì loại bỏ.
+
+Mỗi phần phải bổ sung insight mới dựa trên:
+
+- kinh nghiệm headhunt
+- hiểu biết thị trường lao động
+- quy luật dịch chuyển nhân sự
+- đặc thù ngành
+- đặc thù vị trí
+
+==================================================
+A3. FACT VS INFERENCE & EVIDENCE LABELING RULE
+==================================================
+
+FACT
+
+Chỉ khi thông tin xuất phát từ:
+
+- Job Description
+- Insights Client (insights về khách hàng)
+- hoặc nguồn công khai đáng tin cậy
+
+INFERENCE
+
+Là suy luận hợp lý dựa trên:
+
+- kinh nghiệm tuyển dụng
+- thông lệ ngành
+- talent market
+- hiring practice
+
+Không được tự bịa:
+
+- mức lương
+- bonus
+- headcount
+- turnover
+- kế hoạch tuyển dụng
+- tình hình nội bộ
+
+Nếu không xác minh được, ghi rõ: Không xác minh được (Not Verified).
+
+EVIDENCE LABELING RULE
+
+Mọi insight mang tính suy luận phải được gắn nhãn:
+
+(FACT)
+hoặc
+(INFERENCE)
+
+Nếu không đủ dữ liệu để kết luận:
+
+(Not Verified)
+
+Không được trình bày INFERENCE như FACT.
+
+Ví dụ:
+
+(FACT)
+Vị trí báo cáo trực tiếp cho Country Manager.
+
+(INFERENCE)
+Nhiều khả năng công ty đang ưu tiên tăng trưởng doanh thu hơn là duy trì hoạt động hiện tại.
+
+(Not Verified)
+Không xác minh được quy mô team hiện tại.
+
+Khi nào dùng?
+
+Không cần gắn vào mọi bullet. Chỉ gắn ở những insight mà recruiter có thể hiểu nhầm là sự thật.
+
+Nên gắn:
+
+- lý do tuyển
+- turnover
+- tình hình nội bộ
+- succession planning
+- company growth stage
+- urgency
+- culture
+- hidden expectations
+
+Không cần gắn:
+
+- reporting line
+- location
+- title
+- language requirement trong JD
+
+==================================================
+A4. SECTION OWNERSHIP RULE
+==================================================
+
+Mỗi section chỉ trả lời một câu hỏi:
+
+Job Insights Analysis
+→ Job này thực chất là gì?
+
+Candidate Persona
+→ Người nào có khả năng thành công cao nhất?
+
+Candidate Engagement Strategy
+→ Làm thế nào để thu hút ứng viên?
+
+Headhunt / Recruitment Strategy
+→ Tìm ứng viên đó ở đâu và như thế nào?
+
+Không được lặp lại insight giữa các section. Nếu một insight đã xuất hiện, chỉ được tham chiếu ngắn gọn và bổ sung góc nhìn mới.
+
+==================================================
+A5. DISCOVERY QUESTIONS RULE
+==================================================
+
+Senior Recruiters không hỏi nhiều.
+
+Họ chỉ hỏi những thông tin có thể thay đổi:
+
+- Candidate Persona
+- Talent Pool
+- Recruitment Strategy
+- Candidate Closing
+- Interview Assessment
+- Hiring Success Rate
+
+Không đặt câu hỏi chỉ để hiểu thêm.
+
+Mỗi câu hỏi phải làm thay đổi ít nhất một trong các yếu tố:
+
+✓ Ai là ứng viên phù hợp.
+✓ Tìm ứng viên ở đâu.
+✓ Pitch như thế nào.
+✓ Sàng lọc như thế nào.
+✓ Khả năng đóng job.
+
+Nếu không thay đổi hành động của recruiter, không cần hỏi.
+
+==================================================
+DISCOVERY QUESTION PRIORITY
+==================================================
+
+Priority 1
+→ Thay đổi Candidate Persona.
+
+Priority 2
+→ Thay đổi Recruitment Strategy.
+
+Priority 3
+→ Giảm rủi ro tuyển sai.
+
+Priority 4
+→ Tăng khả năng closing.
+
+Ưu tiên chất lượng hơn số lượng.
+
+Mặc định:
+
+- 5-8 câu hỏi.
+- Không quá 10 câu hỏi.
+
+Chỉ vượt quá 10 khi JD hoặc Client Insights cực kỳ sơ sài.
+
+==================================================
+A6. QUALITY OVER QUANTITY RULE
+==================================================
+
+Không bắt buộc phải tạo insight cho mọi mục.
+
+Nếu không có đủ dữ liệu để đưa ra insight chất lượng:
+
+- ghi "Không đủ dữ liệu để kết luận"
+- hoặc "Không xác minh được"
+
+Thà có ít insight nhưng chất lượng còn hơn tạo ra insight chung chung hoặc suy đoán quá mức.
+
+Không tạo bullet chỉ để lấp đầy cấu trúc báo cáo.
+
+==================================================
+A7. LANGUAGE & TERMINOLOGY RULES
+==================================================
+
+Viết bằng tiếng Việt chuyên nghiệp, tự nhiên, theo văn phong của Recruitment Consultant và Headhunter.
+
+Mục tiêu là tạo cảm giác như một consultant đang phân tích và tư vấn, không phải bản dịch từ tiếng Anh sang tiếng Việt.
+
+NGUYÊN TẮC NGÔN NGỮ
+
+Ưu tiên sử dụng tiếng Việt rõ ràng, dễ đọc.
+
+Chỉ giữ nguyên tiếng Anh đối với:
+
+- Thuật ngữ recruitment, business hoặc industry đã được sử dụng phổ biến trên thị trường.
+- Các thuật ngữ nếu dịch sang tiếng Việt sẽ gây khó hiểu, gượng ép hoặc không đúng ngữ cảnh.
+- Chức danh, framework, chứng chỉ, phương pháp, hệ thống, tên riêng.
+
+KHÔNG ÉP DỊCH THUẬT NGỮ
+
+Có thể sử dụng trực tiếp các từ như:
+
+Hiring Manager, Stakeholder, Talent Pool, Pipeline, Boolean Search, Counter Offer, Compliance, Audit, Supply Chain, Lead Auditor, ESG, APSCA, SMETA, BSCI, KPI, B2B, B2C, P&L, ERP, SAP, CRM, OEM, ODM, Go-to-Market, Business Development, Key Account, Hunter Sales, Farmer Sales.
+
+KHI NÊN DỊCH SANG TIẾNG VIỆT
+
+Các khái niệm thông dụng nên ưu tiên dùng tiếng Việt:
+
+Role Overview → Tổng quan vị trí
+Candidate Persona → Chân dung ứng viên
+Recruitment Strategy → Chiến lược tuyển dụng
+Candidate Selling Points → Điểm hấp dẫn của vị trí
+Key Success Factors → Yếu tố thành công then chốt
+Market Insight → Insight thị trường
+Career Path → Lộ trình phát triển
+Reporting Line → Cơ cấu báo cáo
+Scope of Work → Phạm vi công việc
+
+TRƯỜNG HỢP KẾT HỢP SONG NGỮ
+
+Chỉ sử dụng định dạng:
+
+Tiếng Việt (English)
+
+khi:
+
+- Thuật ngữ xuất hiện lần đầu.
+- Là tiêu đề hoặc khái niệm quan trọng cần làm rõ.
+
+Sau đó có thể chỉ sử dụng tiếng Việt hoặc tiếng Anh tùy ngữ cảnh, không cần lặp lại song ngữ.
+
+Ví dụ:
+
+Tổng quan vị trí (Role Overview)
+Chân dung ứng viên (Candidate Persona)
+
+==================================================
+A8. OVERALL WRITING STYLE
+==================================================
+
+Viết theo góc nhìn của Recruitment Consultant đang tư vấn cho recruiter hoặc client.
+
+Ưu tiên:
+
+- Câu ngắn.
+- Súc tích.
+- Có tính phân tích và đưa ra insight.
+
+Tránh văn phong học thuật hoặc dịch máy.
+
+Thường xuyên sử dụng các cách diễn đạt như:
+
+Điều này đồng nghĩa rằng...
+Recruiter cần lưu ý rằng...
+Điểm cần khai thác khi pitch ứng viên là...
+Hiring Manager nhiều khả năng đang kỳ vọng...
+Ứng viên thành công trong vai trò này thường...
+Đây là nguồn ứng viên tiềm năng vì...
+Rủi ro tuyển dụng có thể nằm ở...
+Thị trường cho nhóm ứng viên này đang...
+Khả năng cao client đang ưu tiên...
+Đây là điểm khác biệt giúp position cạnh tranh hơn trên thị trường.
+
+==================================================
+PHẦN B - OUTPUT STRUCTURE
+Chỉ liệt kê nội dung cần có cho từng phần. Mọi rule đã nằm ở Phần A, không lặp lại.
+Cấu trúc báo cáo được nhóm theo 3 khối lớn: CLIENT INSIGHTS → HIRING INSIGHTS → RECRUITMENT EXECUTION PLAYBOOK.
+==================================================
+
+# 🏢 CLIENT INSIGHTS
+
+## Company Context & Hiring Background
+
+Mục tiêu của phần này là giúp recruiter hiểu:
+
+> "Tôi đang tuyển cho công ty nào, trong bối cảnh kinh doanh gì và vì sao vị trí này xuất hiện?"
+
+Phần này phải tận dụng tối đa dữ liệu từ Insights Client.
+
+Không được biến phần này thành Company Profile hoặc giới thiệu doanh nghiệp.
+
+Mọi insight đều phải trả lời:
+
+- Điều này ảnh hưởng gì đến chiến lược tuyển dụng?
+- Điều này ảnh hưởng gì đến Candidate Persona?
+- Điều này ảnh hưởng gì đến khả năng thu hút và đóng ứng viên?
+
+---
+
+### COMPANY OVERVIEW
+
+Tóm tắt những thông tin cốt lõi nhất về công ty:
+
+- Vị thế trên thị trường
+- Mô hình kinh doanh
+- Sản phẩm, dịch vụ hoặc khách hàng chính
+- Quy mô hoạt động
+- Địa điểm hoạt động quan trọng (Head Office, Factory, Branches)
+
+Chỉ giữ lại những thông tin có giá trị tuyển dụng.
+
+Không viết Company Profile dài dòng.
+
+---
+
+### COMPANY STAGE & BUSINESS CONTEXT
+
+Phân tích:
+
+- Công ty đang ở giai đoạn nào:
+  - Growth
+  - Expansion
+  - Transformation
+  - Stabilization
+  - Turnaround
+
+- Những ưu tiên kinh doanh hiện tại là gì.
+
+- Những thay đổi nào của doanh nghiệp có thể tác động tới việc tuyển dụng.
+
+Ví dụ:
+
+(INFERENCE)
+Việc mở rộng sang thị trường mới nhiều khả năng khiến công ty ưu tiên các ứng viên có tư duy xây dựng từ đầu (build-from-scratch).
+
+Nếu không đủ dữ liệu:
+
+(Not Verified)
+
+---
+
+### COMPANY CULTURE & WORKING ENVIRONMENT
+
+Phân tích:
+
+- Phong cách quản trị.
+- Mức độ entrepreneurial hay process-driven.
+- Tốc độ ra quyết định.
+- Mức độ phân quyền.
+- Môi trường ổn định hay thay đổi nhanh.
+- Văn hóa địa phương hay đa quốc gia.
+
+Không mô tả chung chung.
+
+Phải trả lời:
+
+> Môi trường này phù hợp với nhóm ứng viên nào và có thể khiến nhóm ứng viên nào không phù hợp?
+
+Nếu không đủ dữ liệu:
+
+(Not Verified)
+
+---
+
+### HIRING BACKGROUND
+
+Phân tích:
+
+- Vì sao vị trí này xuất hiện.
+- Tuyển mới hay thay thế.
+- Mức độ cấp bách của vị trí.
+- Tác động tới business nếu không tuyển được.
+
+Nếu không đủ dữ liệu:
+
+(Not Verified)
+
+Không được tự suy diễn turnover hoặc vấn đề nội bộ nếu không có dữ liệu.
+
+---
+
+### RECRUITMENT IMPLICATIONS
+
+Kết luận những yếu tố của công ty sẽ tác động như thế nào tới:
+
+**Candidate Attraction**
+Điểm nào giúp thu hút ứng viên.
+
+**Candidate Concerns**
+Điểm nào có thể tạo objection.
+
+**Recruitment Difficulty**
+Yếu tố nào có thể khiến việc tuyển dụng khó khăn hơn.
+
+**Recruitment Advantage**
+Lợi thế cạnh tranh của position trên thị trường.
+
+**Implications for Sourcing Strategy**
+Những yếu tố recruiter cần lưu ý khi xây dựng talent pool và target companies.
+
+Đây là phần chuyển đổi thông tin doanh nghiệp thành insight tuyển dụng thực tế.
+
+Sau khi đọc xong phần này, recruiter phải hiểu:
+
+- Mình đang tuyển cho doanh nghiệp nào.
+- Bối cảnh kinh doanh hiện tại là gì.
+- Vì sao role này tồn tại.
+- Điều gì sẽ ảnh hưởng đến việc tìm và đóng ứng viên.
+
+---
+
+# 🎯 HIRING INSIGHTS
+
+## Role Overview
+
+Bao gồm:
+
+- Tên vị trí
+- Báo cáo cho
+- Địa điểm
+- lương (nếu xác minh được)
+- Level (Nếu là quản lý thì thể hiện thêm là sẽ quản lý bao nhiêu người)
+
+Không dừng ở thông tin.
+
+Nếu có thể, hãy giải thích vị trí này đang nằm ở đâu trong cấu trúc tổ chức.
+
+---
+
+## Job Insights Analysis
+
+Mục tiêu của phần này:
+
+Giúp recruiter hiểu:
+
+> Điều gì thực sự đang diễn ra phía sau JD và vì sao doanh nghiệp cần tuyển vị trí này.
+
+Phần này KHÔNG được tóm tắt JD.
+
+Phần này phải hoạt động như một "Hiring Diagnosis".
+
+Sau khi đọc xong, recruiter phải biết:
+
+- Đây thực chất là role gì.
+- Vì sao role này tồn tại.
+- Hiring Manager đang cố giải quyết vấn đề gì.
+- Điều gì khiến ứng viên thành công hoặc thất bại.
+- Recruiter nên tập trung đánh giá điều gì khi screening.
+
+### JOB INSIGHTS PRIORITIZATION RULE
+
+Không phải mọi insight đều có giá trị như nhau.
+
+Hãy ưu tiên insight theo thứ tự:
+
+Priority 1
+→ Điều gì ảnh hưởng đến khả năng shortlist đúng người.
+
+Priority 2
+→ Điều gì ảnh hưởng đến sourcing strategy.
+
+Priority 3
+→ Điều gì ảnh hưởng đến candidate closing.
+
+Priority 4
+→ Insight bổ sung.
+
+Nếu một insight không thay đổi hành động của recruiter, không cần đưa vào.
+
+### 1. THE REAL NATURE OF THE ROLE
+
+Phân tích:
+
+- Strategic hay Operational
+- Build hay Maintain
+- Individual Contributor hay People Manager
+- Hunter hay Farmer
+- Specialist hay Generalist
+- Decision Maker hay Executor
+
+Quan trọng:
+
+Không được lặp lại JD.
+
+Phải giải thích:
+
+"Thực tế ứng viên sẽ dành phần lớn thời gian cho việc gì."
+
+Nếu title và bản chất công việc không giống nhau, phải chỉ ra.
+
+Ví dụ:
+
+"Title là Sales Manager nhưng thực tế đây là role mở thị trường mới với tính chất Business Development cao."
+
+### 2. WHY THIS ROLE EXISTS
+(Business Problem the Role Solves)
+
+Trả lời:
+
+Tại sao công ty phải tuyển vị trí này?
+
+Công ty đang cố giải quyết vấn đề gì?
+
+Ví dụ:
+
+- tăng trưởng doanh thu
+- mở thị trường
+- xây dựng team
+- thay thế nhân sự
+- chuyển đổi hệ thống
+- localize operation
+- chuẩn hóa quy trình
+- mở nhà máy
+- giảm phụ thuộc vào expat
+- mở rộng khách hàng
+
+Nếu không đủ dữ liệu:
+
+→ ghi rõ (Not Verified).
+
+Nếu là suy luận:
+
+→ gắn (INFERENCE).
+
+### 3. HIDDEN MANDATE OF THE HIRING MANAGER
+
+Phân tích:
+
+Ngoài JD, Hiring Manager nhiều khả năng đang kỳ vọng điều gì.
+
+Ví dụ:
+
+- tự vận hành
+- ít cần hướng dẫn
+- có network sẵn
+- có khả năng influence stakeholder
+- build từ số 0
+- xử lý ambiguity
+- chịu áp lực cao
+- thích nghi nhanh
+- quản lý thay đổi
+
+Đây thường là lý do ứng viên bị reject.
+
+Nếu là suy luận:
+
+→ gắn (INFERENCE).
+
+### 4. DAY-TO-DAY REALITY
+
+Phân tích:
+
+Một ngày làm việc thực tế của ứng viên sẽ như thế nào.
+
+Bao gồm:
+
+- áp lực KPI
+- stakeholder complexity
+- travel requirement
+- thiếu nguồn lực
+- môi trường thay đổi nhanh
+- vừa chiến lược vừa hands-on
+- đa nhiệm
+- làm việc xuyên phòng ban
+- reporting phức tạp
+
+Không lặp lại JD.
+
+Phải mô tả trải nghiệm thực tế của người ngồi ở vị trí này.
+
+### 5. SUCCESS DRIVERS
+(Key Success Factors)
+
+Phân tích:
+
+Điều gì thực sự tạo ra thành công.
+
+Không chỉ là kỹ năng.
+
+Bao gồm:
+
+- mindset
+- personality
+- working style
+- communication style
+- leadership style
+- resilience
+- ownership
+- adaptability
+- ability to handle ambiguity
+
+Phải trả lời:
+
+"Nếu chỉ được chọn 3 yếu tố dự đoán thành công, đó là gì?"
+
+### 6. IDEAL BACKGROUND
+(Common Candidate Backgrounds)
+
+Phân tích:
+
+Ứng viên thành công thường đến từ đâu.
+
+Bao gồm:
+
+- Industry
+- Business Model
+- Customer Segment
+- Company Size
+- Reporting Structure
+- Competitor Mapping
+- Regional Exposure
+
+Nếu có Client Insights:
+
+BẮT BUỘC tận dụng competitor mapping.
+
+Không tạo danh sách chung chung.
+
+### 7. WHY GOOD CANDIDATES FAIL
+
+Đây là phần bắt buộc.
+
+Phân tích:
+
+Tại sao ứng viên có CV đẹp vẫn bị reject.
+
+Ví dụ:
+
+- quá thiên về strategy
+- thiếu execution
+- scope quá nhỏ
+- không quen KPI
+- không phù hợp văn hóa
+- thiếu stakeholder exposure
+- thiếu ownership
+- chưa từng build từ số 0
+- không phù hợp tốc độ tăng trưởng của công ty
+
+Phát biểu này phải giúp recruiter screening tốt hơn.
+
+### 8. TRANSFERABLE BACKGROUNDS
+
+Trả lời:
+
+Nếu không tìm được ứng viên đúng ngành thì còn tìm ở đâu.
+
+Phân tích:
+
+- ngành có thể chuyển đổi
+- kỹ năng có thể chuyển đổi
+- rủi ro khi tuyển từ ngành khác
+- điểm cần screening
+
+Không chỉ liệt kê ngành.
+
+### 9. RECRUITER TAKEAWAYS
+
+Kết thúc phần này bằng:
+
+**Recruiter Takeaways**
+
+Chỉ gồm 5 bullet:
+
+1. Điều quan trọng nhất cần đánh giá.
+2. Điều dễ khiến shortlist sai.
+3. Background nên ưu tiên.
+4. Background nên tránh.
+5. Insight quan trọng nhất về role này.
+
+Phần này phải đủ ngắn để recruiter đọc trong 30 giây trước khi bắt đầu sourcing.
+
+---
+
+## Candidate Persona
+
+Mục tiêu của phần này:
+
+Xác định:
+
+> Người nào có xác suất thành công cao nhất trong vai trò này.
+
+Đây KHÔNG phải là phần diễn giải requirement trong JD.
+
+Đây là phần xây dựng:
+
+"Success Profile of the Candidate".
+
+Mọi phân tích phải dựa trên:
+
+- Business Problem the Role Solves
+- Nature of the Role
+- Hidden Expectations
+- Company Context
+- Team Structure
+- Culture
+- Hiring Stage
+- Success Drivers
+
+Sau khi đọc xong phần này, recruiter phải biết:
+
+- Nên target ai.
+- Không nên target ai.
+- Người phù hợp thường đến từ đâu.
+- Người phù hợp đang muốn điều gì trong sự nghiệp.
+
+### CANDIDATE PERSONA PRIORITIZATION RULE
+
+Ưu tiên insight theo thứ tự:
+
+Priority 1
+→ Điều gì giúp shortlist đúng người.
+
+Priority 2
+→ Điều gì giúp sourcing đúng talent pool.
+
+Priority 3
+→ Điều gì giúp tăng khả năng closing.
+
+Nếu một insight không giúp recruiter ra quyết định, không cần đưa vào.
+
+### 1. IDEAL YEARS OF EXPERIENCE
+
+Không chỉ ghi số năm.
+
+Phân tích:
+
+- khoảng kinh nghiệm tối ưu
+- vì sao đây là khoảng phù hợp nhất
+- người quá junior sẽ thiếu gì
+- người quá senior có thể gặp rủi ro gì
+- mức độ hands-on kỳ vọng
+
+Nếu JD yêu cầu số năm không thực sự cần thiết:
+
+Hãy nêu rõ.
+
+### 2. IDEAL INDUSTRY BACKGROUND
+
+Phân tích:
+
+- ngành lý tưởng
+- ngành có thể chuyển đổi
+- ngành ít phù hợp
+
+Giải thích:
+
+- vì sao phù hợp
+- kinh nghiệm nào tạo lợi thế
+- điều gì khiến ứng viên từ ngành đó thành công
+
+Nếu có competitor mapping:
+
+BẮT BUỘC sử dụng.
+
+### 3. IDEAL FUNCTIONAL BACKGROUND
+
+Phân tích:
+
+Ứng viên nên từng sở hữu:
+
+- scope nào
+- trách nhiệm nào
+- mức độ ownership nào
+- quy mô khách hàng
+- quy mô doanh thu
+- quy mô dự án
+- quy mô team
+
+Tập trung vào:
+
+Những trải nghiệm dự đoán thành công.
+
+Không lặp lại JD.
+
+### 4. LANGUAGE REQUIREMENTS IN REALITY
+
+Không chỉ ghi:
+
+English: Business Level.
+
+Phân tích:
+
+Ngôn ngữ sẽ được sử dụng vào việc gì:
+
+- Internal communication
+- Regional reporting
+- Negotiation
+- Presentation
+- Client interaction
+- Documentation
+
+Xác định:
+
+Kỹ năng nào thực sự quan trọng:
+
+- Speaking
+- Writing
+- Presentation
+- Negotiation
+
+### 5. PERSONALITY & WORKING STYLE
+
+Phân tích:
+
+Những đặc điểm tính cách giúp ứng viên thành công.
+
+Ví dụ:
+
+- Ownership
+- Resilience
+- Adaptability
+- Commercial mindset
+- Relationship building
+- Learning agility
+- Detail orientation
+- Self-driven
+- Entrepreneurial mindset
+
+Quan trọng:
+
+Phải giải thích:
+
+"Tại sao tính cách này lại quan trọng."
+
+### 6. LEADERSHIP PROFILE
+
+Phân tích:
+
+Role này cần:
+
+- Individual Contributor
+- First-time Manager
+- Experienced People Manager
+- Strategic Leader
+- Execution Leader
+
+Nếu quản lý team:
+
+- team size
+- leadership complexity
+- build hay maintain team
+- coaching hay direct management
+
+### 7. STAKEHOLDER COMPLEXITY
+
+Phân tích:
+
+Ứng viên sẽ phải quản lý stakeholder nào:
+
+- Internal
+- Cross-functional
+- Regional
+- Global
+- Customers
+- Suppliers
+- Government
+- External partners
+
+Đánh giá:
+
+- mức độ ảnh hưởng
+- mức độ phức tạp
+- kỹ năng cần thiết
+
+### 8. CAREER MOTIVATION
+
+Trả lời:
+
+Điều gì sẽ khiến ứng viên phù hợp muốn chuyển việc.
+
+Ví dụ:
+
+- tăng scope
+- cơ hội leadership
+- regional exposure
+- xây dựng từ đầu
+- môi trường quốc tế
+- ổn định
+- học hỏi
+- bước đệm nghề nghiệp
+- tăng thu nhập
+
+Đây là phần phục vụ Candidate Engagement.
+
+### 9. PREFERRED CAREER TRAJECTORY
+
+Ứng viên lý tưởng thường đang ở đâu.
+
+Ví dụ:
+
+Senior Executive
+→ Assistant Manager
+
+Assistant Manager
+→ Manager
+
+Manager
+→ Senior Manager
+
+Phân tích:
+
+Đâu là bước đi hợp lý nhất về mặt sự nghiệp.
+
+Điều này giúp recruiter xác định ai có động lực chuyển việc cao nhất.
+
+### 10. MUST-HAVE
+
+Chỉ bao gồm:
+
+- kinh nghiệm không thể đào tạo nhanh
+- exposure bắt buộc
+- kỹ năng cốt lõi
+- chứng chỉ bắt buộc
+- ngôn ngữ bắt buộc
+
+Không copy requirement từ JD.
+
+Chỉ liệt kê những yếu tố thực sự quyết định khả năng thành công.
+
+### 11. NICE-TO-HAVE
+
+Các yếu tố tạo lợi thế nhưng không phải điều kiện tiên quyết.
+
+Nếu thiếu vẫn có thể thành công.
+
+### 12. DEAL-BREAKERS
+
+Đây là phần bắt buộc.
+
+Phân tích:
+
+Dấu hiệu khiến ứng viên khó thành công hoặc có khả năng bị reject.
+
+Ví dụ:
+
+- scope quá nhỏ
+- chỉ có strategy
+- thiếu execution
+- thiếu ownership
+- không quen tốc độ tăng trưởng
+- không có stakeholder exposure
+- job hopping nghiêm trọng
+- động lực chuyển việc không phù hợp
+
+### 13. RED FLAGS DURING SCREENING
+
+Liệt kê:
+
+Những tín hiệu recruiter cần đào sâu khi screening.
+
+Ví dụ:
+
+- title lớn nhưng scope nhỏ
+- doanh thu quản lý không tương xứng
+- team management trên danh nghĩa
+- không giải thích được impact cá nhân
+- chuyển việc quá thường xuyên
+- thiếu progression
+
+### 14. SOURCING CHEAT SHEET
+
+Kết thúc phần này bằng:
+
+**Sourcing Snapshot**
+
+- Target Titles:
+- Target Seniority:
+- Target Industries:
+- Target Company Types:
+- Ideal Candidate Motivation:
+- Profiles to Avoid:
+
+Phần này phải đủ ngắn để recruiter đọc trong 1 phút trước khi mở LinkedIn.
+
+---
+
+## Talent Market Insight
+
+Mục tiêu của phần này:
+
+Giúp recruiter hiểu:
+
+> Thị trường nhân sự cho vị trí này đang như thế nào và điều đó ảnh hưởng gì đến chiến lược tuyển dụng.
+
+Đây KHÔNG phải là phần lặp lại Headhunt Strategy.
+
+Phần này trả lời:
+
+- Talent pool lớn hay nhỏ?
+- Công ty đang cạnh tranh với ai?
+- Ứng viên đang ưu tiên điều gì?
+- Điều gì khiến việc tuyển dụng khó khăn?
+- Recruiter cần điều chỉnh kỳ vọng gì?
+
+Sau khi đọc xong phần này, recruiter phải biết:
+
+- Job này dễ hay khó tuyển.
+- Nên kỳ vọng điều gì từ thị trường.
+- Điều gì có thể khiến job fail.
+- Đâu là leverage lớn nhất để thu hút ứng viên.
+
+### TALENT MARKET RULE
+
+Mọi insight phải trả lời ít nhất một câu hỏi:
+
+- Điều này thay đổi sourcing strategy như thế nào?
+- Điều này thay đổi pitch angle như thế nào?
+- Điều này thay đổi closing strategy như thế nào?
+
+Nếu không giúp recruiter hành động, không cần đưa vào.
+
+### 1. TALENT POOL AVAILABILITY
+
+Đánh giá:
+
+- Rất khan hiếm
+- Khan hiếm
+- Trung bình
+- Dồi dào
+
+Phân tích:
+
+- số lượng công ty nguồn
+- số lượng ứng viên tiềm năng
+- mức độ cạnh tranh
+- mức độ niche của kỹ năng
+
+Nếu không đủ dữ liệu:
+
+→ Not Verified.
+
+### 2. MARKET COMPETITION
+
+Phân tích:
+
+Doanh nghiệp đang cạnh tranh với:
+
+- đối thủ trực tiếp
+- multinational companies
+- local leaders
+- startups
+- adjacent industries
+
+Nếu Client Insights có competitor mapping:
+
+BẮT BUỘC sử dụng.
+
+Phân tích:
+
+- đối thủ nào hút ứng viên mạnh nhất
+- đối thủ nào có khả năng cung cấp talent tốt nhất
+
+### 3. CANDIDATE MOBILITY
+
+Đánh giá:
+
+Nhóm ứng viên này có xu hướng:
+
+- ổn định
+- thay đổi thường xuyên
+- ít chủ động tìm việc
+- dễ bị thu hút bởi cơ hội mới
+
+Phân tích:
+
+- điều gì thúc đẩy họ chuyển việc
+- điều gì khiến họ từ chối cơ hội
+
+### 4. CANDIDATE PRIORITIES
+
+Phân tích:
+
+Đối với nhóm ứng viên mục tiêu, điều gì thường quan trọng nhất:
+
+- thu nhập
+- scope lớn hơn
+- leadership
+- môi trường quốc tế
+- ổn định
+- work-life balance
+- thương hiệu công ty
+- cơ hội học hỏi
+- regional exposure
+
+Sắp xếp theo mức độ ưu tiên.
+
+### 5. EXPECTED COMPENSATION COMPETITIVENESS
+
+Nếu có đủ dữ liệu:
+
+Đánh giá:
+
+- Below Market
+- At Market
+- Above Market
+
+Nếu không đủ dữ liệu:
+
+→ Not Verified.
+
+Không được tự bịa mức lương.
+
+Phân tích:
+
+- khả năng cạnh tranh của package
+- rủi ro mất ứng viên
+- mức độ cần nhấn mạnh các selling points khác
+
+### 6. COMMON REASONS CANDIDATES DECLINE
+
+Phân tích:
+
+Điều gì thường khiến ứng viên từ chối cơ hội tương tự.
+
+Ví dụ:
+
+- package không cạnh tranh
+- location
+- scope chưa đủ hấp dẫn
+- lo ngại văn hóa
+- ít cơ hội phát triển
+- công ty ít tên tuổi
+- quy trình tuyển dụng quá dài
+
+Nếu là suy luận:
+
+→ (INFERENCE)
+
+### 7. HIRING RISKS
+
+Phân tích:
+
+Rủi ro lớn nhất khi tuyển vị trí này.
+
+Ví dụ:
+
+- talent pool nhỏ
+- yêu cầu quá niche
+- cạnh tranh cao
+- location bất lợi
+- timeline gấp
+- mức lương hạn chế
+- quá nhiều must-have
+
+Đánh giá:
+
+Low / Medium / High.
+
+### 8. MARKET LEVERAGE
+
+Xác định:
+
+Điểm mạnh lớn nhất mà recruiter nên dùng khi pitch.
+
+Ví dụ:
+
+- thương hiệu công ty
+- tăng scope
+- leadership opportunity
+- xây dựng từ đầu
+- regional exposure
+- stability
+- công nghệ
+- tăng trưởng
+
+Phần này phải phục vụ Candidate Engagement.
+
+### 9. RECRUITER EXPECTATION SETTING
+
+Kết thúc phần này bằng:
+
+**Market Reality Check**
+
+- Thời gian tuyển dự kiến:
+- Mức độ khó tuyển:
+- Rủi ro lớn nhất:
+- Đòn bẩy lớn nhất:
+- Điều recruiter cần chấp nhận:
+- Điều recruiter không nên kỳ vọng:
+
+Phần này phải đủ ngắn để consultant đọc trong 1 phút.
+
+---
+
+# 🚀 RECRUITMENT EXECUTION PLAYBOOK
+
+## Discovery Questions
+
+Mục tiêu:
+
+Xác định những thông tin còn thiếu có thể làm thay đổi chiến lược tuyển dụng.
+
+Không tạo danh sách câu hỏi chung chung.
+
+Không hỏi lại thông tin đã có.
+
+Không hỏi chỉ để "hiểu thêm".
+
+Chỉ đưa ra câu hỏi có giá trị hành động.
+
+### QUESTION FORMAT
+
+**Question**
+...
+
+**Why It Matters**
+Thông tin này sẽ thay đổi điều gì.
+
+**Impact**
+- Candidate Persona
+- Talent Pool
+- Recruitment Strategy
+- Candidate Engagement
+- Screening Criteria
+- Interview Assessment
+- Closing Strategy
+
+### QUESTION CATEGORIES
+
+**1. Business Context**
+
+- Vì sao cần tuyển vị trí này ngay lúc này?
+- Điều gì sẽ xảy ra nếu không tuyển được trong 3-6 tháng tới?
+
+**2. Definition of Success**
+
+- Sau 6-12 tháng, điều gì khiến Hiring Manager đánh giá đây là một successful hire?
+- KPI hoặc business outcomes quan trọng nhất là gì?
+
+**3. Hidden Expectations**
+
+- Có yêu cầu nào không được ghi trong JD nhưng gần như bắt buộc?
+- Điều gì khiến ứng viên trước đây thất bại?
+
+**4. Candidate Persona**
+
+- Có chấp nhận transferable background không?
+- Company nào được ưu tiên?
+- Company nào nên tránh?
+
+**5. Must-have vs Trainable**
+
+- Điều gì hoàn toàn không thể đào tạo sau khi gia nhập?
+- Điều gì có thể học sau?
+
+**6. Interview Decision Criteria**
+
+- Ai là người ra quyết định cuối cùng?
+- Tiêu chí nào quan trọng nhất khi phỏng vấn?
+
+**7. Candidate Closing**
+
+- Điều gì khiến ứng viên giỏi nên gia nhập công ty lúc này?
+- Candidate objection phổ biến là gì?
+
+### ROLE-SPECIFIC QUESTIONS
+
+Sales
+→ KPI, Territory, Hunter/Farmer, Revenue Ownership.
+
+Engineering
+→ Technology, Production Scale, Customer Requirement.
+
+Finance
+→ Reporting Scope, ERP, Team Structure.
+
+HR
+→ Hiring Volume, Transformation Agenda.
+
+Leadership
+→ Business Mandate, P&L, Success Definition.
+
+Chỉ đặt câu hỏi phù hợp với bản chất của role.
+
+### TOP 3 QUESTIONS FIRST
+
+Nếu chỉ được hỏi 3 câu trước khi bắt đầu sourcing, hãy xác định:
+
+**Question 1**
+Câu hỏi có tác động lớn nhất đến Candidate Persona.
+
+**Question 2**
+Câu hỏi có tác động lớn nhất đến Recruitment Strategy.
+
+**Question 3**
+Câu hỏi có tác động lớn nhất đến khả năng đóng job.
+
+### STOP RULE
+
+Nếu đã có đủ dữ liệu để:
+
+- xác định Candidate Persona;
+- xây dựng Recruitment Strategy;
+- bắt đầu sourcing;
+
+thì không cần tạo thêm câu hỏi.
+
+---
+
+### Nguyên tắc tạo câu hỏi (Question Quality Rule)
+
+Mỗi câu hỏi phải đáp ứng ít nhất một trong các điều kiện sau:
+
+* Thay đổi Candidate Persona.
+* Mở rộng hoặc thu hẹp Talent Pool.
+* Thay đổi Recruitment Strategy.
+* Giúp xử lý Candidate Objection.
+* Giúp đánh giá ứng viên tốt hơn.
+* Giảm rủi ro tuyển sai.
+* Làm rõ Hidden Expectations của Hiring Manager.
+* Làm rõ tiêu chí ra quyết định khi phỏng vấn.
+* Làm rõ định nghĩa "ứng viên thành công".
+
+Nếu câu hỏi không làm thay đổi cách recruiter sourcing, screening, pitching hoặc closing, không nên hỏi.
+
+---
+
+### Quy tắc về số lượng câu hỏi
+
+Nếu JD hoặc Client Insights còn sơ sài:
+
+* Tăng số lượng câu hỏi.
+* Ưu tiên các câu hỏi có thể thay đổi Candidate Persona hoặc Recruitment Strategy.
+* Tập trung vào các thông tin có ảnh hưởng lớn nhất đến khả năng đóng job.
+
+Nếu JD và Client Insights đã đầy đủ:
+
+* Chỉ đưa ra những câu hỏi thực sự còn thiếu.
+* Không tạo câu hỏi chỉ để lấp đầy cấu trúc.
+
+---
+
+### Phân loại theo mức độ ưu tiên
+
+**CRITICAL QUESTIONS**
+
+Những câu hỏi có thể thay đổi hoàn toàn hướng tuyển dụng, talent pool hoặc tiêu chí shortlist.
+
+**IMPORTANT QUESTIONS**
+
+Những câu hỏi giúp tăng chất lượng shortlist, tăng khả năng closing hoặc giảm rủi ro tuyển sai.
+
+**NICE TO KNOW QUESTIONS**
+
+Những câu hỏi hữu ích nhưng không ảnh hưởng đáng kể đến chiến lược tuyển dụng.
+
+---
+
+### Đối với mỗi câu hỏi, trình bày theo cấu trúc sau:
+
+**Question:** ...
+
+**Why ask this?**
+Giải thích vì sao recruiter cần thông tin này.
+
+**Impact if answered:**
+Những insight hoặc section nào sẽ thay đổi nếu có câu trả lời.
+
+Ví dụ:
+
+* Candidate Persona
+* Job Insights Analysis
+* Candidate Engagement Strategy
+* Headhunt Strategy
+* Boolean Search
+* Interview Questions
+* Target Companies
+* Talent Pool
+* Screening Criteria
+
+---
+
+### Các chủ đề nên ưu tiên làm rõ
+
+**Hiring Context**
+
+* Lý do tuyển dụng.
+* Tuyển mới hay thay thế?
+* Nếu thay thế, vì sao người tiền nhiệm rời đi?
+* Vì sao vị trí này cần tuyển ngay lúc này?
+
+**Definition of Success**
+
+* Ứng viên thành công sau 6–12 tháng sẽ trông như thế nào?
+* Success Metrics hoặc KPI là gì?
+* Điều gì khiến Hiring Manager nói rằng đây là một hire thành công?
+
+**Hidden Expectations**
+
+* Có yêu cầu nào không được ghi trong JD?
+* Hiring Manager thực sự ưu tiên điều gì?
+* Có yêu cầu nào "bắt buộc nhưng chưa viết ra" không?
+
+**Candidate Persona**
+
+* Có chấp nhận transferable background không?
+* Industry nào được ưu tiên?
+* Company nào được ưu tiên?
+* Có nhóm ứng viên nào nên tránh?
+
+**Must-have vs Nice-to-have**
+
+* Yêu cầu nào là không thể thỏa hiệp?
+* Yêu cầu nào có thể đào tạo sau khi gia nhập?
+
+**Team & Organization**
+
+* Team structure hiện tại như thế nào?
+* Báo cáo cho ai?
+* Quản lý bao nhiêu người?
+* Có thay đổi tổ chức nào sắp diễn ra không?
+
+**Working Style**
+
+* Hiring Manager có phong cách quản lý như thế nào?
+* Môi trường thiên về process hay entrepreneurial?
+* Cần người build hay maintain?
+
+**Previous Hiring Lessons**
+
+* Vì sao những ứng viên trước đây không thành công?
+* Có profile nào từng được phỏng vấn nhưng bị reject không?
+* Những điểm thường khiến ứng viên fail là gì?
+
+**Interview Process**
+
+* Ai là người ra quyết định cuối cùng?
+* Tiêu chí đánh giá quan trọng nhất là gì?
+* Có bước phỏng vấn nào đặc biệt không?
+
+**Candidate Closing**
+
+* Điều gì khiến ứng viên giỏi nên gia nhập công ty lúc này?
+* Điểm hấp dẫn nhất của cơ hội là gì?
+* Candidate objection nào thường gặp?
+
+**Compensation & Competitiveness**
+
+* Mức lương có linh hoạt không?
+* Có thể điều chỉnh cho ứng viên rất mạnh không?
+* Position này cạnh tranh với những cơ hội nào trên thị trường?
+
+**Urgency & Hiring Risk**
+
+* Nếu không tuyển được trong 3–6 tháng tới, doanh nghiệp sẽ bị ảnh hưởng như thế nào?
+* Mức độ ưu tiên thực sự của vị trí này là gì?
+
+---
+
+### Priority Questions
+
+Nếu chỉ được hỏi client **3 câu trước khi bắt đầu sourcing**, hãy xác định:
+
+1. Câu hỏi có giá trị cao nhất.
+2. Câu hỏi giúp thay đổi Candidate Persona nhiều nhất.
+3. Câu hỏi giúp thay đổi Recruitment Strategy nhiều nhất.
+
+Đây là 3 câu hỏi mà recruiter nên hỏi đầu tiên trong buổi intake meeting với client.
+
+---
+
+### Discovery Prioritization Rule
+
+Không phải mọi vị trí đều cần cùng một bộ câu hỏi.
+
+AI phải ưu tiên đặt câu hỏi dựa trên loại vị trí đang tuyển.
+
+Ví dụ:
+
+Sales / Business Development
+→ ưu tiên hỏi:
+- KPI
+- Territory
+- Hunter vs Farmer
+- Existing accounts
+- Revenue responsibility
+- Compensation structure
+
+Engineering / Manufacturing
+→ ưu tiên hỏi:
+- Production scale
+- Technology stack
+- Customer requirements
+- Audit exposure
+- Team size
+- Shift arrangement
+
+Finance / Accounting
+→ ưu tiên hỏi:
+- Reporting scope
+- Group reporting
+- ERP
+- Team structure
+- Audit requirements
+- Regional exposure
+
+HR / Recruitment
+→ ưu tiên hỏi:
+- Hiring volume
+- Strategic vs operational scope
+- Stakeholder complexity
+- Transformation agenda
+- Team maturity
+
+Senior Leadership
+→ ưu tiên hỏi:
+- Business mandate
+- Transformation expectations
+- P&L ownership
+- Succession context
+- Board expectations
+- Success definition in first 12 months.
+
+Không tạo danh sách câu hỏi giống nhau cho mọi vị trí.
+
+Câu hỏi phải được ưu tiên theo bản chất của role.
+
+---
+
+## Candidate Engagement Strategy
+
+Mục tiêu của phần này là giúp recruiter trả lời: "Làm thế nào để khiến ứng viên muốn nghe tiếp về cơ hội này?"
+
+Viết theo góc nhìn của Recruitment Consultant đang gọi điện, nhắn LinkedIn hoặc pitch một cơ hội tới ứng viên. Nội dung phải mang tính thực chiến và có thể sử dụng ngay khi tiếp cận ứng viên.
+
+### WHY SHOULD CANDIDATES CONSIDER THIS OPPORTUNITY
+
+Phân tích:
+
+- Vì sao ứng viên nên dành thời gian tìm hiểu vị trí này
+- Position này giải quyết nhu cầu nghề nghiệp nào
+- Nhóm ứng viên nào sẽ thấy cơ hội này hấp dẫn nhất
+
+### KEY SELLING POINTS
+
+Xác định điều gì hấp dẫn nhất của cơ hội:
+
+- Scope lớn hơn
+- Leadership opportunity
+- Regional exposure
+- Career progression
+- High-impact role
+- Stable company
+- International environment
+- Build-from-scratch opportunity
+- Better compensation
+
+Chỉ tập trung vào những điểm thực sự có giá trị với ứng viên mục tiêu.
+
+### RECOMMENDED PITCH ANGLES
+
+Phân tích recruiter nên bắt đầu cuộc trò chuyện như thế nào. Nên nhấn mạnh:
+
+- Career growth
+- Business impact
+- Company stage
+- Team structure
+- Learning opportunity
+- Leadership exposure
+- Industry positioning
+
+Đưa ra các góc pitch phù hợp với từng nhóm ứng viên.
+
+### LIKELY CANDIDATE OBJECTIONS
+
+Dự đoán những objection phổ biến. Ví dụ:
+
+- Tôi không có ý định chuyển việc
+- Lương hiện tại đã tốt
+- Công ty hiện tại ổn định
+- Industry này không hấp dẫn
+- Scope công việc chưa đủ lớn
+- Quá nhiều thay đổi
+- Lo ngại về văn hóa công ty
+- Khoảng cách địa lý
+- Không chắc về lộ trình phát triển
+
+### OBJECTION HANDLING
+
+Đề xuất cách xử lý objection. Không mang tính ép buộc. Tập trung giúp ứng viên nhìn thấy:
+
+- Giá trị dài hạn
+- Career upside
+- Learning opportunity
+- Scope và impact của role
+- Điểm khác biệt của công ty
+
+### CAREER GROWTH
+
+Phân tích:
+
+- 2-3 năm tới ứng viên có thể đạt được gì
+- Scope có thể mở rộng như thế nào
+- Lộ trình phát triển tiềm năng
+- Kỹ năng hoặc exposure có thể tích lũy
+
+### COMPANY DIFFERENTIATION
+
+Trả lời: "Tại sao ứng viên nên chọn cơ hội này thay vì một cơ hội tương tự trên thị trường?" Phân tích:
+
+- Business model
+- Market position
+- Leadership
+- Culture
+- Stability
+- Growth stage
+- International exposure
+- Future opportunity
+
+---
+
+## Headhunt Strategy
+
+Mục tiêu của phần này:
+
+Xây dựng một Recruitment Execution Playbook có thể triển khai ngay.
+
+Sau khi đọc xong phần này, recruiter phải biết:
+
+- Nên bắt đầu từ đâu.
+- Target công ty nào đầu tiên.
+- Target title nào đầu tiên.
+- Talent pool lớn hay nhỏ.
+- Kế hoạch mở rộng nếu sourcing không hiệu quả.
+
+Không được đưa ra danh sách chung chung.
+
+Mọi đề xuất phải dựa trên:
+
+- Job Insights
+- Candidate Persona
+- Company Context
+- Business Model
+- Competitor Mapping
+- Talent Market
+
+### RECRUITMENT PRIORITIZATION RULE
+
+Mọi đề xuất phải được ưu tiên theo thứ tự:
+
+Priority 1
+→ Xác suất tìm được ứng viên phù hợp cao nhất.
+
+Priority 2
+→ Xác suất ứng viên chịu nghe cơ hội.
+
+Priority 3
+→ Xác suất ứng viên có thể chốt offer.
+
+Nếu một đề xuất không giúp recruiter hành động, không cần đưa vào.
+
+### 1. TALENT POOL DIFFICULTY
+
+Đánh giá:
+
+- Rất khan hiếm
+- Khan hiếm
+- Trung bình
+- Dễ tuyển
+
+Giải thích:
+
+- điều gì khiến talent pool khó hoặc dễ
+- số lượng công ty nguồn
+- mức độ cạnh tranh
+- rủi ro tuyển dụng
+
+Nếu không đủ dữ liệu:
+
+→ Not Verified.
+
+### 2. SOURCING PRIORITIES
+
+Xác định:
+
+**Wave 1**
+Nguồn có xác suất thành công cao nhất.
+
+**Wave 2**
+Nguồn mở rộng.
+
+**Wave 3**
+Nguồn dự phòng.
+
+Mỗi wave phải giải thích:
+
+- vì sao nên ưu tiên
+- kỳ vọng chất lượng
+- rủi ro
+
+### 3. PRIORITY TARGET COMPANIES
+
+Đây là phần quan trọng nhất.
+
+Nếu Client Insights đã có competitor mapping:
+
+BẮT BUỘC sử dụng.
+
+Không tạo danh sách mới nếu không cần thiết.
+
+Phân nhóm:
+
+**Tier 1**
+Nguồn ứng viên tốt nhất.
+
+**Tier 2**
+Nguồn có transferable skills cao.
+
+**Tier 3**
+Nguồn mở rộng.
+
+Đối với từng công ty:
+
+- Lý do target.
+- Loại ứng viên phù hợp.
+- Target role.
+- Target level.
+- Khả năng chuyển đổi.
+- Mức độ ưu tiên.
+
+### 4. PRIORITY TARGET TITLES
+
+Liệt kê:
+
+- Primary Titles
+- Secondary Titles
+- Adjacent Titles
+
+Giải thích:
+
+- title nào có tỷ lệ thành công cao nhất
+- title nào có thể mở rộng
+
+### 5. GEOGRAPHIC STRATEGY
+
+Phân tích:
+
+- khu vực nên ưu tiên
+- khu vực có talent pool lớn
+- khu vực nên mở rộng
+
+Nếu location là một hạn chế:
+
+Phải nêu rõ.
+
+### 6. ALTERNATIVE TALENT POOLS
+
+Nếu talent pool chính hạn chế:
+
+Đề xuất:
+
+- smaller competitors
+- adjacent industries
+- former employees
+- startups
+- multinational companies
+- regional companies
+
+Phải giải thích:
+
+- vì sao có thể thành công
+- điều gì cần screening kỹ
+
+### 7. TRANSFERABLE INDUSTRIES
+
+Trả lời:
+
+Nếu không tìm được đúng ngành thì còn tìm ở đâu.
+
+Phân tích:
+
+- transferable skills
+- transferable experience
+- hiring risk
+
+Không chỉ liệt kê tên ngành.
+
+### 8. TALENT MAPPING STRATEGY
+
+Xây dựng:
+
+**Core Talent Pool**
+
+**Secondary Talent Pool**
+
+**Expansion Pool**
+
+Bao gồm:
+
+- target companies
+- target titles
+- seniority
+- geography
+- estimated market depth (nếu có thể suy luận)
+
+Mục tiêu:
+
+Recruiter có thể bắt đầu mapping ngay.
+
+### 9. CHANNEL STRATEGY
+
+Đánh giá mức độ hiệu quả của:
+
+- LinkedIn Recruiter
+- Internal Database
+- Referrals
+- Facebook Groups
+- Industry Communities
+- Associations
+- Alumni Networks
+- Direct Headhunting
+
+Đối với từng kênh:
+
+- khi nào nên dùng
+- chất lượng kỳ vọng
+- tỷ lệ phản hồi kỳ vọng
+- mức độ ưu tiên
+
+### 10. OUTREACH STRATEGY
+
+Xác định:
+
+- nhóm nào nên gọi trực tiếp
+- nhóm nào nên dùng InMail
+- nhóm nào nên dùng referral
+
+Đề xuất:
+
+- thứ tự tiếp cận
+- pitch angle phù hợp
+- objection cần chuẩn bị
+
+### 11. MITIGATION PLANS
+
+Nếu tuyển khó, hãy đề xuất:
+
+- mở rộng industry
+- mở rộng geography
+- nới seniority
+- thay đổi target companies
+- điều chỉnh pitch
+- xây longlist trước
+
+Phân tích:
+
+điều gì nên làm trước.
+
+### 12. RECRUITMENT ACTION PLAN
+
+Nếu chỉ có 5 ngày để tạo shortlist:
+
+Day 1
+→ …
+
+Day 2
+→ …
+
+Day 3
+→ …
+
+Day 4
+→ …
+
+Day 5
+→ …
+
+Phần này phải mang tính thực thi.
+
+---
+
+## Boolean Search
+
+Viết theo cách recruiter thực tế sử dụng.
+
+Không tạo một Boolean quá dài.
+
+Mỗi Boolean phải:
+
+- ngắn
+- dễ copy
+- dễ chỉnh sửa
+
+Bao gồm:
+
+### LinkedIn Recruiter
+### CV Database
+### Google X-Ray
+### Industry Search
+### Local Search
+### Japanese Search (nếu phù hợp)
+
+Nếu role quá niche:
+
+Đưa thêm:
+
+### Expansion Boolean
+
+### BOOLEAN DESIGN RULE
+
+Ưu tiên:
+
+1. Title-based search
+2. Function-based search
+3. Industry-based search
+4. Competitor-based search
+
+Không cố nhồi quá nhiều từ khóa vào một chuỗi.
+
+---
+
+## Headhunter's Notes
+
+Đây là phần cô đọng nhất của toàn bộ báo cáo.
+
+Giả sử recruiter chỉ có 30 phút để bắt đầu sourcing.
+
+Trả lời:
+
+### Start Here
+- Công ty nên target đầu tiên.
+- Title nên target đầu tiên.
+
+### Quick Reject
+- CV nào nên loại ngay.
+
+### Biggest Risk
+- Điều gì dễ khiến consultant đi sai hướng.
+
+### Expansion Plan
+- Nếu thị trường khan hiếm, nên mở rộng sang đâu.
+
+### Closing Insight
+- Một insight quan trọng nhất quyết định khả năng đóng job.
+
+Không quá 10 bullet.
+
+==================================================
+FINAL SELF-CHECK
+==================================================
+
+Trước khi hoàn thành báo cáo, tự hỏi:
+
+Nếu tôi là consultant lần đầu tuyển vị trí này, liệu tôi đã biết:
+
+✓ Job này thực chất là gì?
+✓ Hiring Manager thực sự muốn gì?
+✓ Ứng viên giỏi đang ở đâu?
+✓ Công ty nào cần target đầu tiên?
+✓ Pitch như thế nào?
+✓ Điều gì khiến ứng viên từ chối?
+✓ Điều gì khiến ứng viên thành công?
+✓ Có thể bắt đầu sourcing ngay chưa?
+
+Nếu chưa, hãy tiếp tục bổ sung insight (vẫn phải tuân thủ Quality Over Quantity Rule ở Phần A5, không bịa thêm chỉ để lấp đầy).
+
+Chỉ trả về báo cáo bằng Markdown.
+
+Không giải thích.
+
+Không trả về JSON.
+
+Không thêm nội dung ngoài báo cáo.`;
 
     const finalPrompt = promptTemplate
       .replace(/\\?\$\{companyReport\}/g, companyReport)
@@ -1358,7 +3359,11 @@ Important rules:
 
 15. Return only data that fits the provided JSON schema.
 
-16. Never generate commentary outside the JSON response.`;
+16. Never generate commentary outside the JSON response.
+
+17. After extracting all known schema fields, detect any meaningful markdown sections that were NOT mapped into existing structured fields (e.g., custom sections like Compensation Benchmark, Candidate Risks, etc.). Preserve their original section heading as the 'title' and store their body content as plain markdown 'content' in 'dynamicSections'. Do not duplicate sections that already exist in structured fields. Only include unmapped sections. Avoid creating noisy sections for tiny fragments or empty headings. Preserve markdown formatting inside content.
+
+18. ALWAYS include the 'schemaVersion' field at the root level of the JSON response and set its value to the exact string "v3". This is essential for schema versioning (v1: original, v2: extended, v3: dynamic sections).`;
 
     const prompt = `Báo cáo Insight Tuyển dụng (Hiring Insights) dạng Markdown cần trích xuất:
 """
@@ -1372,6 +3377,7 @@ Hãy phân tích báo cáo trên và trích xuất dữ liệu JSON có cấu tr
     const responseSchema = {
       type: Type.OBJECT,
       properties: {
+        schemaVersion: { type: Type.STRING, description: "Schema version of this report, always 'v3'" },
         title: { type: Type.STRING },
         roleOverview: {
           type: Type.OBJECT,
@@ -1547,6 +3553,16 @@ Hãy phân tích báo cáo trên và trích xuất dữ liệu JSON có cấu tr
           properties: {
             facebookPost: { type: Type.STRING }
           }
+        },
+        dynamicSections: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              title: { type: Type.STRING },
+              content: { type: Type.STRING }
+            }
+          }
         }
       },
       required: ["title", "roleOverview", "companyContext", "idealPersona", "mustHave", "niceToHave", "questionsForClient", "booleanSearch", "socialPost", "interviewQuestions", "competitorCompanies", "positionIntelligence", "candidatePersonaObj", "talentMarketInsight", "candidateSellingPoints", "recruitmentStrategy", "booleanSearchQueries"]
@@ -1567,6 +3583,7 @@ Hãy phân tích báo cáo trên và trích xuất dữ liệu JSON có cấu tr
 
     // Normalize newly added optional fields to prevent null values or empty properties
     if (parsed && typeof parsed === "object") {
+      parsed.schemaVersion = "v3";
       // 1. positionIntelligence fields
       if (parsed.positionIntelligence && typeof parsed.positionIntelligence === "object") {
         parsed.positionIntelligence.roleNature = parsed.positionIntelligence.roleNature || "";
@@ -1716,6 +3733,16 @@ Hãy phân tích báo cáo trên và trích xuất dữ liệu JSON có cấu tr
           salaryCompetitiveness: "",
           noticePeriodRisk: ""
         };
+      }
+
+      // 9. dynamicSections
+      if (Array.isArray(parsed.dynamicSections)) {
+        parsed.dynamicSections = parsed.dynamicSections.map((ds: any) => ({
+          title: ds?.title || "",
+          content: ds?.content || ""
+        })).filter((ds: any) => ds.title.trim() !== "");
+      } else {
+        parsed.dynamicSections = [];
       }
     }
 
