@@ -3363,7 +3363,124 @@ Important rules:
 
 17. After extracting all known schema fields, detect any meaningful markdown sections that were NOT mapped into existing structured fields (e.g., custom sections like Compensation Benchmark, Candidate Risks, etc.). Preserve their original section heading as the 'title' and store their body content as plain markdown 'content' in 'dynamicSections'. Do not duplicate sections that already exist in structured fields. Only include unmapped sections. Avoid creating noisy sections for tiny fragments or empty headings. Preserve markdown formatting inside content.
 
-18. ALWAYS include the 'schemaVersion' field at the root level of the JSON response and set its value to the exact string "v3". This is essential for schema versioning (v1: original, v2: extended, v3: dynamic sections).`;
+18. ALWAYS include the 'schemaVersion' field at the root level of the JSON response and set its value to the exact string "v3". This is essential for schema versioning (v1: original, v2: extended, v3: dynamic sections).
+
+You must return a valid JSON object matching the following structure:
+{
+  "title": "string (Position Title)",
+  "roleOverview": {
+    "dept": "string (Department name)",
+    "reportingLine": "string (Reporting line / Report to)",
+    "salaryRange": "string (Salary range)",
+    "location": "string (Work location)"
+  },
+  "companyContext": ["string"],
+  "idealPersona": ["string"],
+  "mustHave": ["string"],
+  "niceToHave": ["string"],
+  "questionsForClient": ["string"],
+  "booleanSearch": "string",
+  "socialPost": "string",
+  "interviewQuestions": ["string"],
+  "competitorCompanies": {
+    "directCompetitors": ["string"],
+    "similarBusinessModels": ["string"],
+    "transferableTalent": ["string"],
+    "whyTheseCompanies": "string",
+    "category": "string",
+    "targetTitles": ["string"],
+    "targetReason": "string"
+  },
+  "positionIntelligence": {
+    "natureOfRole": "string",
+    "dayToDayChallenges": ["string"],
+    "hiddenExpectations": ["string"],
+    "keySuccessFactors": ["string"],
+    "commonCandidateBackgrounds": ["string"],
+    "commonReasonsCandidatesFail": ["string"],
+    "transferableBackgrounds": ["string"],
+    "businessProblemToSolve": "string",
+    "commonFailureReasons": ["string"],
+    "roleNature": "string"
+  },
+  "candidatePersonaObj": {
+    "yearsOfExperience": "string",
+    "industryBackground": "string",
+    "functionalBackground": "string",
+    "languageRequirements": "string",
+    "personalityTraits": ["string"]
+  },
+  "talentMarketInsight": {
+    "talentPoolDifficulty": "string",
+    "hiringChallenges": ["string"],
+    "counterOfferRisk": "string",
+    "salaryCompetitiveness": "string",
+    "noticePeriodRisk": "string"
+  },
+  "candidateSellingPoints": ["string"],
+  "recruitmentStrategy": {
+    "whereToSource": ["string"],
+    "companiesToTargetFirst": ["string"],
+    "challengesAndMitigations": ["string"]
+  },
+  "booleanSearchQueries": {
+    "linkedin": "string",
+    "cvDb": "string",
+    "xray": "string",
+    "industry": "string",
+    "japanese": "string"
+  },
+  "companyInsights": {
+    "companyName": "string",
+    "industry": "string",
+    "businessModel": "string",
+    "companyStage": "string",
+    "cultureHighlights": ["string"],
+    "employeeValueProposition": ["string"]
+  },
+  "candidatePersona": {
+    "targetAge": "string",
+    "targetGender": "string",
+    "experience": "string",
+    "industries": ["string"],
+    "languages": ["string"],
+    "certifications": ["string"],
+    "technicalSkills": ["string"],
+    "personalityTraits": ["string"],
+    "dealBreakers": ["string"]
+  },
+  "discoveryQuestions": [
+    {
+      "question": "string",
+      "priority": "string",
+      "whyAsk": "string",
+      "impact": "string",
+      "category": "string"
+    }
+  ],
+  "sourcingStrategy": {
+    "priorityCompanies": ["string"],
+    "booleanSearchQueries": ["string"],
+    "pitchingStrategies": ["string"],
+    "objectionHandling": [
+      {
+        "objection": "string",
+        "handling": "string"
+      }
+    ],
+    "headhunterNotes": ["string"]
+  },
+  "socialMediaPost": {
+    "facebookPost": "string"
+  },
+  "dynamicSections": [
+    {
+      "title": "string",
+      "content": "string"
+    }
+  ],
+  "schemaVersion": "v3"
+}`;
 
     const prompt = `Báo cáo Insight Tuyển dụng (Hiring Insights) dạng Markdown cần trích xuất:
 """
@@ -3575,7 +3692,7 @@ Hãy phân tích báo cáo trên và trích xuất dữ liệu JSON có cấu tr
       customEndpoint,
       prompt,
       systemInstruction,
-      responseSchema,
+      responseMimeType: "application/json",
     });
 
     const parsed = safeParseJson(result.text);

@@ -234,6 +234,7 @@ export async function callLLM({
   prompt,
   systemInstruction,
   responseSchema,
+  responseMimeType,
 }: {
   provider: string;
   apiKey: string;
@@ -242,6 +243,7 @@ export async function callLLM({
   prompt: string;
   systemInstruction?: string;
   responseSchema?: any;
+  responseMimeType?: string;
 }): Promise<{ text: string, usage?: any }> {
   console.log(`callLLM triggered. Provider: ${provider}, Model: ${model || "default"}`);
 
@@ -252,7 +254,9 @@ export async function callLLM({
 
     let targetModel = model || "gemini-3.5-flash";
     const config: any = {};
-    if (responseSchema) {
+    if (responseMimeType) {
+      config.responseMimeType = responseMimeType;
+    } else if (responseSchema) {
       config.responseMimeType = "application/json";
       config.responseSchema = responseSchema;
     }
@@ -317,7 +321,7 @@ export async function callLLM({
     }
     messages.push({ role: "user", content: prompt });
 
-    const responseFormat: any = responseSchema ? { type: "json_object" } : undefined;
+    const responseFormat: any = (responseMimeType === "application/json" || responseSchema) ? { type: "json_object" } : undefined;
 
     const chatCompletion = await openaiClient.chat.completions.create({
       model: targetModel,
