@@ -39,7 +39,12 @@ export function AnalysisContent({analysis}: any) {
   };
   const FIT_COLOR: any = {"Strong Fit":"var(--success-hover)","Fit":"var(--info)","Potential":"var(--warning)","Weak":"var(--danger)","Weak Fit":"var(--danger)"};
   const GAP_COLOR: any = {"Critical":["var(--danger)","var(--bg-red-50)","var(--border-red-200)"],"Major":["var(--warning)","var(--bg-amber-50)","var(--border-amber-200)"],"Minor":["var(--text-secondary)","var(--bg-hover)","var(--border-color)"]};
-  const STATUS_STYLE: any = {"MET":["var(--success-hover)","var(--bg-emerald-50)","✓"],"NOT MET":["var(--danger)","var(--bg-red-50)","✕"],"NOT FOUND":["var(--text-muted)","var(--bg-main)","?"]};
+  const STATUS_STYLE: any = {
+    "MET": ["var(--success-hover)", "var(--bg-emerald-50)", "✓"],
+    "NOT MET": ["var(--danger)", "var(--bg-red-50)", "✕"],
+    "TRANSFERABLE": ["var(--warning)", "var(--bg-amber-50)", "⌥"],
+    "NOT FOUND": ["var(--text-muted)", "var(--bg-main)", "?"]
+  };
   const [copied, setCopied] = useState(false);
 
   const rec = REC[analysis.recommendation] || REC["PROCEED WITH CAUTION"];
@@ -50,6 +55,7 @@ export function AnalysisContent({analysis}: any) {
       "CV ANALYSIS", "=".repeat(40),
       "Recommendation: " + analysis.recommendation,
       "Overall Fit: " + (analysis.overall||""),
+      "Confidence: " + (analysis.confidence||""),
       analysis.primaryReason||"", "",
       "QUICK TAKE",
       qt.strength ? "+ " + qt.strength : "",
@@ -59,11 +65,13 @@ export function AnalysisContent({analysis}: any) {
       ...(analysis.requirementCheck||[]).map((r: any)=>"["+r.status+"] "+r.requirement+": "+r.evidence),
       "", "STRENGTHS", ...(analysis.strengths||[]).map((s: any)=>"• "+s),
       "", "GAPS", ...(analysis.gaps||[]).map((g: any)=>"• ["+g.type+"] "+g.item),
+      "", "MISSING INFORMATION", ...(analysis.missingInformation||[]).map((m: any)=>"• "+m),
+      "", "SCREENING PRIORITIES", ...(analysis.screeningPriorities||[]).map((sp: any)=>`• ${sp.item}: ${sp.reason}`),
       "", "CONCERNS", ...(analysis.concerns||[]).map((c: any)=>"• "+c),
       "", "RED FLAGS", ...(analysis.redFlags||[]).map((r: any)=>"[!] "+r),
       "", "CONCLUSION", (typeof analysis.conclusion==="object" ? analysis.conclusion.reason : analysis.conclusion)||"",
       "", "INTERVIEW QUESTIONS",
-      ...(analysis.interviewQuestions||[]).map((q: any,i: number)=>(i+1)+". "+q.question+"\n   Validates: "+q.validates),
+      ...(analysis.interviewQuestions||[]).map((q: any,i: number)=>(i+1)+". "+q.question+"\n   Validates: "+q.validates + (q.priority ? " | Priority: " + q.priority : "")),
 
     ].filter(Boolean).join("\n");
 
@@ -103,18 +111,20 @@ export function AnalysisContent({analysis}: any) {
         <div style={{background:"var(--bg-glass)",backdropFilter:"blur(16px)",borderRadius:10,border:"1.5px solid var(--border-glass)",padding:"12px 14px",marginBottom:12}}>
           <div style={{fontSize:11,fontWeight:700,color:"var(--text-muted)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:8}}>Overall Candidate</div>
           {/* Meta tags row */}
-          <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:analysis.overallCandidate?.profile || analysis.roleInterpretation?.whatTheyDo?8:0}}>
-            {analysis.overallCandidate?.workType || analysis.roleInterpretation?.auditType&&(
+          <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:(analysis.overallCandidate?.profile || analysis.roleInterpretation?.whatTheyDo)?8:0}}>
+            {(analysis.overallCandidate?.workType || analysis.roleInterpretation?.auditType) && (
               <span style={{fontSize:12,fontWeight:600,color:"var(--primary)",background:"var(--bg-indigo-50)",padding:"3px 10px",borderRadius:99,border:"1px solid var(--border-indigo-200)"}}>{analysis.overallCandidate?.workType || analysis.roleInterpretation?.auditType}</span>
             )}
-            {analysis.overallCandidate?.level || analysis.roleInterpretation?.seniorityLevel&&(
+            {(analysis.overallCandidate?.level || analysis.roleInterpretation?.seniorityLevel) && (
               <span style={{fontSize:12,fontWeight:600,color:"var(--info)",background:"var(--bg-sky-50)",padding:"3px 10px",borderRadius:99,border:"1px solid var(--border-sky-200)"}}>{analysis.overallCandidate?.level || analysis.roleInterpretation?.seniorityLevel}</span>
             )}
-            {analysis.overallCandidate?.industries || analysis.roleInterpretation?.industries&&(
-              <span style={{fontSize:12,color:"var(--text-secondary)",background:"var(--bg-hover)",padding:"3px 10px",borderRadius:99,border:"1px solid var(--border-color)"}}>{analysis.overallCandidate?.industries || analysis.roleInterpretation?.industries}</span>
+            {(analysis.overallCandidate?.industries || analysis.roleInterpretation?.industries) && (
+              <span style={{fontSize:12,color:"var(--text-secondary)",background:"var(--bg-hover)",padding:"3px 10px",borderRadius:99,border:"1px solid var(--border-color)"}}>
+                {Array.isArray(analysis.overallCandidate?.industries) ? analysis.overallCandidate.industries.join(", ") : (analysis.overallCandidate?.industries || analysis.roleInterpretation?.industries)}
+              </span>
             )}
           </div>
-          {analysis.overallCandidate?.profile || analysis.roleInterpretation?.whatTheyDo&&(
+          {(analysis.overallCandidate?.profile || analysis.roleInterpretation?.whatTheyDo) && (
             <div style={{fontSize:13,color:"var(--text-muted)",lineHeight:1.6,borderTop:"1px solid var(--border-color)",paddingTop:8}}>{analysis.overallCandidate?.profile || analysis.roleInterpretation?.whatTheyDo}</div>
           )}
         </div>
@@ -174,6 +184,28 @@ export function AnalysisContent({analysis}: any) {
         </div>
       </div>
 
+      {/* Missing Information & Screening Priorities */}
+      {(analysis.missingInformation||[]).length>0&&(
+        <Sec title="Thông tin thiếu (Missing Information)" color="var(--warning)">
+          <div style={{display:"flex",flexDirection:"column",gap:4,marginBottom:6}}>
+            {(analysis.missingInformation||[]).map((m: any,i: number)=><div key={i} style={{display:"flex",gap:7,fontSize:13,color:"var(--text-secondary)",lineHeight:1.5}}><span style={{color:"var(--warning)",flexShrink:0}}>•</span>{m}</div>)}
+          </div>
+        </Sec>
+      )}
+
+      {(analysis.screeningPriorities||[]).length>0&&(
+        <Sec title="Ưu tiên Phỏng vấn Sơ bộ (Screening Priorities)" color="var(--primary)">
+          <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:12}}>
+            {(analysis.screeningPriorities||[]).map((sp: any,i: number)=>(
+              <div key={i} style={{background:"var(--bg-indigo-50)",borderRadius:9,padding:"10px 14px",border:"1px solid var(--border-indigo-200)"}}>
+                <div style={{fontSize:13,fontWeight:600,color:"var(--text-primary)",marginBottom:4}}>{sp.item}</div>
+                <div style={{fontSize:12,color:"var(--text-muted)",lineHeight:1.4}}>{sp.reason}</div>
+              </div>
+            ))}
+          </div>
+        </Sec>
+      )}
+
       {/* Concerns */}
       {(analysis.concerns||[]).length>0&&(
         <Sec title="Concerns" color="var(--text-muted)">
@@ -203,7 +235,14 @@ export function AnalysisContent({analysis}: any) {
           <div style={{display:"flex",flexDirection:"column",gap:8}}>
             {(analysis.interviewQuestions||[]).map((q: any,i: number)=>(
               <div key={i} style={{background:"var(--bg-sky-50)",borderRadius:9,padding:"10px 14px",border:"1px solid var(--border-sky-200)"}}>
-                <div style={{fontSize:13,fontWeight:600,color:"var(--text-primary)",marginBottom:4}}>{i+1}. {q.question}</div>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8,marginBottom:4}}>
+                  <div style={{fontSize:13,fontWeight:600,color:"var(--text-primary)"}}>{i+1}. {q.question}</div>
+                  {q.priority && (
+                    <span style={{fontSize:10,fontWeight:700,color:q.priority==="High"?"var(--danger)":q.priority==="Medium"?"var(--warning)":"var(--text-muted)",background:"rgba(128,128,128,.1)",padding:"1px 6px",borderRadius:99,whiteSpace:"nowrap"}}>
+                      {q.priority}
+                    </span>
+                  )}
+                </div>
                 <div style={{fontSize:11.5,color:"var(--info)"}}>→ <span style={{fontStyle:"italic"}}>{q.validates}</span></div>
               </div>
             ))}
@@ -237,7 +276,7 @@ export function CandidateTools({toast}: any){
   const [gL,setGL]=useState(false); const [eL,setEL]=useState(false); const [rL,setRL]=useState(false);
   const [aL,setAL]=useState(false); const [analysis,setAnalysis]=useState<any>(null);
   const [activeTab,setActiveTab]=useState("summary");
-  const [analysisLang,setAnalysisLang]=useState("en"); // en | vi
+  const [analysisLang,setAnalysisLang]=useState("vi"); // en | vi
   const [sessions,setSessions]=useState<any[]>([]);
   const [cvFile,setCvFile]=useState<any>(null);
   const [fileLoading,setFileLoading]=useState(false);
@@ -290,65 +329,247 @@ export function CandidateTools({toast}: any){
       const currentMonthName = now.toLocaleDateString("en-US",{month:"long"});
 
       // STEP 1: Always analyze in English (consistent results)
-      const sys = "You are an experienced headhunter. Evaluate this candidate decisively." +
-        "\\nCurrent date: " + currentDate + " (Year=" + currentYear + ", Month=" + currentMonth + "). When calculating durations: count months precisely = (endYear-startYear)*12 + (endMonth-startMonth). Example: July 2024 to March 2026 = 20 months." +
-        "\\n\\nRULES:" +
-        "\\n- Write and evaluate like a recruiter briefing another recruiter or hiring manager" +
-        "\\n- Only use info explicitly stated in the CV. If not found = NOT FOUND" +
-        "\\n- Do NOT fabricate certifications, experience, or employment details" +
-        "\\n- Strong experience can offset missing certs (do not auto-reject)" +
-        "\\n- Employment gaps <12 months = normal, low concern only" +
-        "\\n- Strong+no critical gap=PROCEED; Strong+1 critical gap=PROCEED WITH CAUTION; Weak/irrelevant=NOT PRIORITIZE" +
-        "\\n\\nReturn ONLY raw JSON. No markdown. No code blocks. No explanation. Start response with { directly." +
-        "\\n\\nJSON structure:" +
-        "\\n{" +
-        "\\n  \\\"overallCandidate\\\": {\\\"profile\\\": \\\"2-3 sentences: who this person is, their background and experience level — write like a recruiter briefing a colleague\\\", \\\"workType\\\": \\\"hands-on audit|advisory|coordination|compliance monitoring|mixed\\\", \\\"level\\\": \\\"Execution|Lead|Manager\\\", \\\"industries\\\": \\\"list industries\\\"}," +
-        "\\n  \\\"overall\\\": \\\"Strong Fit|Fit|Potential|Weak\\\"," +
-        "\\n  \\\"recommendation\\\": \\\"Proceed|Proceed with conditions|Consider for interview|Not prioritize\\\"," +
-        "\\n  \\\"confidence\\\": \\\"High|Medium|Low\\\"," +
-        "\\n  \\\"primaryReason\\\": \\\"1 sentence: main factor driving this decision\\\"," +
-        "\\n  \\\"quickTake\\\": {\\\"strength\\\": \\\"top strength (cite specifics)\\\"," +
-        "\\\"keyGap\\\": \\\"main gap\\\", \\\"positioning\\\": \\\"how to pitch this candidate\\\"}," +
-        "\\n  \\\"requirementCheck\\\": [{\\\"requirement\\\": \\\"JD requirement\\\", \\\"status\\\": \\\"MET|NOT MET|NOT FOUND\\\", \\\"evidence\\\": \\\"quote from CV or Not mentioned in CV\\\"}]," +
-        "\\n  \\\"strengths\\\": [\\\"bullet\\\"]," +
-        "\\n  \\\"gaps\\\": [{\\\"item\\\": \\\"gap\\\", \\\"type\\\": \\\"Critical|Major|Minor\\\"}]," +
-        "\\n  \\\"concerns\\\": [\\\"concern\\\"]," +
-        "\\n  \\\"redFlags\\\": [\\\"flag\\\"]," +
-        "\\n  \\\"conclusion\\\": {\\\"recommendation\\\": \\\"Proceed|Proceed with conditions|Consider for interview|Not prioritize\\\", \\\"reason\\\": \\\"2-3 sentences as a recruiter would say to a hiring manager — practical, direct, no jargon\\\"}," +
-        "\\n  \\\"interviewQuestions\\\": [{\\\"question\\\": \\\"question\\\", \\\"validates\\\": \\\"what it validates\\\"}]" +
-        "\\n}" +
-        "\\n\\nEXPERIENCE TIMELINE:" +
-        "\\n- Today is exactly: " + currentMonthName + " " + currentYear + "." +
-        "\\n- Present/Now/Current = " + currentMonthName + " " + currentYear + "." +
-        "\\n- Duration formula: (endYear-startYear)*12 + (endMonth-startMonth) months." +
-        "\\n- Example: July 2024 to March 2026 = (2026-2024)*12+(3-7) = 20 months." +
-        "\\n- Always write exact: 20 months / 1 year 8 months. Never: recent / short time." +
-        "\\nSTRICT MATCHING RULES" +
-        "\\n========================" +
-        "\\n- Do NOT assume equivalence between frameworks, tools, or standards. Similar does NOT mean same." +
-        "\\n- If not explicitly mentioned in CV: mark NOT MET or TRANSFERABLE, never MET." +
-        "\\n- Use: No explicit evidence of... / Transferable experience from... / Related but not equivalent to..." +
-        "\\n\\nFIT RATING GUARDRAIL:" +
-        "\\n- ANY critical requirement missing = do NOT assign Strong Fit." +
-        "\\n- Required certification missing = maximum rating is Fit, not Strong Fit." +
-        "\\n- Strong Fit ONLY when most core requirements are MET and no critical gap." +
-        "\\n- When in doubt: downgrade." +
-        "\\n\\nEXPERIENCE CLASSIFICATION:" +
-        "\\n- Direct = exact match explicitly stated in CV." +
-        "\\n- Transferable = similar but different domain or standard." +
-        "\\n- No evidence = not mentioned in CV." +
-        "\\n- Prefer Transferable over Direct when not exact." +
-        "\\n- requirementCheck status: MET | NOT MET | TRANSFERABLE | NOT FOUND" +
-        "\\n\\nWORDING CONTROL:" +
-        "\\n- Avoid: directly maps / fully aligned / strong match (when gaps exist)." +
-        "\\n- Prefer: provides a foundation for / can transition into / requires upskilling in" +
-        "\\n\\nTONE RULES:" +
-        "\\n- Write like a recruiter explaining to a hiring manager, not like a system report." +
-        "\\n- Avoid: Proceed with caution / System warning / overly formal wording." +
-        "\\n- Use natural alternatives: Proceed with conditions / Consider for interview / Some gaps to note / Requires further clarification." +
-        "\\n- recommendation field values: Proceed / Proceed with conditions / Consider for interview / Not prioritize" +
-        "\\n\\nSELF-CHECK before output: verify no assumptions or overclaiming. Verify fit rating = actual evidence." +
-        (analysisLang === "vi" ? "\\n\\nCRITICAL RULE: You MUST write the entire JSON response in Vietnamese (except for technical terms, company names, certifications like ISO/SA8000, job titles, and proper nouns which should remain in English)." : "");
+      const LANGUAGE_RULE =
+        analysisLang === "vi"
+          ? `
+CRITICAL RULE:
+You MUST write the entire JSON response in Vietnamese.
+
+Keep the following in English:
+- company names;
+- certifications;
+- technical standards;
+- job titles;
+- product names;
+- industry abbreviations;
+- business terms commonly used in recruitment and international business.
+`
+          : `
+CRITICAL RULE:
+You MUST write the entire JSON response in English.
+`;
+
+      const sys = `You are an experienced headhunter. Evaluate this candidate decisively.
+Current date: ${currentDate} (Year=${currentYear}, Month=${currentMonth}).
+
+RULES:
+- Write and evaluate like a recruiter briefing another recruiter or hiring manager
+- Only use info explicitly stated in the CV. If not found = NOT FOUND
+- Do NOT fabricate certifications, experience, or employment details
+- Strong experience can offset missing certs (do not auto-reject)
+- Employment gaps <12 months = normal, low concern only
+
+PURPOSE:
+Evaluate whether the candidate is worth progressing to a screening call for this specific role.
+
+Focus on:
+- candidate-job fit against the JD,
+- strengths and gaps,
+- hiring risks and concerns,
+- missing information,
+- areas requiring validation during screening,
+- practical recommendation from a recruiter perspective.
+
+ANALYSIS PROCESS:
+1. Extract facts only from the CV. Do not infer or assume missing information.
+2. Review the candidate's employment history to understand experience level, industry exposure, and career progression.
+3. Compare each JD requirement against explicit evidence from the CV.
+4. Identify strengths, gaps, risks, and missing information relevant to this role.
+5. Assess overall candidate-job fit and determine whether the candidate is worth progressing to a screening call.
+6. Generate targeted screening questions for areas that are unclear, missing, or require validation.
+7. Write the output like a recruiter briefing another recruiter or hiring manager.
+
+Return ONLY raw JSON. No markdown. No code blocks. No explanation. Start response with { directly.
+
+JSON structure:
+{
+  "overallCandidate": {
+    "profile": "2-3 sentences: who this person is, their background and experience level — write like a recruiter briefing a colleague", 
+    "level": "Execution|Lead|Manager|Senior Manager|Director", 
+    "industries": ["industry"]
+  },
+  "overall": "Strong Fit|Fit|Potential|Weak",
+  "recommendation": "Proceed|Proceed with conditions|Consider for interview|Not prioritize",
+  "confidence": "High|Medium|Low",
+  "primaryReason": "1 sentence: main factor driving this decision",
+  "quickTake": {
+    "strength": "top strength (cite specifics)",
+    "keyGap": "main gap", 
+    "positioning": "how to pitch this candidate"
+  },
+  "requirementCheck": [
+    {
+      "requirement": "JD requirement", 
+      "status": "MET|NOT MET|TRANSFERABLE|NOT FOUND", 
+      "evidence": "quote from CV or Not mentioned in CV"
+    }
+  ],
+  "strengths": ["bullet"],
+  "gaps": [
+    {
+      "item": "gap", 
+      "type": "Critical|Major|Minor"
+    }
+  ],
+  "missingInformation": [
+    "missing information"
+  ],
+  "screeningPriorities": [
+    {
+      "item": "",
+      "reason": ""
+    }
+  ],
+  "concerns": ["concern"],
+  "redFlags": ["flag"],
+  "conclusion": {
+    "recommendation": "Proceed|Proceed with conditions|Consider for interview|Not prioritize", 
+    "reason": "2-3 sentences as a recruiter would say to a hiring manager — practical, direct, no jargon"
+  },
+  "interviewQuestions": [
+    {
+      "question": "question", 
+      "validates": "what it validates",
+      "priority": "High|Medium|Low"
+    }
+  ]
+}
+
+STRICT MATCHING RULES
+========================
+- Do NOT assume equivalence between frameworks, tools, or standards. Similar does NOT mean same.
+- If not explicitly mentioned in CV: mark NOT MET or TRANSFERABLE, never MET.
+- Use: No explicit evidence of... / Transferable experience from... / Related but not equivalent to...
+
+FIT RATING GUARDRAIL:
+- ANY critical requirement missing = do NOT assign Strong Fit.
+- Required certification missing = maximum rating is Fit, not Strong Fit.
+- Strong Fit ONLY when most core requirements are MET and no critical gap.
+- When in doubt: downgrade.
+
+RECOMMENDATION LOGIC:
+- Proceed:
+  - Strong Fit; or
+  - Fit with no major concerns or only minor gaps.
+
+- Proceed with conditions:
+  - Fit with one major gap;
+  - Significant missing information requiring validation; or
+  - Strong profile with one important concern that needs clarification.
+
+- Consider for interview:
+  - Potential profile with transferable experience;
+  - Several unknowns or missing information; or
+  - Relevant foundation but not enough evidence for a stronger recommendation.
+
+- Not prioritize:
+  - Weak profile;
+  - Multiple critical gaps; or
+  - Experience is largely irrelevant to the role.
+
+CRITICAL REQUIREMENT:
+Only requirements explicitly stated as mandatory in the JD should be considered critical.
+
+Examples of critical requirements:
+- mandatory certification or license;
+- mandatory industry experience;
+- mandatory language requirement;
+- mandatory technical framework, standard, or domain expertise.
+
+Do not create additional critical requirements unless they are clearly stated as mandatory in the JD.
+
+If the JD does not explicitly identify any requirement as mandatory, assume there are no predefined critical requirements and evaluate based on overall relevance and transferable experience.
+
+EXPERIENCE CLASSIFICATION:
+- Direct = exact match explicitly stated in CV.
+- Transferable = similar but different domain or standard.
+- No evidence = not mentioned in CV.
+- Prefer Transferable over Direct when not exact.
+- requirementCheck status: MET | NOT MET | TRANSFERABLE | NOT FOUND
+
+WORDING CONTROL:
+- Avoid: directly maps / fully aligned / strong match (when gaps exist).
+- Prefer: provides a foundation for / can transition into / requires upskilling in
+
+GAPS:
+Only include deficiencies or mismatches against the JD.
+Do not include information that is simply missing from the CV; place those items under missingInformation instead.
+
+MISSING INFORMATION:
+List important information that is relevant to evaluating this role but is not explicitly stated in the CV.
+
+Examples:
+- Current salary or salary expectation
+- English or other language proficiency level
+- Team size managed
+- Revenue responsibility or sales target
+- Size of portfolio, clients, or projects
+- Industry exposure not clearly specified
+- Product scope not clearly specified
+- Reporting line or management scope
+- Availability or notice period
+
+Do not include information that is irrelevant to the specific JD.
+
+TONE RULES:
+- Write like a recruiter explaining to a hiring manager, not like a system report.
+- Avoid: Proceed with caution / System warning / overly formal wording.
+- Use natural alternatives: Proceed with conditions / Consider for interview / Some gaps to note / Requires further clarification.
+- recommendation field values: Proceed / Proceed with conditions / Consider for interview / Not prioritize
+
+SCREENING PRIORITIES:
+Identify the most important topics that should be validated during the screening call.
+
+Focus on:
+- major gaps against the JD;
+- missing information that could materially affect fit;
+- transferable experience requiring clarification;
+- scope, achievements, and responsibilities that are unclear.
+
+Prioritize only the highest-impact items. Avoid listing minor details.
+
+INTERVIEW QUESTIONS:
+Generate targeted questions that help validate candidate-job fit.
+
+Questions should focus on:
+- missing information in the CV;
+- transferable experience that requires clarification;
+- actual scope of responsibilities and achievements;
+- industry, product, customer, and market exposure;
+- leadership and stakeholder management scope;
+- motivation, career stability, and reason for job changes.
+
+Avoid generic questions that do not help make a hiring decision.
+Each question should have a clear validation objective.
+Prioritize quality over quantity. Generate only the most important questions.
+
+CONFIDENCE:
+The confidence rating reflects the quality and completeness of the available evidence, not the candidate's quality.
+
+- High:
+  The CV contains sufficient and clear evidence for most conclusions and requirement assessments.
+
+- Medium:
+  Some important information is missing or unclear, but there is enough evidence to make a reasonable assessment.
+
+- Low:
+  Significant information is missing, the CV is ambiguous, or conclusions rely heavily on unknowns.
+
+Do not assign High confidence when multiple core requirements are NOT FOUND.
+
+RED FLAGS:
+Only include objective concerns supported by the CV, such as:
+- unexplained employment gaps of 12 months or more;
+- repeated short tenures;
+- inconsistent dates or information;
+- significant career progression;
+- major claims without supporting evidence.
+
+Do not treat missing skills, missing certifications, or requirement gaps as red flags.
+
+SELF-CHECK before output: verify no assumptions or overclaiming. Verify fit rating = actual evidence.
+
+${LANGUAGE_RULE}`;
       const userMsg = pdf
         ? "CV is in the attached PDF.\\n\\nJob Description:\\n" + (jd||"Not provided")
         : "CV:\\n" + cv + "\\n\\nJob Description:\\n" + (jd||"Not provided");
@@ -497,6 +718,11 @@ export function CandidateTools({toast}: any){
           <div style={{display:"flex",borderLeft:"1.5px solid var(--border-glass)",height:44}}>
             {["EN","VI"].map(lang=>(
               <button key={lang} onClick={()=>setAnalysisLang(lang.toLowerCase())} className="ct-btn-lang"
+                title={
+                  lang === "VI"
+                    ? "Tiếng Việt (giữ nguyên thuật ngữ chuyên môn)"
+                    : "English"
+                }
                 style={{width:40,height:"100%",border:"none",borderLeft:lang==="VI"?"1.5px solid var(--border-glass)":"none",cursor:"pointer",fontSize:11,fontWeight:700,background:analysisLang===lang.toLowerCase()?"var(--bg-glass-hover)":"var(--bg-glass)",backdropFilter:"blur(16px)",color:analysisLang===lang.toLowerCase()?"var(--primary-hover)":"var(--text-placeholder)"}}>
                 {lang}
               </button>
