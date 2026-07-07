@@ -3766,13 +3766,6 @@ ${r.booleanSearch || "Not generated yet."}
                       gap: 6
                     }}>
                       <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{client.name}</span>
-                      {client.isPriority && (
-                        <span style={{ color: "var(--warning, #f59e0b)", flexShrink: 0, display: "inline-flex", alignItems: "center" }} title="Khách hàng ưu tiên">
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2">
-                            <path d="M12 17v5M5 17h14v-1.76a2 2 0 0 0-.44-1.24l-2.78-3.5A2 2 0 0 1 15 9.24V5a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v4.24c0 .43-.14.85-.4 1.18l-2.78 3.5a2 2 0 0 0-.44 1.24z"></path>
-                          </svg>
-                        </span>
-                      )}
                     </div>
                     <div style={{ 
                       fontSize: 12, 
@@ -3796,7 +3789,7 @@ ${r.booleanSearch || "Not generated yet."}
                       top: 16, 
                       background: 'none', 
                       border: 'none', 
-                      color: client.isPriority ? '#eab308' : 'rgba(156, 163, 175, 0.7)', 
+                      color: client.isPriority ? '#22c55e' : 'rgba(156, 163, 175, 0.7)', 
                       cursor: 'pointer', 
                       padding: 4, 
                       opacity: client.isPriority ? 0.9 : 0, 
