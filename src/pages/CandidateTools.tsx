@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { motion } from 'motion/react';
 import Markdown from 'react-markdown';
 import { Modal, TA, Btn, CopyBtn, Spin } from '../components/ui';
 import { Sidebar as HistorySidebar } from '../components/Sidebar';
@@ -710,23 +711,142 @@ ${LANGUAGE_RULE}`;
           icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>}>
           {gL?"Generating...":"Generate Summary"}
         </Btn>
-        <div style={{display:"flex",alignItems:"center",borderRadius:12,border:"1.5px solid var(--primary)",overflow:"hidden",flexShrink:0,flex:"1 1 auto"}}>
-          <button onClick={handleAnalyze} disabled={aL||!hasCV} className="ct-btn-analyze"
-            style={{display:"flex",alignItems:"center",justifyContent:"center",flex:1,gap:7,padding:"0 14px",height:44,background:"var(--bg-glass)",backdropFilter:"blur(16px)",border:"none",cursor:aL||!hasCV||!jd.trim()?"not-allowed":"pointer",fontWeight:600,fontSize:14,color:"var(--primary-hover)",opacity:aL||!hasCV||!jd.trim()?.5:1}}>
-            {aL ? <><span style={{width:14,height:14,border:"2px solid var(--primary)",borderTopColor:"transparent",borderRadius:"50%",animation:"spin .7s linear infinite",display:"inline-block",marginRight:6}}/> Analyzing...</> : <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{marginRight:4}}><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg> Analyze CV</>}
+        <div style={{display:"flex",alignItems:"center",gap:12,flexShrink:0,flex:"1 1 auto"}}>
+          {/* Custom Glass Droplet Button */}
+          <button
+            onClick={handleAnalyze}
+            disabled={aL || !hasCV}
+            style={{
+              position: "relative",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flex: 1,
+              gap: 8,
+              padding: "0 24px",
+              height: 44,
+              borderRadius: 99,
+              cursor: aL || !hasCV ? "not-allowed" : "pointer",
+              fontWeight: 600,
+              fontSize: 14,
+              color: "rgba(79, 70, 229, 0.9)", // beautiful indigo theme
+              border: "1px solid rgba(79, 70, 229, 0.25)",
+              // Glass backdrop effect
+              background: "linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(243, 244, 246, 0.9) 100%)",
+              backdropFilter: "blur(12px)",
+              // Droplet liquid gloss reflections: inset shadow + top highlights
+              boxShadow: aL 
+                ? "inset 0 1px 4px rgba(0,0,0,0.1), 0 4px 12px rgba(79, 70, 229, 0.1), 0 0 0 2px rgba(79, 70, 229, 0.15)"
+                : "0 8px 24px -4px rgba(79, 70, 229, 0.12), inset 0 4px 10px rgba(255, 255, 255, 0.95), inset 0 -4px 12px rgba(79, 70, 229, 0.05)",
+              transition: "all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
+              outline: "none",
+              overflow: "hidden"
+            }}
+            onMouseEnter={(e: any) => {
+              if (aL || !hasCV) return;
+              e.currentTarget.style.transform = "scale(1.04) translateY(-1px)";
+              e.currentTarget.style.borderColor = "rgba(79, 70, 229, 0.45)";
+              e.currentTarget.style.color = "rgba(79, 70, 229, 1)";
+              e.currentTarget.style.boxShadow = "0 12px 28px -4px rgba(79, 70, 229, 0.2), inset 0 4px 12px rgba(255, 255, 255, 1), inset 0 -4px 12px rgba(79, 70, 229, 0.08)";
+            }}
+            onMouseLeave={(e: any) => {
+              if (aL || !hasCV) return;
+              e.currentTarget.style.transform = "none";
+              e.currentTarget.style.borderColor = "rgba(79, 70, 229, 0.25)";
+              e.currentTarget.style.color = "rgba(79, 70, 229, 0.9)";
+              e.currentTarget.style.boxShadow = "0 8px 24px -4px rgba(79, 70, 229, 0.12), inset 0 4px 10px rgba(255, 255, 255, 0.95), inset 0 -4px 12px rgba(79, 70, 229, 0.05)";
+            }}
+          >
+            {/* Liquid/Glass Shine Highlight Overlay */}
+            <div style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+              height: "50%",
+              background: "linear-gradient(to bottom, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0) 100%)",
+              pointerEvents: "none",
+              borderRadius: "99px 99px 0 0"
+            }} />
+            
+            {aL ? (
+              <>
+                <span style={{
+                  width: 14,
+                  height: 14,
+                  border: "2px solid rgba(79, 70, 229, 0.8)",
+                  borderTopColor: "transparent",
+                  borderRadius: "50%",
+                  animation: "spin .7s linear infinite",
+                  display: "inline-block",
+                  marginRight: 6
+                }} />
+                Analyzing...
+              </>
+            ) : (
+              <>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ marginRight: 4 }}><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+                Analyze CV
+              </>
+            )}
           </button>
-          <div style={{display:"flex",borderLeft:"1.5px solid var(--border-glass)",height:44}}>
-            {["EN","VI"].map(lang=>(
-              <button key={lang} onClick={()=>setAnalysisLang(lang.toLowerCase())} className="ct-btn-lang"
-                title={
-                  lang === "VI"
-                    ? "Tiếng Việt (giữ nguyên thuật ngữ chuyên môn)"
-                    : "English"
-                }
-                style={{width:40,height:"100%",border:"none",borderLeft:lang==="VI"?"1.5px solid var(--border-glass)":"none",cursor:"pointer",fontSize:11,fontWeight:700,background:analysisLang===lang.toLowerCase()?"var(--bg-glass-hover)":"var(--bg-glass)",backdropFilter:"blur(16px)",color:analysisLang===lang.toLowerCase()?"var(--primary-hover)":"var(--text-placeholder)"}}>
-                {lang}
-              </button>
-            ))}
+
+          {/* iOS-Style Language Selector Capsule */}
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            background: "rgba(0, 0, 0, 0.03)",
+            borderRadius: 99,
+            padding: 3,
+            border: "1px solid rgba(0, 0, 0, 0.04)",
+            gap: 2,
+            height: 44,
+            boxSizing: "border-box"
+          }}>
+            {["EN", "VI"].map(lang => {
+              const isActive = analysisLang === lang.toLowerCase();
+              return (
+                <button
+                  key={lang}
+                  onClick={() => setAnalysisLang(lang.toLowerCase())}
+                  title={lang === "VI" ? "Tiếng Việt (giữ nguyên thuật ngữ chuyên môn)" : "English"}
+                  style={{
+                    position: "relative",
+                    width: 42,
+                    height: "100%",
+                    border: "none",
+                    borderRadius: 99,
+                    cursor: "pointer",
+                    fontSize: 11,
+                    fontWeight: 700,
+                    background: "none",
+                    color: isActive ? "rgba(79, 70, 229, 1)" : "var(--text-placeholder)",
+                    transition: "color 0.2s, background-color 0.2s",
+                    outline: "none",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    zIndex: 1
+                  }}
+                >
+                  {isActive && (
+                    <motion.div
+                      layoutId="active-lang-bg"
+                      style={{
+                        position: "absolute",
+                        inset: 0,
+                        background: "#fff",
+                        borderRadius: 99,
+                        boxShadow: "0 1px 3px rgba(0,0,0,0.1), 0 1px 1px rgba(0,0,0,0.05)",
+                        zIndex: -1
+                      }}
+                      transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                    />
+                  )}
+                  {lang}
+                </button>
+              );
+            })}
           </div>
         </div>
         <Btn onClick={handleEmail} disabled={eL||!hasCV} loading={eL} variant="outline" style={{flex:"1 1 auto"}}
@@ -743,17 +863,89 @@ ${LANGUAGE_RULE}`;
       {/* Result Area */}
       {hasResult && (
         <div>
-          {/* Tabs */}
-          <div style={{display:"flex",gap:4,marginBottom:16,borderBottom:"1.5px solid var(--border-color)",paddingBottom:0}}>
+          {/* Tabs - iOS Segmented Control */}
+          <div style={{
+            display: "inline-flex",
+            background: "rgba(0, 0, 0, 0.03)",
+            borderRadius: 99,
+            padding: 4,
+            position: "relative",
+            gap: 2,
+            marginBottom: 20,
+            border: "1px solid rgba(0, 0, 0, 0.04)",
+            boxShadow: "inset 0 1px 2px rgba(0,0,0,0.02)",
+            alignItems: "center"
+          }}>
             {sum && (
-              <button onClick={()=>setActiveTab("summary")} className="ct-btn-tab"
-                style={{padding:"8px 16px",background:"none",border:"none",cursor:"pointer",fontSize:13.5,fontWeight:activeTab==="summary"?700:500,color:activeTab==="summary"?"var(--primary)":"var(--text-muted)",borderBottom:activeTab==="summary"?"2px solid var(--primary)":"2px solid transparent",marginBottom:-1.5}}>
+              <button
+                onClick={() => setActiveTab("summary")}
+                style={{
+                  position: "relative",
+                  padding: "6px 18px",
+                  borderRadius: 99,
+                  border: "none",
+                  background: "none",
+                  cursor: "pointer",
+                  fontSize: 13,
+                  fontWeight: activeTab === "summary" ? 600 : 500,
+                  color: activeTab === "summary" ? "var(--text-primary)" : "var(--text-secondary)",
+                  zIndex: 2,
+                  transition: "color 0.2s",
+                  outline: "none"
+                }}
+              >
+                {activeTab === "summary" && (
+                  <motion.div
+                    layoutId="active-tab-bg"
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      background: "#fff",
+                      borderRadius: 99,
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.1), 0 1px 1px rgba(0,0,0,0.05)",
+                      zIndex: -1
+                    }}
+                    transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                  />
+                )}
                 Summary
               </button>
             )}
             {analysis && (
-              <button onClick={()=>setActiveTab("analysis")} className="ct-btn-tab"
-                style={{padding:"8px 16px",background:"none",border:"none",cursor:"pointer",fontSize:13.5,fontWeight:activeTab==="analysis"?700:500,color:activeTab==="analysis"?"var(--primary-hover)":"var(--text-muted)",borderBottom:activeTab==="analysis"?"2px solid var(--primary-hover)":"2px solid transparent",marginBottom:-1.5,display:"flex",alignItems:"center",gap:6}}>
+              <button
+                onClick={() => setActiveTab("analysis")}
+                style={{
+                  position: "relative",
+                  padding: "6px 18px",
+                  borderRadius: 99,
+                  border: "none",
+                  background: "none",
+                  cursor: "pointer",
+                  fontSize: 13,
+                  fontWeight: activeTab === "analysis" ? 600 : 500,
+                  color: activeTab === "analysis" ? "var(--text-primary)" : "var(--text-secondary)",
+                  zIndex: 2,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  transition: "color 0.2s",
+                  outline: "none"
+                }}
+              >
+                {activeTab === "analysis" && (
+                  <motion.div
+                    layoutId="active-tab-bg"
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      background: "#fff",
+                      borderRadius: 99,
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.1), 0 1px 1px rgba(0,0,0,0.05)",
+                      zIndex: -1
+                    }}
+                    transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                  />
+                )}
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="M11 8v3l2 2"/></svg>
                 CV Analysis
               </button>
