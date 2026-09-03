@@ -536,3 +536,35 @@ export const buildEmail=(info: any,summary: string)=>{
     : `I'd like to send a potential candidate for your consideration. Kindly check the brief below and the attached CV for more details.`;
   return `Hi,\n\n${jobLine}\n\nCandidate: ${info.candidateName}\nLocation: ${info.location}\nY.O.B: ${info.dob}\nTotal Years of Experience: ${info.yearsExperience}\nLanguage: ${info.language}\nEducation: ${info.education}\nNotice of Availability: ${info.availability}\nExpected Salary: ${info.salary}${summary?`\n\nExecutive Summary:\n${summary}`:""}\n\nBest regards,`;
 };
+
+export async function testExaKey(key: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const res = await fetch("/api/exa/test", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ apiKey: key })
+    });
+    const data = await res.json();
+    return data;
+  } catch (err: any) {
+    return { success: false, error: err.message || String(err) };
+  }
+}
+
+export async function searchExa(query: string, numResults: number = 5): Promise<{ results: any[]; query: string }> {
+  const customKey = localStorage.getItem("custom_exa_api_key") || "";
+  const res = await fetch("/api/exa/search", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-exa-key": customKey
+    },
+    body: JSON.stringify({ query, numResults })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: "Exa search failed" }));
+    throw new Error(err.error || "Exa search failed");
+  }
+  return await res.json();
+}
+

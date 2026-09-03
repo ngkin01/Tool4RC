@@ -989,20 +989,36 @@ export function JobPostGenerator({toast}: any) {
       );
       
       const newImagePrompt = result.trim();
+      
+      let generatedImage = "";
+      try {
+        const res = await fetch("/api/generate-image", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt: newImagePrompt })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          generatedImage = data.image;
+        }
+      } catch (err) {
+        console.error("Failed to generate actual image", err);
+      }
+      
       setVersions(prev => {
         const updated = [...prev];
-        updated[activeVersion] = { ...updated[activeVersion], imagePrompt: newImagePrompt };
+        updated[activeVersion] = { ...updated[activeVersion], imagePrompt: newImagePrompt, generatedImage };
         try { localStorage.setItem(JP_VERSIONS_KEY, JSON.stringify(updated)); } catch {}
         return updated;
       });
       if (currentPost && currentPost.id) {
         try {
-          await updateDoc(doc(db, "jobPosts", currentPost.id), { imagePrompt: newImagePrompt });
-          setMemories(prev => prev.map(m => m.id === currentPost.id ? {...m, imagePrompt: newImagePrompt} : m));
+          await updateDoc(doc(db, "jobPosts", currentPost.id), { imagePrompt: newImagePrompt, generatedImage });
+          setMemories(prev => prev.map(m => m.id === currentPost.id ? {...m, imagePrompt: newImagePrompt, generatedImage} : m));
         } catch(e) {}
       }
     } catch (e) {
-      toast("Error generating image prompt.", "error");
+      toast("Error generating image.", "error");
     } finally {
       setImagePromptLoading(false);
     }
@@ -1224,9 +1240,15 @@ export function JobPostGenerator({toast}: any) {
                   <div style={{background:"var(--bg-glass-hover)",borderRadius:10,border:"1px solid var(--border-glass)",padding:"16px 18px"}}>
                     <div style={{fontSize:13, fontWeight: 700, color:"var(--primary)", marginBottom: 8, display: "flex", alignItems: "center", gap: 6}}>
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                      Image Generation Prompt
+                      Generated Image
                     </div>
-                    <div style={{fontSize:14, color:"var(--text-primary)", lineHeight: 1.6, whiteSpace: "pre-wrap", fontFamily: "var(--font-mono)"}}>
+                    {currentPost.generatedImage && (
+                      <div style={{marginBottom: 16}}>
+                        <img src={`data:image/jpeg;base64,${currentPost.generatedImage}`} alt="Generated Poster" style={{width: "100%", maxWidth: 400, borderRadius: 8, border: "1px solid var(--border-glass)"}} referrerPolicy="no-referrer" />
+                      </div>
+                    )}
+                    <div style={{fontSize:12, fontWeight: 600, color:"var(--text-muted)", marginBottom: 4}}>Image Prompt:</div>
+                    <div style={{fontSize:13, color:"var(--text-primary)", lineHeight: 1.6, whiteSpace: "pre-wrap", fontFamily: "var(--font-mono)"}}>
                       {currentPost.imagePrompt}
                     </div>
                     <button onClick={async()=>{await navigator.clipboard.writeText(currentPost.imagePrompt);toast("Copied image prompt!", "success");}} className="jp-btn-copy-image-prompt" 
@@ -1238,7 +1260,7 @@ export function JobPostGenerator({toast}: any) {
                 ) : (
                   <button onClick={handleGenerateImagePrompt} disabled={imagePromptLoading} className="jp-btn jp-btn-generate-image-prompt"
                     style={{display:"flex",alignItems:"center",gap:7,padding:"9px 16px",borderRadius:10,border:"1.5px dashed var(--primary)",cursor:imagePromptLoading?"not-allowed":"pointer",fontWeight:600,fontSize:13.5,background:"var(--bg-glass)",color:"var(--primary)", opacity: imagePromptLoading ? 0.5 : 1}}>
-                    {imagePromptLoading ? <><Spin size={13} color="var(--primary)"/>Generating...</> : <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>✨ Generate Image Prompt</>}
+                    {imagePromptLoading ? <><Spin size={13} color="var(--primary)"/>Generating Image...</> : <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>✨ Generate Image</>}
                   </button>
                 )}
               </div>

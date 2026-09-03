@@ -2,6 +2,7 @@ import express from "express";
 import path from "path";
 import { Type } from "@google/genai";
 import { callLLM, callLLMStream, safeParseJson } from "./api/_lib/ai.js";
+import { searchWithExa, testExaApiKey } from "./api/_lib/exa.js";
 
 export const app = express();
 const PORT = Number(process.env.PORT) || 3000;
@@ -10,6 +11,48 @@ app.use(express.json());
 
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok" });
+});
+
+// Exa.ai Search Engine Endpoints
+app.post("/api/exa/test", async (req, res) => {
+  try {
+    const { apiKey } = req.body;
+    const effectiveKey = apiKey || (req.headers["x-exa-key"] as string) || process.env.EXA_API_KEY || "";
+    const testResult = await testExaApiKey(effectiveKey);
+    res.json(testResult);
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message || String(err) });
+  }
+});
+
+app.post("/api/exa/search", async (req, res) => {
+  try {
+    const { query, numResults, type } = req.body;
+    const headerKey = req.headers["x-exa-key"] as string;
+    const apiKey = headerKey || process.env.EXA_API_KEY || "";
+
+    if (!query || !query.trim()) {
+      return res.status(400).json({ error: "Missing query parameter" });
+    }
+
+    if (!apiKey || !apiKey.trim()) {
+      return res.status(400).json({
+        error: "Chưa cấu hình Exa API Key! Vui lòng nhập API Key Exa trong mục Cài đặt.",
+      });
+    }
+
+    const searchResults = await searchWithExa({
+      query: query.trim(),
+      numResults: numResults || 5,
+      type: type || "auto",
+      apiKey: apiKey.trim(),
+    });
+
+    res.json(searchResults);
+  } catch (err: any) {
+    console.error("Exa Search API Error:", err);
+    res.status(500).json({ error: err.message || String(err) });
+  }
 });
 
 // API route for processing universal input
@@ -553,6 +596,47 @@ LƯU Ý QUAN TRỌNG VỀ THUẬT NGỮ: TUYỆT ĐỐI GIỮ NGUYÊN các thu�
       }
     }
 
+    const exaHeaderKey = req.headers["x-exa-key"] as string;
+    const exaApiKey = exaHeaderKey || process.env.EXA_API_KEY || "";
+    let exaSources: any[] = [];
+
+    if (exaApiKey && exaApiKey.trim()) {
+      try {
+        console.log(`[Exa Search] Performing real-time search for company "${clientName}" via Exa...`);
+        const searchRes = await searchWithExa({
+          query: `${clientName} company official website business overview products services Vietnam`,
+          numResults: 5,
+          apiKey: exaApiKey.trim(),
+        });
+        if (searchRes && searchRes.results && searchRes.results.length > 0) {
+          exaSources = searchRes.results;
+          console.log(`[Exa Search] Retrieved ${exaSources.length} web sources for "${clientName}".`);
+
+          const exaContextText = `\n\n==================================================\n` +
+            `DỮ LIỆU TÌM KIẾM THỜI GIAN THỰC TỪ EXA AI SEARCH (EXA SEARCH ENGINE):\n` +
+            `Hệ thống đã thu thập các kết quả web mới nhất về đối tác "${clientName}" qua Exa Search (KHÔNG dùng Google Search):\n` +
+            searchRes.results.map((r, i) => 
+              `[Nguồn Exa ${i + 1}] Tiêu đề: ${r.title}\n` +
+              `URL: ${r.url}\n` +
+              `Trích đoạn nội dung thực tế:\n${r.text || ""}\n` +
+              (r.highlights && r.highlights.length ? `Điểm cốt lõi nổi bật: ${r.highlights.join("; ")}\n` : "")
+            ).join("\n---\n") +
+            `\n==================================================\n` +
+            `CHỈ DẪN NGHIÊM NGẶT VỀ DỮ LIỆU TÌM KIẾM:\n` +
+            `- Hãy ưu tiên các thông tin sự thật (FACT) từ các nguồn web Exa Search ở trên để xác minh chính xác tên công ty, mô hình kinh doanh, địa chỉ/nhà máy, dịch vụ và đối thủ.\n` +
+            `- Gắn nhãn (FACT) cho những gì có bằng chứng rõ ràng từ kết quả Exa Search.\n` +
+            `- KHÔNG sử dụng Google Search; toàn bộ dữ liệu tìm kiếm thời gian thực được cung cấp qua Exa Search.\n` +
+            `- Tuyệt đối KHÔNG giả định hoặc tự bịa số liệu không có trong kết quả Exa hoặc ngữ cảnh cung cấp.\n`;
+
+          finalPrompt = exaContextText + "\n\n" + finalPrompt;
+        }
+      } catch (exaErr) {
+        console.warn("[Exa Search] Failed to retrieve search results for client:", exaErr);
+      }
+    } else {
+      console.log(`[Exa Search] No Exa API key provided, proceeding without real-time web search.`);
+    }
+
     console.log(`Step 1: Running Company Research for ${clientName} using model ${model || "default"}`);
     
     const result = await callLLM({
@@ -563,7 +647,12 @@ LƯU Ý QUAN TRỌNG VỀ THUẬT NGỮ: TUYỆT ĐỐI GIỮ NGUYÊN các thu�
       prompt: finalPrompt,
     });
 
-    res.json({ companyReport: result.text, usage: result.usage });
+    res.json({ 
+      companyReport: result.text, 
+      usage: result.usage,
+      exaSources,
+      searchedViaExa: exaSources.length > 0 
+    });
   } catch (error) {
     console.error("LLM Step 1 Error:", error);
     const errorMessage = error instanceof Error ? error.message : String(error);
@@ -2693,16 +2782,41 @@ app.post("/api/freecai/chat", async (req, res) => {
       targetModel = "gemini-3.5-flash"; // Default to a standard conversational model
     }
 
+    const exaHeaderKey = req.headers["x-exa-key"] as string;
+    const exaApiKey = exaHeaderKey || process.env.EXA_API_KEY || "";
+    let exaChatContext = "";
+    
+    const isSearchQuery = /tìm|tra cứu|search|tin tức|thông tin mới|ở đâu|địa chỉ|website|news|overview|profile/i.test(message);
+    if (isSearchQuery && exaApiKey && exaApiKey.trim()) {
+      try {
+        const clientName = clientData?.name || "";
+        const q = clientName ? `${clientName} ${message}` : message;
+        console.log(`[Exa Chat Search] Querying Exa for: "${q}"`);
+        const searchRes = await searchWithExa({
+          query: q,
+          numResults: 3,
+          apiKey: exaApiKey.trim(),
+        });
+        if (searchRes && searchRes.results && searchRes.results.length > 0) {
+          exaChatContext = `\n\nReal-time web search results from Exa Search (Do not use Google search):\n` +
+            searchRes.results.map((r, i) => `[Exa Source ${i + 1}] ${r.title} (${r.url}):\n${r.text || ""}`).join("\n\n");
+        }
+      } catch (exaErr) {
+        console.warn("[Exa Chat Search] Warning during Exa search:", exaErr);
+      }
+    }
+
     const stream = callLLMStream({
       provider,
       apiKey,
       model: targetModel,
       customEndpoint,
       prompt: `You are a helpful AI recruiting assistant. 
-      Answer the recruiter's question using the following client data context.
+      Answer the recruiter's question using the following client data context and Exa web search results if available.
       
       Context:
       ${JSON.stringify(clientData)}
+      ${exaChatContext}
       
       Question: ${message}`,
     });
@@ -3874,7 +3988,61 @@ Hãy phân tích báo cáo trên và trích xuất dữ liệu JSON có cấu tr
 });
 
 async function startServer() {
-  // Vite middleware for development
+  app.post("/api/generate-image", async (req, res) => {
+  console.log("Processing /api/generate-image...");
+  try {
+    const headerKey = req.headers["x-ai-key"] as string;
+    let apiKey = headerKey || process.env.GEMINI_API_KEY;
+
+    if (!apiKey) {
+      return res.status(400).json({ error: "API Key is required" });
+    }
+
+    const { prompt } = req.body;
+    if (!prompt) {
+      return res.status(400).json({ error: "Missing prompt" });
+    }
+
+    const { GoogleGenAI } = await import("@google/genai");
+    const ai = new GoogleGenAI({
+      apiKey: apiKey,
+      httpOptions: { headers: { 'User-Agent': 'aistudio-build' } }
+    });
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-3.1-flash-lite-image',
+      contents: {
+        parts: [{ text: prompt }]
+      },
+      config: {
+        imageConfig: {
+          aspectRatio: "1:1"
+        }
+      }
+    });
+
+    let base64Image = "";
+    if (response.candidates && response.candidates.length > 0 && response.candidates[0].content && response.candidates[0].content.parts) {
+      for (const part of response.candidates[0].content.parts) {
+        if (part.inlineData) {
+          base64Image = part.inlineData.data;
+          break;
+        }
+      }
+    }
+
+    if (!base64Image) {
+      return res.status(500).json({ error: "No image generated" });
+    }
+
+    res.json({ image: base64Image });
+  } catch (error) {
+    console.error("Image generation error:", error);
+    res.status(500).json({ error: String(error) });
+  }
+});
+
+// Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({

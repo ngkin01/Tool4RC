@@ -17,6 +17,7 @@
     "@vitejs/plugin-react": "^5.0.4",
     "cobe": "^2.0.1",
     "dotenv": "^17.2.3",
+    "exa-js": "^2.19.0",
     "express": "^4.21.2",
     "firebase": "^12.15.0",
     "html-react-parser": "^6.0.0",

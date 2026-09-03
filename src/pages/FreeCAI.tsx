@@ -2175,11 +2175,13 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
   const [userApiKey, setUserApiKey] = useState<string>(() => localStorage.getItem('freec_ai_api_key') || localStorage.getItem('freec_ai_user_gemini_key') || "");
   const [userModel, setUserModel] = useState<string>(() => localStorage.getItem('freec_ai_model') || "");
   const [userCustomEndpoint, setUserCustomEndpoint] = useState<string>(() => localStorage.getItem('freec_ai_custom_endpoint') || "");
+  const [userExaKey, setUserExaKey] = useState<string>(() => localStorage.getItem('custom_exa_api_key') || "");
 
   const [tempProvider, setTempProvider] = useState(userProvider);
   const [tempKey, setTempKey] = useState(userApiKey);
   const [tempModel, setTempModel] = useState(userModel);
   const [tempEndpoint, setTempEndpoint] = useState(userCustomEndpoint);
+  const [tempExaKey, setTempExaKey] = useState(userExaKey);
 
   // Sync with global custom keys when configuration modal is opened
   useEffect(() => {
@@ -2188,16 +2190,19 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
       const key = localStorage.getItem('freec_ai_api_key') || localStorage.getItem('freec_ai_user_gemini_key') || "";
       const model = localStorage.getItem('freec_ai_model') || "";
       const endpoint = localStorage.getItem('freec_ai_custom_endpoint') || "";
+      const exa = localStorage.getItem('custom_exa_api_key') || "";
 
       setUserProvider(provider);
       setUserApiKey(key);
       setUserModel(model);
       setUserCustomEndpoint(endpoint);
+      setUserExaKey(exa);
 
       setTempProvider(provider);
       setTempKey(key);
       setTempModel(model);
       setTempEndpoint(endpoint);
+      setTempExaKey(exa);
     }
   }, [isAiSettingsOpen]);
 
@@ -2366,12 +2371,15 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
       effectiveModel = "gemini-3.5-flash";
     }
 
+    const exaKey = localStorage.getItem("custom_exa_api_key") || "";
+
     return {
       'Content-Type': 'application/json',
       'x-ai-provider': effectiveProvider,
       ...(effectiveKey ? { 'x-ai-key': effectiveKey } : {}),
       ...(effectiveModel ? { 'x-ai-model': effectiveModel } : {}),
-      ...(effectiveEndpoint ? { 'x-ai-custom-endpoint': effectiveEndpoint } : {})
+      ...(effectiveEndpoint ? { 'x-ai-custom-endpoint': effectiveEndpoint } : {}),
+      ...(exaKey ? { 'x-exa-key': exaKey } : {})
     };
   };
 
@@ -2417,18 +2425,27 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
     }
   };
 
-  const handleSaveApiSettings = (provider: string, key: string, model: string, endpoint: string) => {
+  const handleSaveApiSettings = (provider: string, key: string, model: string, endpoint: string, exaKeyVal?: string) => {
     localStorage.setItem('freec_ai_provider', provider);
     localStorage.setItem('freec_ai_api_key', key.trim());
     localStorage.setItem('freec_ai_model', model.trim());
     localStorage.setItem('freec_ai_custom_endpoint', endpoint.trim());
+
+    if (exaKeyVal !== undefined) {
+      if (exaKeyVal.trim()) {
+        localStorage.setItem('custom_exa_api_key', exaKeyVal.trim());
+      } else {
+        localStorage.removeItem('custom_exa_api_key');
+      }
+      setUserExaKey(exaKeyVal.trim());
+    }
 
     setUserProvider(provider);
     setUserApiKey(key.trim());
     setUserModel(model.trim());
     setUserCustomEndpoint(endpoint.trim());
 
-    toast("Đã cập nhật cấu hình AI thành công!", "success");
+    toast("Đã cập nhật cấu hình AI và Exa Search thành công!", "success");
   };
 
   const handleClearApiSettings = () => {
@@ -2437,6 +2454,9 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
     localStorage.removeItem('freec_ai_user_gemini_key');
     localStorage.removeItem('freec_ai_model');
     localStorage.removeItem('freec_ai_custom_endpoint');
+    localStorage.removeItem('custom_exa_api_key');
+    setUserExaKey("");
+    setTempExaKey("");
 
     setUserProvider("system");
     setUserApiKey("");
@@ -3137,6 +3157,9 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
 
         const step1Data = await step1Response.json();
         const companyReport = step1Data.companyReport || "";
+        if (step1Data.searchedViaExa) {
+          toast(`Đã xác thực dữ liệu công ty thời gian thực từ Exa Search (${step1Data.exaSources?.length || 0} nguồn web)`, "success");
+        }
         if (step1Data.usage) {
           const { provider, model } = getEffectiveAiDetails();
           UsageTracker.logUsage(provider, model, step1Data.usage.prompt_tokens || 0, step1Data.usage.completion_tokens || 0);
@@ -6317,8 +6340,35 @@ ${r.booleanSearch || "Not generated yet."}
                     </div>
                   )}
 
+                  {/* Exa.ai Web Search Key */}
+                  <div style={{ padding: 14, borderRadius: 10, border: "1px solid var(--border-color)", background: "rgba(79, 70, 229, 0.03)", display: "flex", flexDirection: "column", gap: 8 }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 6 }}>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" strokeWidth="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                        Exa AI Web Search (Tìm kiếm thông tin web hiện tại)
+                      </span>
+                      <span style={{ fontSize: 11, color: "#4f46e5", fontWeight: 600, background: "rgba(79, 70, 229, 0.1)", padding: "2px 8px", borderRadius: 99 }}>
+                        Thay thế Google Search
+                      </span>
+                    </div>
+                    <p style={{ fontSize: 12, color: "var(--text-muted)", margin: 0, lineHeight: 1.5 }}>
+                      Sử dụng Exa Search Engine để tìm kiếm dữ liệu thời gian thực (thông tin công ty, chi nhánh, sản phẩm, tin tức mới nhất, đối thủ cạnh tranh).
+                    </p>
+                    <input 
+                      type="password"
+                      placeholder="Dán Exa API Key (để trống nếu đã cài đặt ở góc trên)..."
+                      value={tempExaKey}
+                      onChange={e => setTempExaKey(e.target.value)}
+                      style={{ 
+                        width: "100%", padding: "10px 12px", borderRadius: 8, 
+                        border: "1px solid var(--border-color)", background: "var(--bg-body)", 
+                        color: "var(--text-primary)", fontSize: 13, outline: "none" 
+                      }} 
+                    />
+                  </div>
+
                   <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 }}>
-                    {(userApiKey || userProvider !== 'system' || userModel || userCustomEndpoint) && (
+                    {(userApiKey || userProvider !== 'system' || userModel || userCustomEndpoint || userExaKey) && (
                       <button 
                         onClick={() => {
                           handleClearApiSettings();
@@ -6330,7 +6380,7 @@ ${r.booleanSearch || "Not generated yet."}
                     )}
                     <button 
                       onClick={() => {
-                        handleSaveApiSettings(tempProvider, tempKey, tempModel, tempEndpoint);
+                        handleSaveApiSettings(tempProvider, tempKey, tempModel, tempEndpoint, tempExaKey);
                         setIsAiSettingsOpen(false);
                       }}
                       style={{ padding: "10px 20px", background: "#4f46e5", color: "white", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer" }}

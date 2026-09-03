@@ -26,6 +26,11 @@ export function Header({ onMenu }: any) {
   const [qwenModel, setQwenModel] = useState("qwen-plus");
   const [githubModel, setGithubModel] = useState("openai/gpt-4o");
   
+  const [exaKey, setExaKey] = useState("");
+  const [isExaTesting, setIsExaTesting] = useState(false);
+  const [exaTestStatus, setExaTestStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [exaErrorMessage, setExaErrorMessage] = useState("");
+
   const [isTesting, setIsTesting] = useState(false);
   const [testStatus, setTestStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState("");
@@ -81,6 +86,7 @@ export function Header({ onMenu }: any) {
       const savedCerebras = localStorage.getItem("custom_cerebras_api_key") || "";
       const savedQwen = localStorage.getItem("custom_qwen_api_key") || "";
       const savedGithub = localStorage.getItem("custom_github_pat") || "";
+      const savedExa = localStorage.getItem("custom_exa_api_key") || "";
       
       setGeminiKey(savedGemini);
       setOpenaiKey(savedOpenai);
@@ -89,12 +95,15 @@ export function Header({ onMenu }: any) {
       setCerebrasKey(savedCerebras);
       setQwenKey(savedQwen);
       setGithubKey(savedGithub);
+      setExaKey(savedExa);
       
       const currentKey = savedProvider === 'gemini' ? savedGemini : savedProvider === 'openai' ? savedOpenai : savedProvider === 'grok' ? savedGrok : savedProvider === 'groq' ? savedGroq : savedProvider === 'cerebras' ? savedCerebras : savedProvider === 'qwen' ? savedQwen : savedProvider === 'github' ? savedGithub : "";
       setTestStatus(currentKey ? 'success' : 'idle');
       setErrorMessage("");
       setGeminiTestStatus(savedGemini ? 'success' : 'idle');
       setGeminiErrorMessage("");
+      setExaTestStatus(savedExa ? 'success' : 'idle');
+      setExaErrorMessage("");
     }
   }, [showSettings]);
 
@@ -185,6 +194,33 @@ export function Header({ onMenu }: any) {
     setIsGeminiTesting(false);
   };
 
+  const handleTestExaKey = async () => {
+    if (!exaKey.trim()) return;
+    setIsExaTesting(true);
+    setExaTestStatus('idle');
+    setExaErrorMessage("");
+    try {
+      const res = await fetch("/api/exa/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ apiKey: exaKey.trim() })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setExaTestStatus('success');
+        localStorage.setItem("custom_exa_api_key", exaKey.trim());
+      } else {
+        setExaTestStatus('error');
+        setExaErrorMessage(data.error || "API Key Exa không hợp lệ. Vui lòng kiểm tra lại.");
+      }
+    } catch (err: any) {
+      setExaTestStatus('error');
+      setExaErrorMessage(err.message || String(err));
+    } finally {
+      setIsExaTesting(false);
+    }
+  };
+
   const handleSaveKey = () => {
     if (geminiKey.trim() && geminiTestStatus !== 'success') {
       const confirmSave = window.confirm("API Key Gemini chưa được Test thành công. Bạn có chắc chắn muốn Lưu?");
@@ -192,6 +228,10 @@ export function Header({ onMenu }: any) {
     }
     if (provider !== 'gemini' && currentKey.trim() && testStatus !== 'success') {
       const confirmSave = window.confirm(`API Key cho ${provider.toUpperCase()} chưa được Test thành công. Bạn có chắc chắn muốn Lưu?`);
+      if (!confirmSave) return;
+    }
+    if (exaKey.trim() && exaTestStatus !== 'success') {
+      const confirmSave = window.confirm("API Key Exa chưa được Test thành công. Bạn có chắc chắn muốn Lưu?");
       if (!confirmSave) return;
     }
     
@@ -209,6 +249,12 @@ export function Header({ onMenu }: any) {
       localStorage.removeItem("custom_gemini_api_key");
     }
     localStorage.setItem("gemini_proxy_url", geminiProxyUrl.trim());
+
+    if (exaKey.trim()) {
+      localStorage.setItem("custom_exa_api_key", exaKey.trim());
+    } else {
+      localStorage.removeItem("custom_exa_api_key");
+    }
     
     if (openaiKey.trim()) {
       localStorage.setItem("custom_openai_api_key", openaiKey.trim());
@@ -310,7 +356,7 @@ export function Header({ onMenu }: any) {
               </div>
               
               <p style={{ fontSize: 12, color: "var(--text-muted)", lineHeight: 1.5, marginBottom: 12, margin: "0 0 12px 0" }}>
-                API này được dùng riêng cho các tính năng <strong>Google Search Grounding</strong> (tìm kiếm & xác thực thông tin công ty) và trích xuất dữ liệu địa điểm <strong>Google Maps</strong> cho email mẫu.
+                API này được dùng cho các tính năng <strong>phân tích tuyển dụng AI</strong>, tạo hình ảnh ứng viên và trích xuất dữ liệu địa điểm <strong>Google Maps</strong> cho email mẫu. (Các tác vụ tìm kiếm thông tin thời gian thực được xử lý qua Exa AI Search ở mục 3).
               </p>
 
               <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
@@ -601,6 +647,68 @@ export function Header({ onMenu }: any) {
                   </select>
                 </div>
               )}
+            </div>
+
+            {/* PHẦN 3: EXA SEARCH (TÌM KIẾM THÔNG TIN HIỆN TẠI BẰNG EXA.AI) */}
+            <div style={{ background: "var(--bg-main)", padding: 16, borderRadius: 12, border: "1.5px solid var(--border-color)", marginTop: 20 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                <span style={{ background: "#4f46e5", color: "#fff", borderRadius: "50%", width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: "bold" }}>3</span>
+                <label style={{ fontSize: 15, fontWeight: 700, color: "var(--text-secondary)", margin: 0 }}>API Key Exa.ai (Tìm kiếm thông tin web hiện tại)</label>
+              </div>
+
+              <p style={{ fontSize: 12, color: "var(--text-muted)", lineHeight: 1.5, marginBottom: 12, margin: "0 0 12px 0" }}>
+                Được sử dụng cho toàn bộ các tác vụ <strong>tìm kiếm dữ liệu thời gian thực</strong> (nghiên cứu thông tin công ty khách hàng, sản phẩm, tin tức tuyển dụng, đối thủ cạnh tranh) qua công cụ <strong>Exa Search Engine</strong> chuyên sâu cho AI thay thế Google Search.
+              </p>
+
+              <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+                <input 
+                  type="password" 
+                  value={exaKey} 
+                  onChange={e => {
+                    setExaKey(e.target.value);
+                    setExaTestStatus('idle');
+                  }} 
+                  placeholder="Dán Exa API Key (exa.ai) của bạn tại đây..."
+                  style={{ flex: 1, border: "1.5px solid var(--border-color)", borderRadius: 8, padding: "10px 14px", fontSize: 14, outline: "none", transition: "border-color 0.2s", background: "var(--bg-card)" }}
+                  onFocus={(e: any) => e.target.style.borderColor = "var(--border-focus)"} 
+                  onBlur={(e: any) => e.target.style.borderColor = "var(--border-color)"}
+                />
+                <button 
+                  onClick={handleTestExaKey}
+                  disabled={isExaTesting || !exaKey.trim()}
+                  style={{ 
+                    padding: "0 16px", 
+                    borderRadius: 8, 
+                    border: "none", 
+                    cursor: (isExaTesting || !exaKey.trim()) ? "not-allowed" : "pointer", 
+                    fontWeight: 600, 
+                    fontSize: 14, 
+                    background: (isExaTesting || !exaKey.trim()) ? "var(--border-color)" : "#4f46e5", 
+                    color: "#fff",
+                    transition: "background 0.2s",
+                    whiteSpace: "nowrap"
+                  }}
+                >
+                  {isExaTesting ? "Đang test..." : "Test Exa Key"}
+                </button>
+              </div>
+
+              {exaTestStatus === 'success' && (
+                <div style={{ fontSize: 13, color: "var(--success)", fontWeight: 500, marginBottom: 8, display: "flex", alignItems: "center", gap: 4 }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                  Exa API Key hợp lệ! Đã sẵn sàng tìm kiếm web thông tin công ty bằng Exa.
+                </div>
+              )}
+              {exaTestStatus === 'error' && (
+                <div style={{ fontSize: 13, color: "var(--danger)", fontWeight: 500, marginBottom: 8, display: "flex", alignItems: "flex-start", gap: 4 }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0, marginTop: 1 }}><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+                  <span style={{ wordBreak: "break-word" }}>{exaErrorMessage || "Lỗi API Key Exa. Vui lòng kiểm tra lại."}</span>
+                </div>
+              )}
+
+              <div style={{ fontSize: 11, color: "var(--text-muted)" }}>
+                💡 <strong>Lấy Key miễn phí:</strong> Đăng ký và tạo khóa API tại <a href="https://dashboard.exa.ai/api-keys" target="_blank" rel="noreferrer" style={{ color: "#4f46e5", textDecoration: "none", fontWeight: 600 }}>dashboard.exa.ai</a>.
+              </div>
             </div>
 
             {/* BẢO MẬT */}
