@@ -2241,7 +2241,7 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
 
     if (provider === 'system') {
       provider = localStorage.getItem("ai_provider") || "gemini";
-      if (provider === 'gemini') model = localStorage.getItem("gemini_model") || "gemini-3.5-flash";
+      if (provider === 'gemini') model = localStorage.getItem("gemini_model") || "gemini-3.8-flash";
       else if (provider === 'openai') model = localStorage.getItem("openai_model") || "gpt-4o-mini";
       else if (provider === 'grok') model = "grok-2-latest";
       else if (provider === 'groq') model = localStorage.getItem("groq_model") || "llama-3.3-70b-versatile";
@@ -2250,7 +2250,7 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
       else if (provider === 'github') model = localStorage.getItem("custom_github_model") || "openai/gpt-4o";
     } else {
       if (!model) {
-        if (provider === 'gemini') model = localStorage.getItem("gemini_model") || "gemini-3.5-flash";
+        if (provider === 'gemini') model = localStorage.getItem("gemini_model") || "gemini-3.8-flash";
         else if (provider === 'openai') model = localStorage.getItem("openai_model") || "gpt-4o-mini";
         else if (provider === 'grok') model = "grok-2-latest";
         else if (provider === 'groq') model = localStorage.getItem("groq_model") || "llama-3.3-70b-versatile";
@@ -2335,7 +2335,7 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
       // Load corresponding custom key
       if (effectiveProvider === 'gemini') {
         effectiveKey = localStorage.getItem("custom_gemini_api_key") || "";
-        effectiveModel = localStorage.getItem("gemini_model") || "gemini-3.5-flash";
+        effectiveModel = localStorage.getItem("gemini_model") || "gemini-3.8-flash";
         effectiveEndpoint = localStorage.getItem("gemini_proxy_url") || "";
       } else if (effectiveProvider === 'openai') {
         effectiveKey = localStorage.getItem("custom_openai_api_key") || "";
@@ -2361,7 +2361,7 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
       if (!effectiveKey) {
         if (effectiveProvider === 'gemini') {
           effectiveKey = localStorage.getItem("custom_gemini_api_key") || "";
-          if (!effectiveModel) effectiveModel = localStorage.getItem("gemini_model") || "gemini-3.5-flash";
+          if (!effectiveModel) effectiveModel = localStorage.getItem("gemini_model") || "gemini-3.8-flash";
           if (!effectiveEndpoint) effectiveEndpoint = localStorage.getItem("gemini_proxy_url") || "";
         } else if (effectiveProvider === 'openai') {
           effectiveKey = localStorage.getItem("custom_openai_api_key") || "";
@@ -2386,18 +2386,12 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
     }
 
     const validGeminiModels = [
-      "gemini-3.5-flash",
-      "gemini-3.1-pro-preview",
+      "gemini-3.8-flash",
       "gemini-3.1-flash-lite",
-      "gemini-2.5-pro",
-      "gemini-2.5-flash",
-      "gemini-2.0-flash",
-      "gemini-1.5-pro",
-      "gemini-1.5-flash",
-      "gemini-2.0-flash-lite-preview-02-05"
+      "gemini-3.1-pro-preview"
     ];
-    if (effectiveProvider === 'gemini' && !validGeminiModels.includes(effectiveModel)) {
-      effectiveModel = "gemini-3.5-flash";
+    if (effectiveProvider === 'gemini' && (!validGeminiModels.includes(effectiveModel) || effectiveModel === "gemini-3.5-flash")) {
+      effectiveModel = "gemini-3.8-flash";
     }
 
     const exaKey = localStorage.getItem("custom_exa_api_key") || "";
@@ -6396,7 +6390,7 @@ ${r.booleanSearch || "Not generated yet."}
                         <input 
                           type="text"
                           placeholder={
-                            tempProvider === 'gemini' ? "gemini-3.5-flash (Mặc định)" :
+                            tempProvider === 'gemini' ? "gemini-3.8-flash (Mặc định - Miễn phí)" :
                             tempProvider === 'openai' ? "gpt-4o-mini (Mặc định)" :
                             tempProvider === 'grok' ? "grok-2-latest (Mặc định)" :
                             tempProvider === 'claude' ? "claude-3-5-sonnet-latest" :

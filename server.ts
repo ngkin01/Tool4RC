@@ -2786,7 +2786,10 @@ app.post("/api/freecai/chat", async (req, res) => {
 
     let targetModel = model;
     if (!targetModel && provider === "gemini") {
-      targetModel = "gemini-3.5-flash"; // Default to a standard conversational model
+      targetModel = "gemini-3.8-flash"; // Default to up-to-date free tier conversational model
+    }
+    if (provider === "gemini" && (targetModel === "gemini-3.5-flash" || targetModel?.startsWith("gemini-1.") || targetModel?.startsWith("gemini-2."))) {
+      targetModel = "gemini-3.8-flash";
     }
 
     const exaHeaderKey = req.headers["x-exa-key"] as string;

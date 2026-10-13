@@ -55,7 +55,10 @@ export async function* callLLMStream({
       ? new GoogleGenAI({ apiKey, httpOptions: { headers: { "User-Agent": "aistudio-build" } } })
       : getDefaultGeminiAi();
 
-    let targetModel = model || "gemini-3.5-flash";
+    let targetModel = model || "gemini-3.8-flash";
+    if (targetModel === "gemini-3.5-flash" || targetModel.startsWith("gemini-1.") || targetModel.startsWith("gemini-2.")) {
+      targetModel = "gemini-3.8-flash";
+    }
     const config: any = {};
     if (responseSchema) {
       config.responseMimeType = "application/json";
@@ -252,7 +255,10 @@ export async function callLLM({
       ? new GoogleGenAI({ apiKey, httpOptions: { headers: { "User-Agent": "aistudio-build" } } })
       : getDefaultGeminiAi();
 
-    let targetModel = model || "gemini-3.5-flash";
+    let targetModel = model || "gemini-3.8-flash";
+    if (targetModel === "gemini-3.5-flash" || targetModel.startsWith("gemini-1.") || targetModel.startsWith("gemini-2.")) {
+      targetModel = "gemini-3.8-flash";
+    }
     const config: any = {};
     if (responseMimeType) {
       config.responseMimeType = responseMimeType;

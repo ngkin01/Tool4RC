@@ -11,7 +11,7 @@ export function Header({ onMenu }: any) {
   const [showUsage, setShowUsage] = useState(false);
   
   const [provider, setProvider] = useState<AIProvider>('gemini');
-  const [geminiModel, setGeminiModel] = useState("gemini-3.5-flash");
+  const [geminiModel, setGeminiModel] = useState("gemini-3.8-flash");
   const [geminiKey, setGeminiKey] = useState("");
   const [geminiProxyUrl, setGeminiProxyUrl] = useState("");
   const [openaiKey, setOpenaiKey] = useState("");
@@ -45,20 +45,16 @@ export function Header({ onMenu }: any) {
       const savedProvider = getProvider();
       setProvider(savedProvider);
       
-      let savedGeminiModel = localStorage.getItem("gemini_model") || "gemini-3.5-flash";
+      let savedGeminiModel = localStorage.getItem("gemini_model") || "gemini-3.8-flash";
       const validGeminiModels = [
-        "gemini-3.5-flash",
-        "gemini-3.1-pro-preview",
+        "gemini-3.8-flash",
         "gemini-3.1-flash-lite",
-        "gemini-2.5-pro",
-        "gemini-2.5-flash",
-        "gemini-2.0-flash",
-        "gemini-1.5-pro",
-        "gemini-1.5-flash",
-        "gemini-2.0-flash-lite-preview-02-05"
+        "gemini-3.1-pro-preview"
       ];
-      if (!validGeminiModels.includes(savedGeminiModel)) {
-        savedGeminiModel = "gemini-3.5-flash";
+      // Automatically migrate deprecated or older models to gemini-3.8-flash (Free Tier)
+      if (!validGeminiModels.includes(savedGeminiModel) || savedGeminiModel === "gemini-3.5-flash" || savedGeminiModel.startsWith("gemini-1.") || savedGeminiModel.startsWith("gemini-2.")) {
+        savedGeminiModel = "gemini-3.8-flash";
+        localStorage.setItem("gemini_model", "gemini-3.8-flash");
       }
       setGeminiModel(savedGeminiModel);
       
@@ -520,20 +516,14 @@ export function Header({ onMenu }: any) {
                       }}
                       style={{ width: "100%", border: "1.5px solid var(--border-color)", borderRadius: 8, padding: "10px 14px", fontSize: 14, outline: "none", marginBottom: 12, background: "var(--bg-card)", color: "var(--text-secondary)" }}
                     >
-                      <optgroup label="Pro">
-                        <option value="gemini-3.1-pro-preview">Gemini 3.1 Pro (Preview)</option>
-                        <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
-                        <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+                      <optgroup label="Flash (Khuyên dùng - Hoàn toàn miễn phí Free Tier)">
+                        <option value="gemini-3.8-flash">Gemini 3.8 Flash (Mới nhất, Thông minh & Miễn phí)</option>
                       </optgroup>
-                      <optgroup label="Flash">
-                        <option value="gemini-3.5-flash">Gemini 3.5 Flash (Mới & Tốt nhất)</option>
-                        <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
-                        <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
-                        <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
+                      <optgroup label="Flash-Lite (Siêu nhanh - Miễn phí Free Tier)">
+                        <option value="gemini-3.1-flash-lite">Gemini 3.1 Flash-Lite (Siêu tốc & Miễn phí)</option>
                       </optgroup>
-                      <optgroup label="Flash-Lite">
-                        <option value="gemini-3.1-flash-lite">Gemini 3.1 Flash-Lite</option>
-                        <option value="gemini-2.0-flash-lite-preview-02-05">Gemini 2.0 Flash-Lite</option>
+                      <optgroup label="Pro (Nâng cao - Yêu cầu gói Trả phí)">
+                        <option value="gemini-3.1-pro-preview">Gemini 3.1 Pro Preview (Mạnh nhất - Cần Billing/Paid Key)</option>
                       </optgroup>
                     </select>
                   </div>
