@@ -50,22 +50,25 @@ export async function searchWithExa({
 }: {
   query: string;
   numResults?: number;
-  type?: "auto" | "neural" | "keyword";
+  type?: "auto" | "deep" | "fast" | "neural" | "keyword" | "instant" | string;
   apiKey?: string;
-}): Promise<{ results: ExaSearchResult[]; query: string }> {
+}): Promise<{ results: ExaSearchResult[]; query: string; searchType: string }> {
   const exa = getExaClient(apiKey);
   if (!exa) {
     throw new Error("EXA_API_KEY_MISSING: Chưa cấu hình Exa API Key trong mục Cài đặt hoặc biến môi trường.");
   }
 
-  console.log(`[Exa Search] Query: "${query}", NumResults: ${numResults}, Type: ${type}`);
+  const effectiveType = type === "deep" ? "deep" : (type || "auto");
+  console.log(`[Exa Search] Query: "${query}", NumResults: ${numResults}, Type: ${effectiveType}`);
 
-  const response = await exa.searchAndContents(query, {
-    type,
+  const searchOptions: any = {
+    type: effectiveType,
     numResults,
     text: { maxCharacters: 1500 },
     highlights: true,
-  });
+  };
+
+  const response = await exa.searchAndContents(query, searchOptions);
 
   const results: ExaSearchResult[] = (response.results || []).map((item: any) => ({
     title: item.title || "Untitled",
@@ -79,5 +82,6 @@ export async function searchWithExa({
   return {
     results,
     query,
+    searchType: effectiveType,
   };
 }

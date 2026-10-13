@@ -2176,12 +2176,38 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
   const [userModel, setUserModel] = useState<string>(() => localStorage.getItem('freec_ai_model') || "");
   const [userCustomEndpoint, setUserCustomEndpoint] = useState<string>(() => localStorage.getItem('freec_ai_custom_endpoint') || "");
   const [userExaKey, setUserExaKey] = useState<string>(() => localStorage.getItem('custom_exa_api_key') || "");
+  const [exaSearchType, setExaSearchType] = useState<"auto" | "deep">(() => (localStorage.getItem('exa_search_type') as "auto" | "deep") || "auto");
 
   const [tempProvider, setTempProvider] = useState(userProvider);
   const [tempKey, setTempKey] = useState(userApiKey);
   const [tempModel, setTempModel] = useState(userModel);
   const [tempEndpoint, setTempEndpoint] = useState(userCustomEndpoint);
   const [tempExaKey, setTempExaKey] = useState(userExaKey);
+  const [tempExaSearchType, setTempExaSearchType] = useState<"auto" | "deep">(exaSearchType);
+
+  // Sync exaSearchType across tabs and components
+  useEffect(() => {
+    const handleTypeChange = () => {
+      const current = (localStorage.getItem("exa_search_type") as "auto" | "deep") || "auto";
+      setExaSearchType(current);
+      setTempExaSearchType(current);
+    };
+    window.addEventListener("exa_search_type_changed", handleTypeChange);
+    window.addEventListener("storage", handleTypeChange);
+    return () => {
+      window.removeEventListener("exa_search_type_changed", handleTypeChange);
+      window.removeEventListener("storage", handleTypeChange);
+    };
+  }, []);
+
+  const handleToggleExaSearchType = (newType?: "auto" | "deep") => {
+    const next = newType || (exaSearchType === "auto" ? "deep" : "auto");
+    setExaSearchType(next);
+    setTempExaSearchType(next);
+    localStorage.setItem("exa_search_type", next);
+    window.dispatchEvent(new Event("exa_search_type_changed"));
+    toast(`Đã chuyển Exa Search sang chế độ: ${next === 'deep' ? '🔬 Deep Search (Nghiên cứu sâu)' : '⚡ Auto (Tiêu chuẩn - Tiết kiệm)'}`, "info");
+  };
 
   // Sync with global custom keys when configuration modal is opened
   useEffect(() => {
@@ -2191,18 +2217,21 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
       const model = localStorage.getItem('freec_ai_model') || "";
       const endpoint = localStorage.getItem('freec_ai_custom_endpoint') || "";
       const exa = localStorage.getItem('custom_exa_api_key') || "";
+      const exaType = (localStorage.getItem('exa_search_type') as "auto" | "deep") || "auto";
 
       setUserProvider(provider);
       setUserApiKey(key);
       setUserModel(model);
       setUserCustomEndpoint(endpoint);
       setUserExaKey(exa);
+      setExaSearchType(exaType);
 
       setTempProvider(provider);
       setTempKey(key);
       setTempModel(model);
       setTempEndpoint(endpoint);
       setTempExaKey(exa);
+      setTempExaSearchType(exaType);
     }
   }, [isAiSettingsOpen]);
 
@@ -2372,6 +2401,7 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
     }
 
     const exaKey = localStorage.getItem("custom_exa_api_key") || "";
+    const activeExaSearchType = localStorage.getItem("exa_search_type") || "auto";
 
     return {
       'Content-Type': 'application/json',
@@ -2379,7 +2409,8 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
       ...(effectiveKey ? { 'x-ai-key': effectiveKey } : {}),
       ...(effectiveModel ? { 'x-ai-model': effectiveModel } : {}),
       ...(effectiveEndpoint ? { 'x-ai-custom-endpoint': effectiveEndpoint } : {}),
-      ...(exaKey ? { 'x-exa-key': exaKey } : {})
+      ...(exaKey ? { 'x-exa-key': exaKey } : {}),
+      'x-exa-type': activeExaSearchType
     };
   };
 
@@ -2425,7 +2456,7 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
     }
   };
 
-  const handleSaveApiSettings = (provider: string, key: string, model: string, endpoint: string, exaKeyVal?: string) => {
+  const handleSaveApiSettings = (provider: string, key: string, model: string, endpoint: string, exaKeyVal?: string, exaTypeVal?: "auto" | "deep") => {
     localStorage.setItem('freec_ai_provider', provider);
     localStorage.setItem('freec_ai_api_key', key.trim());
     localStorage.setItem('freec_ai_model', model.trim());
@@ -2439,6 +2470,11 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
       }
       setUserExaKey(exaKeyVal.trim());
     }
+
+    const typeToSave = exaTypeVal || tempExaSearchType || "auto";
+    localStorage.setItem('exa_search_type', typeToSave);
+    setExaSearchType(typeToSave);
+    window.dispatchEvent(new Event("exa_search_type_changed"));
 
     setUserProvider(provider);
     setUserApiKey(key.trim());
@@ -3158,7 +3194,8 @@ export function FreeCAI({ toast }: { toast: (msg: string, type: 'success'|'error
         const step1Data = await step1Response.json();
         const companyReport = step1Data.companyReport || "";
         if (step1Data.searchedViaExa) {
-          toast(`Đã xác thực dữ liệu công ty thời gian thực từ Exa Search (${step1Data.exaSources?.length || 0} nguồn web)`, "success");
+          const modeLabel = step1Data.exaSearchType === 'deep' ? '🔬 Deep' : '⚡ Auto';
+          toast(`Đã xác thực dữ liệu công ty thời gian thực từ Exa Search [${modeLabel}] (${step1Data.exaSources?.length || 0} nguồn web)`, "success");
         }
         if (step1Data.usage) {
           const { provider, model } = getEffectiveAiDetails();
@@ -5568,10 +5605,71 @@ ${r.booleanSearch || "Not generated yet."}
 
               <div style={{ display: "flex", flexDirection: "column", gap: 12, position: "relative" }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingLeft: 4, paddingRight: 4 }}>
-                  <label style={{ fontSize: 13, color: "#3730a3", fontWeight: 800, display: "flex", alignItems: "center", gap: 8 }}>
-                    <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#8b5cf6", boxShadow: "0 0 8px rgba(139, 92, 246, 0.4)" }}></span>
-                    Nhập thông tin
-                  </label>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <label style={{ fontSize: 13, color: "#3730a3", fontWeight: 800, display: "flex", alignItems: "center", gap: 8, margin: 0 }}>
+                      <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#8b5cf6", boxShadow: "0 0 8px rgba(139, 92, 246, 0.4)" }}></span>
+                      Nhập thông tin
+                    </label>
+
+                    {/* NÚT GẠT CHỌN MỨC ĐỘ EXA SEARCH (AUTO vs DEEP) */}
+                    <div 
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        background: "rgba(255, 255, 255, 0.85)",
+                        backdropFilter: "blur(6px)",
+                        border: exaSearchType === 'deep' ? "1.5px solid #f59e0b" : "1.5px solid rgba(99, 102, 241, 0.25)",
+                        borderRadius: 20,
+                        padding: "2px",
+                        boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+                        transition: "all 0.2s ease"
+                      }}
+                      title={exaSearchType === 'auto' ? "Exa Auto: Nhanh, chuẩn xác, tiết kiệm Quota Free ($10/tháng)" : "Exa Deep: Nghiên cứu đào sâu đa bước ($12/1k requests)"}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => handleToggleExaSearchType('auto')}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 4,
+                          padding: "3px 9px",
+                          borderRadius: 14,
+                          border: "none",
+                          fontSize: 11,
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          background: exaSearchType === 'auto' ? "linear-gradient(135deg, #6366f1, #8b5cf6)" : "transparent",
+                          color: exaSearchType === 'auto' ? "#ffffff" : "#64748b",
+                          boxShadow: exaSearchType === 'auto' ? "0 2px 6px rgba(99, 102, 241, 0.35)" : "none",
+                          transition: "all 0.2s ease"
+                        }}
+                      >
+                        ⚡ Auto
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleToggleExaSearchType('deep')}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 4,
+                          padding: "3px 9px",
+                          borderRadius: 14,
+                          border: "none",
+                          fontSize: 11,
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          background: exaSearchType === 'deep' ? "linear-gradient(135deg, #f59e0b, #d97706)" : "transparent",
+                          color: exaSearchType === 'deep' ? "#ffffff" : "#64748b",
+                          boxShadow: exaSearchType === 'deep' ? "0 2px 6px rgba(217, 119, 6, 0.35)" : "none",
+                          transition: "all 0.2s ease"
+                        }}
+                      >
+                        🔬 Deep
+                      </button>
+                    </div>
+                  </div>
                   
                   <Btn 
                     onClick={async () => {
@@ -6365,6 +6463,53 @@ ${r.booleanSearch || "Not generated yet."}
                         color: "var(--text-primary)", fontSize: 13, outline: "none" 
                       }} 
                     />
+
+                    {/* Mức độ tìm kiếm Exa */}
+                    <div style={{ marginTop: 6, padding: "8px 10px", borderRadius: 8, background: "rgba(255, 255, 255, 0.4)", border: "1px solid var(--border-color)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <div>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-secondary)" }}>Độ sâu tìm kiếm Exa</div>
+                        <div style={{ fontSize: 11, color: "var(--text-muted)" }}>
+                          {tempExaSearchType === 'auto' ? '⚡ Auto: Tối ưu hạn mức Free $10/tháng' : '🔬 Deep: Đối chiếu đa nguồn ($12/1k requests)'}
+                        </div>
+                      </div>
+
+                      <div style={{ display: "flex", background: "var(--bg-body)", borderRadius: 16, padding: 2, border: "1px solid var(--border-color)" }}>
+                        <button
+                          type="button"
+                          onClick={() => setTempExaSearchType('auto')}
+                          style={{
+                            padding: "3px 10px",
+                            borderRadius: 14,
+                            border: "none",
+                            fontSize: 11,
+                            fontWeight: 700,
+                            cursor: "pointer",
+                            background: tempExaSearchType === 'auto' ? '#4f46e5' : 'transparent',
+                            color: tempExaSearchType === 'auto' ? '#fff' : 'var(--text-muted)',
+                            transition: "all 0.2s"
+                          }}
+                        >
+                          ⚡ Auto
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setTempExaSearchType('deep')}
+                          style={{
+                            padding: "3px 10px",
+                            borderRadius: 14,
+                            border: "none",
+                            fontSize: 11,
+                            fontWeight: 700,
+                            cursor: "pointer",
+                            background: tempExaSearchType === 'deep' ? 'linear-gradient(135deg, #f59e0b, #d97706)' : 'transparent',
+                            color: tempExaSearchType === 'deep' ? '#fff' : 'var(--text-muted)',
+                            transition: "all 0.2s"
+                          }}
+                        >
+                          🔬 Deep
+                        </button>
+                      </div>
+                    </div>
                   </div>
 
                   <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 }}>
@@ -6380,7 +6525,7 @@ ${r.booleanSearch || "Not generated yet."}
                     )}
                     <button 
                       onClick={() => {
-                        handleSaveApiSettings(tempProvider, tempKey, tempModel, tempEndpoint, tempExaKey);
+                        handleSaveApiSettings(tempProvider, tempKey, tempModel, tempEndpoint, tempExaKey, tempExaSearchType);
                         setIsAiSettingsOpen(false);
                       }}
                       style={{ padding: "10px 20px", background: "#4f46e5", color: "white", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer" }}

@@ -27,6 +27,7 @@ export function Header({ onMenu }: any) {
   const [githubModel, setGithubModel] = useState("openai/gpt-4o");
   
   const [exaKey, setExaKey] = useState("");
+  const [exaSearchType, setExaSearchType] = useState<"auto" | "deep">(() => (localStorage.getItem("exa_search_type") as "auto" | "deep") || "auto");
   const [isExaTesting, setIsExaTesting] = useState(false);
   const [exaTestStatus, setExaTestStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [exaErrorMessage, setExaErrorMessage] = useState("");
@@ -87,6 +88,7 @@ export function Header({ onMenu }: any) {
       const savedQwen = localStorage.getItem("custom_qwen_api_key") || "";
       const savedGithub = localStorage.getItem("custom_github_pat") || "";
       const savedExa = localStorage.getItem("custom_exa_api_key") || "";
+      const savedExaType = (localStorage.getItem("exa_search_type") as "auto" | "deep") || "auto";
       
       setGeminiKey(savedGemini);
       setOpenaiKey(savedOpenai);
@@ -96,6 +98,7 @@ export function Header({ onMenu }: any) {
       setQwenKey(savedQwen);
       setGithubKey(savedGithub);
       setExaKey(savedExa);
+      setExaSearchType(savedExaType);
       
       const currentKey = savedProvider === 'gemini' ? savedGemini : savedProvider === 'openai' ? savedOpenai : savedProvider === 'grok' ? savedGrok : savedProvider === 'groq' ? savedGroq : savedProvider === 'cerebras' ? savedCerebras : savedProvider === 'qwen' ? savedQwen : savedProvider === 'github' ? savedGithub : "";
       setTestStatus(currentKey ? 'success' : 'idle');
@@ -255,6 +258,8 @@ export function Header({ onMenu }: any) {
     } else {
       localStorage.removeItem("custom_exa_api_key");
     }
+    localStorage.setItem("exa_search_type", exaSearchType);
+    window.dispatchEvent(new Event("exa_search_type_changed"));
     
     if (openaiKey.trim()) {
       localStorage.setItem("custom_openai_api_key", openaiKey.trim());
@@ -705,6 +710,66 @@ export function Header({ onMenu }: any) {
                   <span style={{ wordBreak: "break-word" }}>{exaErrorMessage || "Lỗi API Key Exa. Vui lòng kiểm tra lại."}</span>
                 </div>
               )}
+
+              {/* CHỌN MỨC ĐỘ TÌM KIẾM EXA (AUTO VS DEEP) */}
+              <div style={{ marginTop: 12, marginBottom: 12, padding: "10px 12px", borderRadius: 8, background: "var(--bg-card)", border: "1px solid var(--border-color)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text-secondary)" }}>Độ sâu tìm kiếm:</span>
+                    <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 99, fontWeight: 600, background: exaSearchType === 'deep' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(16, 185, 129, 0.15)', color: exaSearchType === 'deep' ? '#d97706' : '#059669' }}>
+                      {exaSearchType === 'deep' ? '🔬 Deep Search ($12/1k req)' : '⚡ Fast/Auto (Tiết kiệm)'}
+                    </span>
+                  </div>
+
+                  {/* Nút gạt chuyển đổi (Segmented Toggle Switch) */}
+                  <div style={{ display: "flex", background: "var(--bg-body)", borderRadius: 20, padding: 3, border: "1px solid var(--border-color)" }}>
+                    <button
+                      type="button"
+                      onClick={() => setExaSearchType('auto')}
+                      style={{
+                        padding: "4px 12px",
+                        borderRadius: 16,
+                        border: "none",
+                        fontSize: 12,
+                        fontWeight: 600,
+                        cursor: "pointer",
+                        background: exaSearchType === 'auto' ? '#4f46e5' : 'transparent',
+                        color: exaSearchType === 'auto' ? '#ffffff' : 'var(--text-muted)',
+                        boxShadow: exaSearchType === 'auto' ? '0 1px 4px rgba(79, 70, 229, 0.3)' : 'none',
+                        transition: "all 0.2s"
+                      }}
+                    >
+                      ⚡ Auto
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setExaSearchType('deep')}
+                      style={{
+                        padding: "4px 12px",
+                        borderRadius: 16,
+                        border: "none",
+                        fontSize: 12,
+                        fontWeight: 600,
+                        cursor: "pointer",
+                        background: exaSearchType === 'deep' ? 'linear-gradient(135deg, #d97706, #b45309)' : 'transparent',
+                        color: exaSearchType === 'deep' ? '#ffffff' : 'var(--text-muted)',
+                        boxShadow: exaSearchType === 'deep' ? '0 1px 4px rgba(217, 119, 6, 0.3)' : 'none',
+                        transition: "all 0.2s"
+                      }}
+                    >
+                      🔬 Deep
+                    </button>
+                  </div>
+                </div>
+
+                <p style={{ fontSize: 11, color: "var(--text-muted)", margin: 0, lineHeight: 1.4 }}>
+                  {exaSearchType === 'auto' ? (
+                    <><strong>⚡ Mức Auto (Khuyên dùng):</strong> Cân bằng tốc độ và chất lượng, tìm 5 nguồn web, tối ưu hạn mức Free $10/tháng.</>
+                  ) : (
+                    <><strong>🔬 Mức Deep:</strong> Tự động tìm kiếm nhiều tầng (multi-step), đọc 8 nguồn web đối chiếu dữ liệu chuyên sâu cho khách hàng lớn.</>
+                  )}
+                </p>
+              </div>
 
               <div style={{ fontSize: 11, color: "var(--text-muted)" }}>
                 💡 <strong>Lấy Key miễn phí:</strong> Đăng ký và tạo khóa API tại <a href="https://dashboard.exa.ai/api-keys" target="_blank" rel="noreferrer" style={{ color: "#4f46e5", textDecoration: "none", fontWeight: 600 }}>dashboard.exa.ai</a>.

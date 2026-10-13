@@ -551,15 +551,17 @@ export async function testExaKey(key: string): Promise<{ success: boolean; error
   }
 }
 
-export async function searchExa(query: string, numResults: number = 5): Promise<{ results: any[]; query: string }> {
+export async function searchExa(query: string, numResults: number = 5, type?: string): Promise<{ results: any[]; query: string; searchType?: string }> {
   const customKey = localStorage.getItem("custom_exa_api_key") || "";
+  const exaType = type || localStorage.getItem("exa_search_type") || "auto";
   const res = await fetch("/api/exa/search", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "x-exa-key": customKey
+      "x-exa-key": customKey,
+      "x-exa-type": exaType
     },
-    body: JSON.stringify({ query, numResults })
+    body: JSON.stringify({ query, numResults, type: exaType })
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: "Exa search failed" }));

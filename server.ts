@@ -29,6 +29,7 @@ app.post("/api/exa/search", async (req, res) => {
   try {
     const { query, numResults, type } = req.body;
     const headerKey = req.headers["x-exa-key"] as string;
+    const headerType = (req.headers["x-exa-type"] as string);
     const apiKey = headerKey || process.env.EXA_API_KEY || "";
 
     if (!query || !query.trim()) {
@@ -41,10 +42,13 @@ app.post("/api/exa/search", async (req, res) => {
       });
     }
 
+    const searchType = type || headerType || "auto";
+    const defaultNum = searchType === "deep" ? 8 : 5;
+
     const searchResults = await searchWithExa({
       query: query.trim(),
-      numResults: numResults || 5,
-      type: type || "auto",
+      numResults: numResults || defaultNum,
+      type: searchType,
       apiKey: apiKey.trim(),
     });
 
@@ -598,22 +602,24 @@ LƯU Ý QUAN TRỌNG VỀ THUẬT NGỮ: TUYỆT ĐỐI GIỮ NGUYÊN các thu�
 
     const exaHeaderKey = req.headers["x-exa-key"] as string;
     const exaApiKey = exaHeaderKey || process.env.EXA_API_KEY || "";
+    const exaSearchType = ((req.headers["x-exa-type"] as string) || (req.body.exaSearchType as string) || "auto") as "auto" | "deep";
     let exaSources: any[] = [];
 
     if (exaApiKey && exaApiKey.trim()) {
       try {
-        console.log(`[Exa Search] Performing real-time search for company "${clientName}" via Exa...`);
+        console.log(`[Exa Search] Performing real-time search for company "${clientName}" via Exa (Mode: ${exaSearchType})...`);
         const searchRes = await searchWithExa({
           query: `${clientName} company official website business overview products services Vietnam`,
-          numResults: 5,
+          numResults: exaSearchType === "deep" ? 8 : 5,
+          type: exaSearchType,
           apiKey: exaApiKey.trim(),
         });
         if (searchRes && searchRes.results && searchRes.results.length > 0) {
           exaSources = searchRes.results;
-          console.log(`[Exa Search] Retrieved ${exaSources.length} web sources for "${clientName}".`);
+          console.log(`[Exa Search] Retrieved ${exaSources.length} web sources for "${clientName}" (Mode: ${exaSearchType}).`);
 
           const exaContextText = `\n\n==================================================\n` +
-            `DỮ LIỆU TÌM KIẾM THỜI GIAN THỰC TỪ EXA AI SEARCH (EXA SEARCH ENGINE):\n` +
+            `DỮ LIỆU TÌM KIẾM THỜI GIAN THỰC TỪ EXA AI SEARCH (EXA SEARCH ENGINE - CHẾ ĐỘ: ${exaSearchType.toUpperCase()}):\n` +
             `Hệ thống đã thu thập các kết quả web mới nhất về đối tác "${clientName}" qua Exa Search (KHÔNG dùng Google Search):\n` +
             searchRes.results.map((r, i) => 
               `[Nguồn Exa ${i + 1}] Tiêu đề: ${r.title}\n` +
@@ -651,7 +657,8 @@ LƯU Ý QUAN TRỌNG VỀ THUẬT NGỮ: TUYỆT ĐỐI GIỮ NGUYÊN các thu�
       companyReport: result.text, 
       usage: result.usage,
       exaSources,
-      searchedViaExa: exaSources.length > 0 
+      searchedViaExa: exaSources.length > 0,
+      exaSearchType
     });
   } catch (error) {
     console.error("LLM Step 1 Error:", error);
@@ -2784,6 +2791,7 @@ app.post("/api/freecai/chat", async (req, res) => {
 
     const exaHeaderKey = req.headers["x-exa-key"] as string;
     const exaApiKey = exaHeaderKey || process.env.EXA_API_KEY || "";
+    const exaSearchType = ((req.headers["x-exa-type"] as string) || "auto") as "auto" | "deep";
     let exaChatContext = "";
     
     const isSearchQuery = /tìm|tra cứu|search|tin tức|thông tin mới|ở đâu|địa chỉ|website|news|overview|profile/i.test(message);
@@ -2791,10 +2799,11 @@ app.post("/api/freecai/chat", async (req, res) => {
       try {
         const clientName = clientData?.name || "";
         const q = clientName ? `${clientName} ${message}` : message;
-        console.log(`[Exa Chat Search] Querying Exa for: "${q}"`);
+        console.log(`[Exa Chat Search] Querying Exa for: "${q}" (Mode: ${exaSearchType})`);
         const searchRes = await searchWithExa({
           query: q,
-          numResults: 3,
+          numResults: exaSearchType === "deep" ? 5 : 3,
+          type: exaSearchType,
           apiKey: exaApiKey.trim(),
         });
         if (searchRes && searchRes.results && searchRes.results.length > 0) {
